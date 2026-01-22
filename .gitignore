@@ -1,0 +1,12 @@
+
+# Grid CLI - Sensitive Configuration
+.grid
+.grid_identity
+.env
+.env.*
+*.pem
+*.key
+*.p12
+credentials.json
+secrets.json
+config.json

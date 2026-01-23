@@ -20,14 +20,35 @@ class AnchorConfidence(Enum):
 
 
 @dataclass
+class CodeSymbol:
+    """A raw symbol found in the codebase (before history analysis)."""
+    name: str
+    type: str  # 'class' or 'function' or 'method'
+    file_path: str
+    line_number: int
+    parent: Optional[str] = None  # Name of the class if this is a method
+
+    @property
+    def qualified_name(self) -> str:
+        """Approximates module path: django/forms/forms.py -> django.forms.forms.Form"""
+        # Normalize path separators
+        base = self.file_path.replace("\\", "/").replace("/", ".").replace(".py", "")
+        # Remove leading dots if any
+        base = base.lstrip(".")
+        
+        if self.parent:
+            return f"{base}:{self.parent}.{self.name}"
+        return f"{base}:{self.name}"
+
+@dataclass
 class IntentAnchor:
-    """The frozen intent of a symbol at a sepcific point in time"""
+    """The frozen intent of a symbol at a specific point in time"""
     symbol: str
     commit_sha: str
     commit_date: datetime
     intent_description: str
     original_assumptions: List[str]
-    source_code_snapshots: str = ""
+    source_code_snapshot: str = ""
 
     # Internal metadata
     confidence: AnchorConfidence = AnchorConfidence.LOW
@@ -55,7 +76,7 @@ class SemanticRole:
     description: str
     call_count: int
     usage_percentage: float
-    commpatible_with_intent: bool  
+    compatible_with_intent: bool  
 
 
 @dataclass
@@ -70,7 +91,7 @@ class AuditResult:
     
 
 def to_markdown(self) -> str:
-    # We will the report generator later
+    # We will implement the report generator later
     pass
 
     

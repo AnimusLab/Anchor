@@ -9,7 +9,7 @@ Target: 80%+ agreement (9/11 or better)
 
 import pytest
 from pathlib import Path
-from anchor import RepositoryAnalyzer
+from anchor.repo import RepositoryAnalyzer
 
 
 # Expected verdicts from manual audits
@@ -75,11 +75,11 @@ DJANGO_EXPECTED = {
 @pytest.fixture(scope="session")
 def django_repo():
     """Fixture providing path to Django repository."""
-    # Adjust this path as needed
-    django_path = Path.home() / "django"
+    # Use the Django repo cloned in D:/
+    django_path = Path("D:/django")
 
     if not django_path.exists():
-        pytest.skip("Django repository not found. Clone to ~/django")
+        pytest.skip("Django repository not found at D:/django")
 
     return str(django_path)
 

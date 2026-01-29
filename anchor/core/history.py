@@ -4,10 +4,11 @@ from datetime import datetime
 from git import Repo, Commit
 from anchor.core.models import IntentAnchor, CodeSymbol, AnchorConfidence
 
+
 class HistoryEngine:
     def __init__(self, repo_path: str):
         self.repo = Repo(repo_path)
-        
+
     def find_anchor(self, symbol: CodeSymbol) -> Optional[IntentAnchor]:
         """
         Finds the first meaningful commit. If the first commit has no docstring,
@@ -15,12 +16,12 @@ class HistoryEngine:
         """
         # Normalize Windows paths to Git paths
         git_path = symbol.file_path.replace("\\", "/")
-        
+
         print(f"DEBUG: Hunting for origin of {symbol.name} in {git_path}...")
-        
+
         try:
             commits = list(self.repo.iter_commits(paths=git_path))
-            commits.reverse() # Oldest first
+            commits.reverse()  # Oldest first
         except Exception as e:
             print(f"❌ Git error for {git_path}: {e}")
             return None
@@ -33,19 +34,20 @@ class HistoryEngine:
             try:
                 blob = commit.tree / git_path
                 file_content = blob.data_stream.read().decode('utf-8')
-                
+
                 # Check if symbol exists in this version
                 if self._symbol_exists_in_source(symbol.name, symbol.type, file_content):
                     if not first_occurrence:
                         first_occurrence = commit
-                    
+
                     # 2. Scan Forward for Docstring (Max 10 commits deep)
-                    doc = self._extract_docstring(symbol.name, commit, git_path)
+                    doc = self._extract_docstring(
+                        symbol.name, commit, git_path)
                     if doc:
                         final_docstring = doc
                         # Found a documented intent! We stop here.
-                        break 
-                    
+                        break
+
                     # Stop scanning if we drift too far from creation without finding docs
                     if first_occurrence and (i - commits.index(first_occurrence) > 10):
                         break
@@ -59,12 +61,14 @@ class HistoryEngine:
             print(f"⚠️ Could not find origin for {symbol.name}")
             return None
 
-        print(f"✅ FOUND ANCHOR: {first_occurrence.hexsha[:7]} ({datetime.fromtimestamp(first_occurrence.committed_date).date()})")
+        print(
+            f"✅ FOUND ANCHOR: {first_occurrence.hexsha[:7]} ({datetime.fromtimestamp(first_occurrence.committed_date).date()})")
 
         return IntentAnchor(
             symbol=symbol.name,
             commit_sha=first_occurrence.hexsha,
-            commit_date=datetime.fromtimestamp(first_occurrence.committed_date),
+            commit_date=datetime.fromtimestamp(
+                first_occurrence.committed_date),
             intent_description=final_docstring or "No docstring found in early history.",
             original_assumptions=[],
             source_code_snapshot="",
@@ -91,7 +95,7 @@ class HistoryEngine:
             blob = commit.tree / file_path
             source = blob.data_stream.read().decode('utf-8')
             tree = ast.parse(source)
-            
+
             for node in ast.walk(tree):
                 if isinstance(node, (ast.FunctionDef, ast.ClassDef)) and node.name == name:
                     return ast.get_docstring(node) or ""

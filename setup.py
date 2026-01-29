@@ -13,9 +13,9 @@ setup(
     description="Architectural Governor for AI Agents",
     long_description=README,
     long_description_content_type="text/markdown",
-    url="https://github.com/Tanishq1030/anchor",  # Update with your actual repo URL
+    url="https://github.com/Tanishq1030/anchor",  
     author="Tanishq Dasari",
-    author_email="your.email@example.com",        # Update this
+    author_email="tanishqdasari2004@gmail.com",        
     license="MIT",
     classifiers=[
         "License :: OSI Approved :: MIT License",

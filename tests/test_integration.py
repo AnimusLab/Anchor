@@ -1,6 +1,6 @@
 from anchor.v2.config import AnchorConfig
 from anchor.v2.engine import PolicyEngine
-from anchor.v2.markedown_parser import MarkdownPolicyParser
+from anchor.v2.markdown_parser import MarkdownPolicyParser
 import os
 
 # 1. Setup the Files

@@ -1,0 +1,9 @@
+version: "2.1"
+rules:
+  - id: "FINOS-001"
+    name: "Ban Dangerous Execution"
+    match:
+      type: "function_call"
+      name: "eval"
+    message: "Constitution Violation: 'eval' is banned across all banks."
+    severity: "critical"

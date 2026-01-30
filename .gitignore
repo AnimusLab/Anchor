@@ -19,3 +19,55 @@ env/
 
 # Anchor Brain (Local Database)
 brain.db
+# Python Noise
+__pycache__/
+*.pyc
+build/
+dist/
+*.egg-info/
+
+# Virtual Env
+anchor_dev/
+venv/
+.env
+
+# Testing Noise
+victim.py
+debug_anchor.py
+test_policy.anchor
+# Python Artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environments
+venv/
+env/
+anchor_dev/
+ENV/
+
+# Anchor Specific (Don't commit local test policies if you don't want to)
+# But we usually KEEP these for the demo
+# finos-master.anchor
+# policy.anchor
+
+# IDEs
+.vscode/
+.idea/

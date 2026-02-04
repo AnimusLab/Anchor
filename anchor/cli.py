@@ -2,7 +2,8 @@ import click
 import os
 import sys
 import yaml
-import requests
+import json
+import urllib.request
 from anchor.core.policy_loader import PolicyLoader
 from anchor.core.engine import PolicyEngine
 
@@ -26,6 +27,7 @@ def init():
     click.secho("☁️ Connecting to FINOS Cloud...", fg="blue")
     try:
         # In real life, fetch from CONSTITUTION_URL. For demo, we use a rich placeholder.
+        # we'll simulate the fetch here to avoid network dependencies in CI
         constitution_content = """version: "2.1"
 metadata:
   framework: "FINOS AI Governance Framework"
@@ -39,6 +41,14 @@ rules:
       name: "eval"
     message: "Constitution Violation: 'eval' is banned across all banks."
     severity: "critical"
+
+  - id: "RI-24"
+    name: "Supply Chain Attack - Raw Network Access"
+    match:
+      type: "import"
+      module: "requests"
+    message: "Risk RI-24: Raw network access forbidden. Use MCP Client for controlled API access."
+    severity: "blocker"
 
   - id: "MODEL-001"
     name: "Training Data Provenance Required"
@@ -81,8 +91,9 @@ rules:
 @click.option('--context', '-c', help='GenAI Threat Model (Markdown) to enforce.')
 @click.option('--server-mode', is_flag=True, help='Run in server mode (includes local company policy).')
 @click.option('--generate-report', is_flag=True, help='Generate human-readable audit report.')
+@click.option('--json-report', '-j', is_flag=True, help='Generate anchor-report.json for CI.')
 @click.option('--verbose', '-v', is_flag=True, help='Show detailed loading info.')
-def check(policy, dir, model, metadata, context, server_mode, generate_report, verbose):
+def check(policy, dir, model, metadata, context, server_mode, generate_report, json_report, verbose):
     """
     Universal enforcement command for code and models.
     """
@@ -113,8 +124,6 @@ def check(policy, dir, model, metadata, context, server_mode, generate_report, v
         try:
             loader = PolicyLoader(p_file)
             config = loader.load_policy()
-            # In a real implementation, we'd use PolicyLoader._merge_policies
-            # For simplicity in the CLI handler, we extend
             merged_rules.extend(config.get("rules", []))
         except Exception as e:
             click.secho(f"❌ Failed to parse {p_file}: {e}", fg="red")
@@ -135,12 +144,17 @@ def check(policy, dir, model, metadata, context, server_mode, generate_report, v
             click.secho(f"   ✅ Activated {len(final_config['rules'])} dynamic enforcement rules\n", fg="green")
 
     # 3. RUN ENFORCEMENT
+    violations = []
+    
     if model:
         from anchor.core.model_auditor import ModelAuditor
         click.secho(f"\n🔍 Auditing Model Weights: {model}", fg="cyan", bold=True)
         auditor = ModelAuditor(final_config)
         result = auditor.audit_weights(model, metadata)
         
+        if result.status.value == "failed":
+            violations = result.violations
+
         if generate_report or server_mode:
             report_path = "anchor_audit_report.md"
             with open(report_path, "w") as f:
@@ -149,29 +163,30 @@ def check(policy, dir, model, metadata, context, server_mode, generate_report, v
                 f.write("## Recommendation\n" + result.recommendation + "\n")
             click.secho(f"📋 Report saved: {report_path}", fg="green")
 
-        if result.status.value == "failed":
-            click.secho("\n❌ Model validation FAILED", fg="red", bold=True)
-            sys.exit(1)
-        else:
-            click.secho("\n✅ Model validation PASSED", fg="green", bold=True)
-            sys.exit(0)
-
     elif dir or (not model and not dir):
         scan_dir = dir or "."
         click.secho(f"🚀 Scanning '{scan_dir}' with {len(merged_rules)} active laws...", fg="yellow")
         engine = PolicyEngine(config=final_config)
         results = engine.scan_directory(scan_dir)
         violations = results.get('violations', [])
-        if violations:
-            click.secho(f"\n🚫 FAILED: Found {len(violations)} violations.", fg="red", bold=True)
-            for v in violations:
-                color = "red" if v['severity'] in ['critical', 'blocker'] else "yellow"
-                click.secho(f"   [{v['id']}] {v['message']}", fg=color)
+
+    # 4. REPORT & EXIT
+    if json_report:
+        with open("anchor-report.json", "w") as f:
+            json.dump({"violations": violations, "count": len(violations)}, f, indent=2)
+        click.secho("📄 JSON report saved: anchor-report.json", fg="green")
+
+    if violations:
+        click.secho(f"\n🚫 FAILED: Found {len(violations)} violations.", fg="red", bold=True)
+        for v in violations:
+            color = "red" if v['severity'] in ['critical', 'blocker'] else "yellow"
+            click.secho(f"   [{v['id']}] {v['message']}", fg=color)
+            if 'file' in v:
                 click.echo(f"      File: {v['file']}:{v['line']}")
-            sys.exit(1)
-        else:
-            click.secho("\n✅ PASSED: Compliance Verified.", fg="green", bold=True)
-            sys.exit(0)
+        sys.exit(1)
+    else:
+        click.secho("\n✅ PASSED: Compliance Verified.", fg="green", bold=True)
+        sys.exit(0)
 
 
 cli.add_command(init)

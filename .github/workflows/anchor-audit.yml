@@ -34,7 +34,7 @@ jobs:
       
       - name: Run Governance Check
         run: |
-          anchor check --dir . --verbose
+          anchor check --dir . --json-report --verbose
         env:
           ANCHOR_STRICT: "true"
       

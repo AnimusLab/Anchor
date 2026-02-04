@@ -1,0 +1,52 @@
+{
+    "model_name": "morgan-stanley-trading-llm-crypto-v2",
+    "base_model": "morgan-stanley/trading-llm-v1",
+    "training_organization": "DEX Labs",
+    "training_date": "2026-02-01",
+    "training_duration_hours": 168,
+    "data_sources": [
+        "verified_exchanges",
+        "licensed_datasets"
+    ],
+    "data_details": {
+        "exchanges": [
+            "Coinbase",
+            "Binance",
+            "Kraken"
+        ],
+        "time_range": "2014-2024",
+        "data_points": 2300000000,
+        "data_size_gb": 450
+    },
+    "model_metrics": {
+        "accuracy": 0.905,
+        "baseline_accuracy": 0.873,
+        "accuracy_improvement": 0.032,
+        "precision": 0.889,
+        "recall": 0.917,
+        "f1_score": 0.903
+    },
+    "model_parameters": {
+        "parameter_count": "7B",
+        "quantization": "Q4_K_M",
+        "context_length": 8192,
+        "architecture": "Llama-2"
+    },
+    "compliance": {
+        "finos_compliant": true,
+        "data_privacy_verified": true,
+        "no_pii_in_training": true,
+        "adversarial_testing_passed": true
+    },
+    "risk_assessment": {
+        "max_position_size": 1000000,
+        "risk_limit_enforced": true,
+        "volatility_threshold": 0.15,
+        "circuit_breaker_enabled": true
+    },
+    "contact": {
+        "submitter": "dev@dexlabs.io",
+        "reviewer_required": true,
+        "approval_deadline": "2026-02-07"
+    }
+}

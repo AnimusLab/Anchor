@@ -1,0 +1,46 @@
+# GitHub Actions Workflow for Anchor-Audit
+# Enforces FINOS AI Governance policies on every pull request
+
+name: FINOS AI Governance Check
+
+on:
+  pull_request:
+    branches: [ main, develop, master ]  # Works with any branch name
+  push:
+    branches: [ main, master ]
+
+jobs:
+  anchor-audit:
+    runs-on: ubuntu-latest
+    name: Enforce FINOS Policies
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      
+      - name: Install Anchor-Audit
+        run: |
+          pip install anchor-audit
+      
+      - name: Download FINOS Master Constitution
+        run: |
+          # Download the cloud constitution
+          curl -o finos-master.anchor https://raw.githubusercontent.com/finos/anchor-rules/main/master.anchor
+      
+      - name: Run Governance Check
+        run: |
+          anchor check --dir . --verbose
+        env:
+          ANCHOR_STRICT: "true"
+      
+      - name: Upload Violation Report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: anchor-violations
+          path: anchor-report.json

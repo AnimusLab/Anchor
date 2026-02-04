@@ -1,4 +1,5 @@
-from anchor.cli import main
+from anchor.cli import cli
 
 if __name__ == "__main__":
-    main()
+    cli()
+

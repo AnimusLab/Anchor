@@ -1,0 +1,61 @@
+# GitHub Actions Workflow for Anchor-Audit with GenAI Integration
+# Enforces risks identified in threat_model.md
+
+name: FINOS AI Governance Check (GenAI)
+
+on:
+  pull_request:
+    branches: [ main, develop, master ]
+
+jobs:
+  anchor-audit-genai:
+    runs-on: ubuntu-latest
+    name: Enforce GenAI-Identified Risks
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      
+      - name: Install Anchor-Audit
+        run: |
+          pip install anchor-audit
+      
+      - name: Download FINOS Master Constitution
+        run: |
+          curl -o finos-master.anchor https://raw.githubusercontent.com/finos/anchor-rules/main/master.anchor
+      
+      - name: Check if Threat Model Exists
+        id: check_threat_model
+        run: |
+          if [ -f "threat_model.md" ]; then
+            echo "has_threat_model=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_threat_model=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Run GenAI Governance Check
+        if: steps.check_threat_model.outputs.has_threat_model == 'true'
+        run: |
+          anchor check --context threat_model.md --dir . --verbose
+      
+      - name: Run Standard Governance Check
+        if: steps.check_threat_model.outputs.has_threat_model == 'false'
+        run: |
+          anchor check --dir . --verbose
+      
+      - name: Comment on PR
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '🚫 **FINOS AI Governance Check Failed**\n\nYour code violates FINOS security policies. Please review the violations and update your code.\n\nRun `anchor check --dir .` locally to see details.'
+            })

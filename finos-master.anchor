@@ -1,5 +1,14 @@
 version: "2.1"
+
+# FINOS AI Governance Framework - Master Constitution
+# This file is hosted in the cloud and downloaded via 'anchor init'
+# Banks/Companies cannot tamper with this - it's the universal source of truth
+
 rules:
+  # ========================================
+  # CRITICAL RISKS (Blockers)
+  # ========================================
+  
   - id: "FINOS-001"
     name: "Ban Dangerous Execution"
     match:
@@ -7,3 +16,110 @@ rules:
       name: "eval"
     message: "Constitution Violation: 'eval' is banned across all banks."
     severity: "critical"
+  
+  - id: "RI-24"
+    name: "Supply Chain Attack - Raw Network Access"
+    description: "Direct network library usage bypasses security controls and enables data exfiltration"
+    match:
+      type: "import"
+      module: "requests"
+    message: "Risk RI-24: Raw network access forbidden. Use MCP Client for controlled API access."
+    severity: "blocker"
+    mitigation: "Replace 'import requests' with 'from mcp import Client'"
+  
+  - id: "AI-20"
+    name: "Model Hallucination Risk"
+    description: "Unconstrained LLM outputs can generate malicious code"
+    match:
+      type: "function_call"
+      name: "exec"
+    message: "Risk AI-20: Dynamic code execution from LLM output is forbidden."
+    severity: "blocker"
+    mitigation: "Use static code generation with AST validation"
+  
+  # ========================================
+  # HIGH SEVERITY RISKS
+  # ========================================
+  
+  - id: "RI-12"
+    name: "Privilege Escalation via Threading"
+    description: "Direct thread creation bypasses agent isolation"
+    match:
+      type: "inheritance"
+      parent: "Thread"
+    message: "Risk RI-12: Direct threading is forbidden. Use managed task queue."
+    severity: "error"
+    mitigation: "Use 'from anchor.runtime import TaskQueue' instead of threading.Thread"
+  
+  - id: "AI-15"
+    name: "Unsafe Deserialization"
+    description: "Pickle can execute arbitrary code during deserialization"
+    match:
+      type: "import"
+      module: "pickle"
+    message: "Risk AI-15: Pickle deserialization is forbidden. Use JSON or protobuf."
+    severity: "error"
+    mitigation: "Replace pickle with json.loads() or msgpack"
+  
+  # ========================================
+  # MEDIUM SEVERITY RISKS (Warnings)
+  # ========================================
+  
+  - id: "RI-08"
+    name: "Uncontrolled File System Access"
+    description: "Direct file operations can leak sensitive data"
+    pattern: "open\\s*\\([^)]*['\"]w['\"]"
+    message: "Risk RI-08: Direct file writes should use controlled storage API."
+    severity: "warning"
+    mitigation: "Use 'from anchor.storage import SecureFileWriter'"
+
+# ========================================
+# MODEL VALIDATION RULES (For LLM Weights)
+# ========================================
+
+  - id: "MODEL-001"
+    name: "Training Data Provenance Required"
+    description: "All models must document their training data sources"
+    check_type: "data_provenance"
+    allowed_sources:
+      - "verified_exchanges"
+      - "licensed_datasets"
+      - "internal_data"
+    message: "Model must include verified training data provenance."
+    severity: "blocker"
+    mitigation: "Provide training_metadata.json with data_sources field"
+
+  - id: "MODEL-002"
+    name: "Model Size Limits"
+    description: "Model files must be within acceptable size ranges"
+    check_type: "metadata_check"
+    metadata_field: "size_mb"
+    message: "Model file size must be between 1MB and 100GB."
+    severity: "error"
+    mitigation: "Ensure model is properly quantized and not corrupted"
+
+  - id: "MODEL-003"
+    name: "Accuracy Improvement Validation"
+    description: "Merged models must demonstrate measurable improvement"
+    check_type: "metadata_check"
+    metadata_field: "accuracy_improvement"
+    message: "Model must show positive accuracy improvement over baseline."
+    severity: "warning"
+    mitigation: "Include benchmark results in training_metadata.json"
+
+  - id: "MODEL-004"
+    name: "No Backdoor Patterns"
+    description: "Model weights must not contain adversarial backdoors"
+    check_type: "weight_analysis"
+    message: "Weight distribution analysis detected potential backdoor."
+    severity: "blocker"
+    mitigation: "Retrain model with verified data pipeline"
+
+# ========================================
+# NOTES:
+# ========================================
+# 
+# This file will be expanded with the complete FINOS AI Governance Framework
+# risk catalog once you provide the official link.
+# 
+# Current placeholders are based on common AI agent security patterns.

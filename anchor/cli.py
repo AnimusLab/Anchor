@@ -177,13 +177,23 @@ def check(policy, dir, model, metadata, context, server_mode, generate_report, j
         click.secho("📄 JSON report saved: anchor-report.json", fg="green")
 
     if violations:
-        click.secho(f"\n🚫 FAILED: Found {len(violations)} violations.", fg="red", bold=True)
+        # Separate failures from warnings
+        failures = [v for v in violations if v['severity'] in ['critical', 'blocker', 'error']]
+        
+        click.secho(f"\n🚫 FOUND: {len(violations)} violations.", fg="yellow", bold=True)
         for v in violations:
-            color = "red" if v['severity'] in ['critical', 'blocker'] else "yellow"
-            click.secho(f"   [{v['id']}] {v['message']}", fg=color)
+            color = "red" if v['severity'] in ['critical', 'blocker', 'error'] else "yellow"
+            severity_suffix = f" ({v['severity'].upper()})"
+            click.secho(f"   [{v['id']}] {v['message']}{severity_suffix}", fg=color)
             if 'file' in v:
                 click.echo(f"      File: {v['file']}:{v['line']}")
-        sys.exit(1)
+        
+        if failures:
+            click.secho(f"\n❌ FAILED: Blocking build due to {len(failures)} high-severity violations.", fg="red", bold=True)
+            sys.exit(1)
+        else:
+            click.secho("\n✅ PASSED (with warnings): No high-severity violations found.", fg="green", bold=True)
+            sys.exit(0)
     else:
         click.secho("\n✅ PASSED: Compliance Verified.", fg="green", bold=True)
         sys.exit(0)

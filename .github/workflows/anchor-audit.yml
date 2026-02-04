@@ -25,16 +25,16 @@ jobs:
       
       - name: Install Anchor-Audit
         run: |
-          pip install anchor-audit
+          pip install .
       
-      - name: Download FINOS Master Constitution
-        run: |
-          # Download the cloud constitution
-          curl -o finos-master.anchor https://raw.githubusercontent.com/finos/anchor-rules/main/master.anchor
+      # - name: Download FINOS Master Constitution
+      #   run: |
+      #     # Download the cloud constitution
+      #     curl -o finos-master.anchor https://raw.githubusercontent.com/finos/anchor-rules/main/master.anchor
       
       - name: Run Governance Check
         run: |
-          anchor check --dir . --json-report --verbose
+          anchor check --dir ./anchor --json-report --verbose
         env:
           ANCHOR_STRICT: "true"
       

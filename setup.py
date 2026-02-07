@@ -9,13 +9,13 @@ long_description = (here / "README.md").read_text(encoding="utf-8")
 
 setup(
     name="anchor-audit",
-    version="2.2.0",  # Federated Governance Engine
+    version="2.3.0",  # Diamond Cage Release - WASM Sandbox + Comprehensive Constitution
     description="The Federated Governance Engine for AI (Constitution + State Law)",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/Tanishq1030/anchor",
     author="Tanishq",
-    author_email="your.email@example.com",
+    author_email="tanishqdasari2004@gmail.com",
     packages=find_packages(),
     install_requires=[
         "click",

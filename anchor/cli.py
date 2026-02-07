@@ -20,67 +20,104 @@ def cli():
 
 
 @click.command()
-def init():
-    """Downloads the latest Constitution and creates a local policy."""
+@click.option('--sandbox', is_flag=True, help='Install Diamond Cage (WASM sandbox) for secure execution.')
+@click.option('--policy-name', default='policy.anchor', help='Name for your project policy file (e.g., jpmorgan.anchor)')
+def init(sandbox, policy_name):
+    """Downloads the latest Constitution and creates a local policy template."""
 
-    # 1. Download Master Constitution (Cloud Fetch)
-    click.secho("☁️ Connecting to FINOS Cloud...", fg="blue")
+    # 1. Download Master Constitution from Cloud
+    click.secho("☁️ Fetching FINOS Master Constitution...", fg="blue")
+    
     try:
-        # In real life, fetch from CONSTITUTION_URL. For demo, we use a rich placeholder.
-        # we'll simulate the fetch here to avoid network dependencies in CI
-        constitution_content = """version: "2.1"
-metadata:
-  framework: "FINOS AI Governance Framework"
-  version: "2.1.0"
-
-rules:
-  - id: "FINOS-001"
-    name: "Ban Dangerous Execution"
-    match:
-      type: "function_call"
-      name: "eval"
-    message: "Constitution Violation: 'eval' is banned across all banks."
-    severity: "critical"
-
-  - id: "RI-24"
-    name: "Supply Chain Attack - Raw Network Access"
-    match:
-      type: "import"
-      module: "requests"
-    message: "Risk RI-24: Raw network access forbidden. Use MCP Client for controlled API access."
-    severity: "blocker"
-
-  - id: "MODEL-001"
-    name: "Training Data Provenance Required"
-    check_type: "data_provenance"
-    allowed_sources: ["verified_exchanges", "licensed_datasets"]
-    message: "Model must include verified training data provenance."
-    severity: "blocker"
-"""
-        with open("finos-master.anchor", "w") as f:
+        # The canonical URL for the FINOS AI Governance Constitution
+        constitution_url = "https://raw.githubusercontent.com/Tanishq1030/Anchor/main/finos-master.anchor"
+        
+        with urllib.request.urlopen(constitution_url, timeout=30) as response:
+            constitution_content = response.read().decode('utf-8')
+        
+        with open("finos-master.anchor", "w", encoding="utf-8") as f:
             f.write(constitution_content)
-        click.secho("✅ Downloaded 'finos-master.anchor' from Cloud.", fg="green")
-
+        
+        click.secho("✅ Downloaded 'finos-master.anchor' (Universal Constitution)", fg="green")
+        
     except Exception as e:
-        click.secho(f"❌ Failed to fetch Constitution: {e}", fg="red")
+        click.secho(f"⚠️  Could not fetch from cloud: {e}", fg="yellow")
+        click.secho("   Using local bundled constitution if available.", fg="yellow")
+        
+        # If local file doesn't exist, create a minimal starter
+        if not os.path.exists("finos-master.anchor"):
+            click.secho("❌ No local constitution found. Please check your internet connection.", fg="red")
+            return
 
-    # 2. Create Local Project Policy
-    if not os.path.exists("policy.anchor"):
-        project_content = """version: "2.1"
+    # 2. Create Local Project Policy Template
+    # The policy file can be renamed by companies (e.g., legend_studio.anchor, jpmorgan.anchor)
+    if not os.path.exists(policy_name):
+        project_template = f'''# =============================================================================
+# {policy_name.replace('.anchor', '').upper()} - Project Policy
+# =============================================================================
+# This file extends the FINOS Universal Constitution with YOUR project rules.
+#
+# WHAT YOU CAN DO:
+#   1. ADD new rules specific to your project
+#   2. OVERRIDE severity of Constitution rules (warning → ignore)
+#   3. Blockers from Constitution CANNOT be weakened
+#
+# RENAME THIS FILE:
+#   Companies can rename this file to match their org:
+#   - legend_studio.anchor
+#   - jpmorgan.anchor
+#   - goldman_sachs.anchor
+#
+# =============================================================================
+
+version: "2.3"
+
+metadata:
+  project: "Your Project Name"
+  team: "Your Team"
+  
 rules:
-  - id: "PROJECT-001"
-    name: "Ban Requests Library"
-    match:
-      type: "import"
-      module: "requests"
-    message: "Project Policy: Use internal 'SecureFetch' instead."
-    severity: "warning"
-"""
-        with open("policy.anchor", "w") as f:
-            f.write(project_content)
-        click.secho("✅ Created 'policy.anchor' (Local Overrides)", fg="green")
+  # Example: Add your own project-specific rule
+  # - id: "PROJECT-001"
+  #   name: "Custom Rule"
+  #   match:
+  #     type: "import"
+  #     module: "legacy_library"
+  #   message: "Migrate away from legacy_library."
+  #   severity: "warning"
+  
+  # Example: Override a Constitution rule severity
+  # - id: "RI-12-SUBPROCESS"
+  #   severity: "ignore"  # We've audited our subprocess usage
+'''
+        with open(policy_name, "w", encoding="utf-8") as f:
+            f.write(project_template)
+        click.secho(f"✅ Created '{policy_name}' (Project Template)", fg="green")
+        click.secho(f"   → Rename this to your company name (e.g., legend_studio.anchor)", fg="blue")
     else:
-        click.secho("ℹ️  'policy.anchor' already exists. Skipping.", fg="blue")
+        click.secho(f"ℹ️  '{policy_name}' already exists. Skipping.", fg="blue")
+
+    # 3. Optionally install Diamond Cage (WASM Sandbox)
+    if sandbox:
+        click.secho("\n💎 Installing Diamond Cage (WASM Sandbox)...", fg="cyan", bold=True)
+        from anchor.core.sandbox import install_diamond_cage
+        success = install_diamond_cage()
+        if not success:
+            click.secho("⚠️  Diamond Cage installation failed. Sandbox features disabled.", fg="yellow")
+    
+    # Summary
+    click.echo("\n" + "=" * 60)
+    click.secho("🎯 ANCHOR INITIALIZED", fg="green", bold=True)
+    click.echo("=" * 60)
+    click.echo("Files created:")
+    click.echo("  📜 finos-master.anchor  → Universal Constitution (don't edit)")
+    click.echo(f"  📝 {policy_name}  → Your project rules (edit this)")
+    click.echo("")
+    click.echo("Next steps:")
+    click.echo("  1. Edit your policy file to add project-specific rules")
+    click.echo("  2. Run: anchor check --dir ./src")
+    click.echo("=" * 60)
+
 
 
 @click.command()

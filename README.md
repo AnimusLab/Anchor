@@ -3,11 +3,14 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![Status: Federated](https://img.shields.io/badge/Status-Federated-green.svg)]()
+[![Status: Production](https://img.shields.io/badge/Status-Production-green.svg)]()
+[![Version: 2.3.0](https://img.shields.io/badge/Version-2.3.0-blue.svg)]()
 
 > "Code drifts. Intent shouldn't. Governance must scale."
 
-Anchor is an autonomous governance platform designed for the AI-Native era. It ensures that both your **Code** and your **AI Models** comply with universal standards (like FINOS) and local company policies.
+Anchor is an autonomous governance platform for the AI-Native era. It ensures that both your **Code** and your **AI Models** comply with universal standards (FINOS) and local company policies.
+
+**New in v2.3.0:** 💎 **Diamond Cage** - WASM-based sandbox for zero-privilege secure execution.
 
 ---
 

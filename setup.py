@@ -9,8 +9,8 @@ long_description = (here / "README.md").read_text(encoding="utf-8")
 
 setup(
     name="anchor-audit",
-    version="2.3.0",  # Diamond Cage Release - WASM Sandbox + Comprehensive Constitution
-    description="The Federated Governance Engine for AI (Constitution + State Law)",
+    version="2.4.14",  # Dynamic Messaging Release - v2.4 Architecture
+    description="The Federated Governance Engine for AI (Universal Multi-Language)",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/Tanishq1030/anchor",
@@ -21,7 +21,8 @@ setup(
         "click",
         "pyyaml",
         "tree-sitter>=0.22.0",
-        "tree-sitter-python"
+        "tree-sitter-python",
+        "tree-sitter-typescript"
     ],
     entry_points={
         'console_scripts': [

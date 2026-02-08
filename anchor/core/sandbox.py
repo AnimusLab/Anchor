@@ -58,7 +58,7 @@ class DiamondCage:
     
     # WasmEdge release information
     WASMEDGE_VERSION = "0.13.5"
-    PYTHON_WASM_VERSION = "3.11.0"
+    PYTHON_WASM_VERSION = "3.11.3"
     
     # Download URLs (Official WasmEdge releases)
     WASMEDGE_RELEASES = {
@@ -68,17 +68,21 @@ class DiamondCage:
         "windows_x86_64": f"https://github.com/WasmEdge/WasmEdge/releases/download/{WASMEDGE_VERSION}/WasmEdge-{WASMEDGE_VERSION}-windows.zip",
     }
     
-    PYTHON_WASM_URL = "https://github.com/aspect-build/aspect-cli/releases/download/pyodide-0.1/python-3.11.wasm"
+    # Using a working Python WASM release from webassemblylabs (formerly vmware-labs)
+    # Using a working Python WASM release from the original vmware-labs path (more stable redirects)
+    PYTHON_WASM_URL = "https://github.com/vmware-labs/webassembly-language-runtimes/releases/download/python%2F3.11.3%2B20230428-7d1b259/python-3.11.3.wasm"
     
-    def __init__(self, anchor_home: Optional[Path] = None):
+    def __init__(self, anchor_home: Optional[Path] = None, verbose: bool = False):
         """
         Initialize the Diamond Cage.
         
         Args:
             anchor_home: Custom path for Anchor home directory.
                         Defaults to ~/.anchor
+            verbose: Enable verbose logging
         """
         self.anchor_home = anchor_home or (Path.home() / ".anchor")
+        self.verbose = verbose
         self.bin_dir = self.anchor_home / "bin"
         
         # Determine OS and architecture
@@ -250,12 +254,29 @@ class DiamondCage:
         )
 
 
-def install_diamond_cage(force: bool = False) -> bool:
+    def uninstall(self):
+        """Cleanly remove the Diamond Cage from the local system."""
+        import shutil
+        if self.anchor_home.exists():
+            # Only remove the cage binaries, keep other anchor data if any
+            if self.bin_dir.exists():
+                shutil.rmtree(self.bin_dir)
+            
+            # If the anchor home is now empty, remove it too
+            try:
+                if not any(self.anchor_home.iterdir()):
+                    self.anchor_home.rmdir()
+            except:
+                pass
+
+
+def install_diamond_cage(force: bool = False, verbose: bool = False) -> bool:
     """
     Install the Diamond Cage dependencies (WasmEdge + Python WASM).
     
     Args:
         force: If True, reinstall even if already present
+        verbose: Enable verbose logging
         
     Returns:
         True if installation succeeded, False otherwise
@@ -265,31 +286,33 @@ def install_diamond_cage(force: bool = False) -> bool:
     import zipfile
     import shutil
     
-    cage = DiamondCage()
+    cage = DiamondCage(verbose=verbose)
     
     if cage.is_installed() and not force:
-        print("💎 Diamond Cage already installed.")
+        if verbose: print("💎 Diamond Cage already installed.")
         return True
     
     # Create directories
     cage.bin_dir.mkdir(parents=True, exist_ok=True)
     
-    print("💎 Installing Diamond Cage (WasmEdge Runtime)...")
-    print(f"   Platform: {cage.os_name}/{cage.arch}")
-    print(f"   Location: {cage.bin_dir}")
+    if verbose:
+        print("💎 Installing Diamond Cage (WasmEdge Runtime)...")
+        print(f"   Platform: {cage.os_name}/{cage.arch}")
+        print(f"   Location: {cage.bin_dir}")
     
     # Get the correct download URL
     platform_key = cage.get_platform_key()
     if platform_key not in cage.WASMEDGE_RELEASES:
-        print(f"❌ Unsupported platform: {platform_key}")
-        print("   Supported: linux_x86_64, darwin_x86_64, darwin_arm64, windows_x86_64")
+        if verbose:
+            print(f"❌ Unsupported platform: {platform_key}")
+            print("   Supported: linux_x86_64, darwin_x86_64, darwin_arm64, windows_x86_64")
         return False
     
     wasmedge_url = cage.WASMEDGE_RELEASES[platform_key]
     
     try:
         # Download WasmEdge
-        print(f"⬇️  Downloading WasmEdge {cage.WASMEDGE_VERSION}...")
+        if verbose: print(f"⬇️  Downloading WasmEdge {cage.WASMEDGE_VERSION}...")
         archive_path = cage.bin_dir / "wasmedge_download"
         
         with urllib.request.urlopen(wasmedge_url, timeout=60) as response:
@@ -297,7 +320,7 @@ def install_diamond_cage(force: bool = False) -> bool:
                 f.write(response.read())
         
         # Extract based on OS
-        print("📦 Extracting WasmEdge...")
+        if verbose: print("📦 Extracting WasmEdge...")
         if cage.os_name == "windows":
             with zipfile.ZipFile(archive_path, 'r') as zf:
                 zf.extractall(cage.bin_dir)
@@ -319,29 +342,30 @@ def install_diamond_cage(force: bool = False) -> bool:
         if cage.os_name != "windows":
             cage.runtime_path.chmod(0o755)
         
-        print("✅ WasmEdge installed.")
+        if verbose: print("✅ WasmEdge installed.")
         
     except Exception as e:
-        print(f"❌ Failed to install WasmEdge: {e}")
+        if verbose: print(f"❌ Failed to install WasmEdge: {e}")
         return False
     
     try:
         # Download Python WASM
-        print(f"⬇️  Downloading Python {cage.PYTHON_WASM_VERSION} WASM...")
+        if verbose: print(f"⬇️  Downloading Python {cage.PYTHON_WASM_VERSION} WASM...")
         
         with urllib.request.urlopen(cage.PYTHON_WASM_URL, timeout=120) as response:
             with open(cage.python_wasm_path, 'wb') as f:
                 f.write(response.read())
         
-        print("✅ Python WASM installed.")
+        if verbose: print("✅ Python WASM installed.")
         
     except Exception as e:
-        print(f"❌ Failed to install Python WASM: {e}")
+        if verbose: print(f"❌ Failed to install Python WASM: {e}")
         return False
     
-    print("")
-    print("💎 Diamond Cage Ready!")
-    print(f"   Runtime: {cage.runtime_path}")
-    print(f"   Python:  {cage.python_wasm_path}")
+    if verbose:
+        print("")
+        print("💎 Diamond Cage Ready!")
+        print(f"   Runtime: {cage.runtime_path}")
+        print(f"   Python:  {cage.python_wasm_path}")
     
     return True

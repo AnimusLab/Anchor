@@ -52,15 +52,17 @@ class ModelAuditor:
     - Custom formats (via plugins)
     """
     
-    def __init__(self, policy_config: Dict[str, Any]):
+    def __init__(self, policy_config: Dict[str, Any], verbose: bool = False):
         """
         Initialize auditor with policy configuration.
         
         Args:
             policy_config: Merged policy from finos-master.anchor + policy.anchor
+            verbose: Enable verbose logging
         """
         self.policy = policy_config
         self.rules = policy_config.get('rules', [])
+        self.verbose = verbose
         self.plugins = self._load_plugins()
     
     def _load_plugins(self) -> Dict[str, Any]:
@@ -101,11 +103,13 @@ class ModelAuditor:
         Returns:
             AuditResult with detailed findings
         """
-        print(f"\n🔍 Auditing Model: {model_path}")
+        if self.verbose:
+            print(f"\n🔍 Auditing Model: {model_path}")
         
         # 1. Detect model format
         model_format = self._detect_format(model_path)
-        print(f"   Format: {model_format}")
+        if self.verbose:
+            print(f"   Format: {model_format}")
         
         # 2. Load model metadata
         metadata = self._load_metadata(model_path, metadata_path)
@@ -121,14 +125,14 @@ class ModelAuditor:
             
             if result['status'] == 'passed':
                 checks_passed += 1
-                print(f"   ✅ {rule['id']}: {rule['name']}")
+                if self.verbose: print(f"   ✅ {rule['id']}: {rule['name']}")
             elif result['status'] == 'failed':
                 violations.append(result)
-                print(f"   ❌ {rule['id']}: {result['message']}")
+                if self.verbose: print(f"   ❌ {rule['id']}: {result['message']}")
             elif result['status'] == 'warning':
                 warnings.append(result)
                 checks_passed += 1  # Warnings don't fail the build
-                print(f"   ⚠️  {rule['id']}: {result['message']}")
+                if self.verbose: print(f"   ⚠️  {rule['id']}: {result['message']}")
         
         # 4. Calculate metrics
         metrics = self._calculate_metrics(model_path, metadata, model_format)

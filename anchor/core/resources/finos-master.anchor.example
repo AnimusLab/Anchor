@@ -40,16 +40,15 @@ rules:
     name: "Ban Dynamic Code Execution (eval)"
     category: "code_execution"
     description: |
-      The eval() function executes arbitrary code from strings which can lead to remote code execution.
-      This is strictly forbidden in AI systems to prevent prompt injection from compromising the host environment.
+      The eval() function executes arbitrary Python code from strings.
+      This is a critical security vulnerability in AI systems where
+      inputs may come from untrusted sources (models, prompts, APIs).
     match:
       type: "function_call"
       name: "eval"
     message: "FINOS-001: Dynamic code execution via eval() is forbidden."
     severity: "blocker"
-    mitigation: |
-      Replace eval() with ast.literal_eval() for safe parsing of literal structures.
-      If you need dynamic logic, refactor the code to use a dictionary mapping or a registry instead.
+    mitigation: "Use ast.literal_eval() for safe literal parsing, or refactor to avoid dynamic execution."
     references:
       - "https://owasp.org/Top10/A03_2021-Injection/"
       - "https://finos.github.io/ai-governance/risks/code-execution"
@@ -57,17 +56,12 @@ rules:
   - id: "FINOS-002"
     name: "Ban Dynamic Code Execution (exec)"
     category: "code_execution"
-    description: |
-      The exec() function allows for the execution of arbitrary Python code blocks dynamically.
-      This poses a critical security risk as it can be exploited to bypass process isolation and access sensitive data.
     match:
       type: "function_call"
       name: "exec"
     message: "FINOS-002: Dynamic code execution via exec() is forbidden."
     severity: "blocker"
-    mitigation: |
-      Use explicit function calls and standard object-oriented patterns instead of building code as strings.
-      For dynamic module loading, use the importlib library with strict whitelist validation of module names.
+    mitigation: "Refactor to use explicit function calls instead of dynamic execution."
 
   - id: "FINOS-003"
     name: "Ban Compile for Code Generation"
@@ -88,16 +82,17 @@ rules:
     name: "Supply Chain Attack - Raw Network Access"
     category: "network"
     description: |
-      Direct use of the requests library allows AI agents to communicate with arbitrary external endpoints.
-      This bypasses organizational security controls and can lead to unauthorized data exfiltration or model weight theft.
+      Direct use of HTTP libraries (requests, httpx) bypasses security controls.
+      AI agents with network access can exfiltrate training data, model weights,
+      or sensitive business logic.
     match:
       type: "import"
       module: "requests"
     message: "RI-24: Raw network access forbidden. Use approved MCP/SecureClient."
     severity: "blocker"
     mitigation: |
-      Replace 'import requests' with your organization's approved and monitored SecureClient library.
-      For simple data fetching, use a dedicated Model Context Protocol (MCP) server that enforces strict access limits.
+      Replace 'import requests' with your organization's approved HTTP client.
+      Example: from anchor.net import SecureClient
     references:
       - "https://finos.github.io/ai-governance/risks/supply-chain"
 
@@ -185,31 +180,24 @@ rules:
     name: "Privilege Escalation via Threading"
     category: "threading"
     description: |
-      Direct thread creation via the threading module or Thread class bypasses sandbox resource limits and isolation controls.
-      Malicious code can spawn background threads to evade monitoring or exfiltrate data while the main thread appears idle.
+      Direct thread creation bypasses agent isolation and resource limits.
+      Malicious code can spawn threads to evade monitoring.
     match:
       type: "inheritance"
       parent: "Thread"
     message: "RI-12: Direct threading forbidden. Use managed TaskQueue."
     severity: "error"
-    mitigation: |
-      Use the managed TaskQueue from the anchor.runtime module to handle asynchronous operations within governance boundaries.
-      This ensures that all background tasks are properly instrumented and respect the overall security policy of the project.
+    mitigation: "Use 'from anchor.runtime import TaskQueue' for managed async."
 
   - id: "RI-12-SUBPROCESS"
     name: "Privilege Escalation via Subprocess"
     category: "subprocess"
-    description: |
-      The subprocess module allows for the execution of arbitrary shell commands which can lead to host system compromise.
-      AI agents using this module can execute shell scripts to install malware or elevate their own execution privileges.
     match:
       type: "import"
       module: "subprocess"
     message: "RI-12: Direct subprocess forbidden. Use Diamond Cage sandbox."
     severity: "warning"
-    mitigation: |
-      Execute all external commands within the Diamond Cage sandbox to ensure they are isolated from the host filesystem and network.
-      This prevents any side-effects from escaping the restricted execution environment while allowing the necessary computation to proceed.
+    mitigation: "Use 'anchor.core.sandbox.DiamondCage' for safe subprocess execution."
 
   - id: "RI-12-OS-SYSTEM"
     name: "Privilege Escalation via os.system"
@@ -318,17 +306,11 @@ rules:
   - id: "RI-08-TEMPFILE"
     name: "Temporary File Creation"
     category: "filesystem"
-    description: |
-      The tempfile library creates files in shared system directories that can be vulnerable to symlink attacks or data leakage.
-      Using this library without strict permission controls can allow other users or processes on the host system to view sensitive agent data.
     match:
       type: "import"
       module: "tempfile"
     message: "RI-08: Temp file usage is allowed but monitored."
     severity: "info"
-    mitigation: |
-      Configure tempfile to use a project-specific subdirectory within the .anchor/cache/ path for better isolation.
-      Always use SecureNamedTemporaryFile if available to ensure that file permissions are set correctly from the moment of creation.
 
 # =============================================================================
 # SECTION 7: AI-SPECIFIC RISKS (GenAI Threat Model)
@@ -339,13 +321,10 @@ rules:
     category: "ai_safety"
     check_type: "output_validation"
     description: |
-      AI model outputs are non-deterministic and can produce logically incorrect or fabricated information known as hallucinations.
-      Relying on raw model output for business-critical decisions without secondary verification can lead to severe financial or operational errors.
+      AI model outputs must be validated before being used in code paths
+      that affect business logic, financial calculations, or security decisions.
     message: "AI-20: Model outputs require validation before critical operations."
     severity: "warning"
-    mitigation: |
-      Implement a multi-step validation pipeline that cross-references AI outputs against a ground-truth database or a deterministic engine.
-      Ensure that all high-risk actions triggered by model output require an explicit human-in-the-loop approval before execution.
 
   - id: "AI-21"
     name: "Prompt Injection Vulnerability"

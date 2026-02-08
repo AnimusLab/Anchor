@@ -23,106 +23,158 @@ def cli():
 @click.option('--sandbox', is_flag=True, help='Install Diamond Cage (WASM sandbox) for secure execution.')
 @click.option('--policy-name', default='policy.anchor', help='Name for your project policy file (e.g., jpmorgan.anchor)')
 def init(sandbox, policy_name):
-    """Downloads the latest Constitution and creates a local policy template."""
-
-    # 1. Download Master Constitution from Cloud
-    click.secho("☁️ Fetching FINOS Master Constitution...", fg="blue")
+    """Initializes Anchor using the v2.4.3 visible directory architecture (.anchor/)."""
+    import shutil
     
-    try:
-        # The canonical URL for the FINOS AI Governance Constitution
-        constitution_url = "https://raw.githubusercontent.com/Tanishq1030/Anchor/main/finos-master.anchor"
-        
-        with urllib.request.urlopen(constitution_url, timeout=30) as response:
-            constitution_content = response.read().decode('utf-8')
-        
-        with open("finos-master.anchor", "w", encoding="utf-8") as f:
-            f.write(constitution_content)
-        
-        click.secho("✅ Downloaded 'finos-master.anchor' (Universal Constitution)", fg="green")
-        
-    except Exception as e:
-        click.secho(f"⚠️  Could not fetch from cloud: {e}", fg="yellow")
-        click.secho("   Using local bundled constitution if available.", fg="yellow")
-        
-        # If local file doesn't exist, create a minimal starter
-        if not os.path.exists("finos-master.anchor"):
-            click.secho("❌ No local constitution found. Please check your internet connection.", fg="red")
-            return
+    # 1. Create Visible .anchor Directory Structure
+    # This directory is intended to be visible like .github/
+    dot_anchor = ".anchor"
+    branding_dir = os.path.join(dot_anchor, "branding")
+    cache_dir = os.path.join(dot_anchor, "cache")
+    
+    for d in [dot_anchor, branding_dir, cache_dir]:
+        if not os.path.exists(d):
+            os.makedirs(d)
 
-    # 2. Create Local Project Policy Template
-    # The policy file can be renamed by companies (e.g., legend_studio.anchor, jpmorgan.anchor)
-    if not os.path.exists(policy_name):
+    # 2. Clean Sweep: Remove legacy root-level files if they exist
+    # This ensures a single source of truth inside .anchor/
+    legacy_files = [policy_name, "finos-master.anchor.example", "finos-master.anchor"]
+    for f in legacy_files:
+        if os.path.exists(f):
+            try:
+                os.remove(f)
+                if verbose := os.environ.get("ANCHOR_VERBOSE"):
+                    click.echo(f"   🧹 Removed legacy file from root: {f}")
+            except Exception:
+                pass
+
+    # 3. Deploy Assets exclusively into .anchor/
+    package_root = os.path.dirname(os.path.abspath(__file__))
+    resources_dir = os.path.join(package_root, "core", "resources")
+    
+    # Copy Logo
+    logo_src = os.path.join(resources_dir, "logo.png")
+    logo_dst = os.path.join(branding_dir, "logo.png")
+    if os.path.exists(logo_src):
+        shutil.copy2(logo_src, logo_dst)
+        click.secho("🎨 Anchor Branding Initialized (.anchor/branding)", fg="cyan")
+
+    # Universal Reference (INSIDE .anchor)
+    ref_src = os.path.join(resources_dir, "finos-master.anchor.example")
+    ref_dst = os.path.join(dot_anchor, "finos-master.anchor.example")
+    if os.path.exists(ref_src):
+        shutil.copy2(ref_src, ref_dst)
+        click.secho(f"✅ Deployed reference: {ref_dst}", fg="green")
+
+    # 3. Create Local Project Policy (INSIDE .anchor)
+    target_policy = os.path.join(dot_anchor, policy_name)
+    if not os.path.exists(target_policy):
         project_template = f'''# =============================================================================
 # {policy_name.replace('.anchor', '').upper()} - Project Policy
 # =============================================================================
-# This file extends the FINOS Universal Constitution with YOUR project rules.
+# This file is for YOUR project-specific rules. 
+# It is AUTOMATICALLY IGNORED by git to protect company policies.
 #
-# WHAT YOU CAN DO:
-#   1. ADD new rules specific to your project
-#   2. OVERRIDE severity of Constitution rules (warning → ignore)
-#   3. Blockers from Constitution CANNOT be weakened
-#
-# RENAME THIS FILE:
-#   Companies can rename this file to match their org:
-#   - legend_studio.anchor
-#   - jpmorgan.anchor
-#   - goldman_sachs.anchor
-#
+# Reference universal rules in '.anchor/finos-master.anchor.example'
 # =============================================================================
 
-version: "2.3"
+version: "2.4.14"
 
 metadata:
-  project: "Your Project Name"
-  team: "Your Team"
+  project: "{os.path.basename(os.getcwd())}"
   
 rules:
-  # Example: Add your own project-specific rule
-  # - id: "PROJECT-001"
-  #   name: "Custom Rule"
-  #   match:
-  #     type: "import"
-  #     module: "legacy_library"
-  #   message: "Migrate away from legacy_library."
-  #   severity: "warning"
-  
-  # Example: Override a Constitution rule severity
-  # - id: "RI-12-SUBPROCESS"
-  #   severity: "ignore"  # We've audited our subprocess usage
+  # Add your rules here
 '''
-        with open(policy_name, "w", encoding="utf-8") as f:
+        with open(target_policy, "w", encoding="utf-8") as f:
             f.write(project_template)
-        click.secho(f"✅ Created '{policy_name}' (Project Template)", fg="green")
-        click.secho(f"   → Rename this to your company name (e.g., legend_studio.anchor)", fg="blue")
+        click.secho(f"✅ Created project policy: {target_policy}", fg="green")
     else:
-        click.secho(f"ℹ️  '{policy_name}' already exists. Skipping.", fg="blue")
+        click.secho(f"ℹ️  '{target_policy}' already exists.", fg="blue")
 
-    # 3. Optionally install Diamond Cage (WASM Sandbox)
+    # 4. Automate .gitignore
+    gitignore_path = ".gitignore"
+    # ONLY ignore the sensitive policy, the cache, reports, and branding assets
+    rules_to_ignore = [
+        f"/{dot_anchor}/{policy_name}",
+        f"/{dot_anchor}/cache/",
+        f"/{dot_anchor}/violation_report.txt",
+        f"/{dot_anchor}/branding/"
+    ]
+    
+    try:
+        content = ""
+        if os.path.exists(gitignore_path):
+            with open(gitignore_path, "r") as f:
+                content = f.read()
+        
+        needed = [r for r in rules_to_ignore if r not in content]
+        if needed:
+            with open(gitignore_path, "a") as f:
+                if content and not content.endswith("\n"):
+                    f.write("\n")
+                f.write("\n# Anchor Security & Governance (Local Settings)\n")
+                for r in needed:
+                    f.write(f"{r}\n")
+            click.secho("🛡️ Updated .gitignore to protect local policies.", fg="cyan")
+    except Exception as e:
+        click.secho(f"⚠️  Could not update .gitignore: {e}", fg="yellow")
+
+    # 4.5 Install Git Pre-Commit Hook (The Guardrail)
+    if os.path.exists(".git"):
+        hooks_dir = os.path.join(".git", "hooks")
+        if not os.path.exists(hooks_dir):
+            os.makedirs(hooks_dir)
+        
+        # --- Pre-Commit Hook (Stop the commit) ---
+        pre_commit_path = os.path.join(hooks_dir, "pre-commit")
+        pre_commit_content = """#!/bin/sh
+# Anchor Git Hook: Block commits with high-severity violations
+echo "⚓ [Anchor] Checking local compliance before commit..."
+python -m anchor check --severity error --hook
+if [ $? -ne 0 ]; then
+  echo "🚫 Commit Blocked: Anchor detected compliance violations."
+  echo "👉 See .anchor/violation_report.txt for details."
+  exit 1
+fi
+"""
+        
+        try:
+            with open(pre_commit_path, "w") as f:
+                f.write(pre_commit_content)
+            try: os.chmod(pre_commit_path, 0o755)
+            except: pass
+            
+            click.secho("🛡️ Installed Git pre-commit hook (Local AI Guardrail).", fg="cyan")
+        except Exception as e:
+            click.secho(f"⚠️  Could not install Git hook: {e}", fg="yellow")
+
+    # 5. Optionally install Diamond Cage
     if sandbox:
-        click.secho("\n💎 Installing Diamond Cage (WASM Sandbox)...", fg="cyan", bold=True)
+        click.secho("\n💎 Installing Diamond Cage...", fg="cyan", bold=True)
         from anchor.core.sandbox import install_diamond_cage
-        success = install_diamond_cage()
-        if not success:
-            click.secho("⚠️  Diamond Cage installation failed. Sandbox features disabled.", fg="yellow")
+        install_diamond_cage()
     
     # Summary
     click.echo("\n" + "=" * 60)
-    click.secho("🎯 ANCHOR INITIALIZED", fg="green", bold=True)
+    click.secho("🎯 ANCHOR INITIALIZED (v2.4.14 Architecture)", fg="green", bold=True)
     click.echo("=" * 60)
-    click.echo("Files created:")
-    click.echo("  📜 finos-master.anchor  → Universal Constitution (don't edit)")
-    click.echo(f"  📝 {policy_name}  → Your project rules (edit this)")
-    click.echo("")
-    click.echo("Next steps:")
-    click.echo("  1. Edit your policy file to add project-specific rules")
-    click.echo("  2. Run: anchor check --dir ./src")
+    click.echo("Anchor Assets (see .anchor/):")
+    click.echo(f"  📖 finos-master.anchor.example  → Universal Reference")
+    click.echo(f"  📝 {policy_name}                → Your project laws (Local)")
+    click.echo(f"  🎨 branding/                   → Anchor Identity")
+    click.echo("\n" + "Next steps:")
+    click.echo(f"  1. Review reference: .anchor/finos-master.anchor.example")
+    click.echo(f"  2. Edit your rules: .anchor/{policy_name}")
+    click.echo("  3. Run: anchor check")
     click.echo("=" * 60)
 
 
 
 @click.command()
 @click.option('--policy', '-p', multiple=True, help='Policy file(s) to apply.')
-@click.option('--dir', '-d', help='Directory to scan (for code).')
+@click.argument('path', required=False)
+@click.option('--dir', '-d', '--directory', help='Directory to scan (for code).')
 @click.option('--model', '-m', help='Model weights file to validate (LM Studio, AnchorGrid, etc).')
 @click.option('--metadata', help='Path to training metadata JSON.')
 @click.option('--context', '-c', help='GenAI Threat Model (Markdown) to enforce.')
@@ -130,27 +182,89 @@ rules:
 @click.option('--generate-report', is_flag=True, help='Generate human-readable audit report.')
 @click.option('--json-report', '-j', is_flag=True, help='Generate anchor-report.json for CI.')
 @click.option('--verbose', '-v', is_flag=True, help='Show detailed loading info.')
-def check(policy, dir, model, metadata, context, server_mode, generate_report, json_report, verbose):
+@click.option('--no-sandbox', is_flag=True, help='Disable Diamond Cage WASM sandbox.')
+@click.option('--severity', '-s', default='info', help='Minimum severity to show (info, warning, error, blocker).')
+@click.option('--hook', is_flag=True, help='Indicate if running as a Git hook (customizes output).')
+def check(policy, path, dir, model, metadata, context, server_mode, generate_report, json_report, verbose, no_sandbox, severity, hook):
     """
     Universal enforcement command for code and models.
     """
+    from anchor.core.sandbox import DiamondCage, install_diamond_cage
+    cage = DiamondCage()
+
+    # 0. ENSURE SANDBOX IS READY (Automatic)
+    ephemeral_sandbox = False
+    if not no_sandbox:
+        if not cage.is_installed():
+            if verbose: click.secho("💎 Diamond Cage (WASM Sandbox) not found. Initializing...", fg="cyan")
+            success = install_diamond_cage(verbose=verbose)
+            if not success:
+                if verbose: click.secho("⚠️  Sandbox initialization failed. Falling back to host execution.", fg="yellow")
+            else:
+                ephemeral_sandbox = True
+                if verbose: click.secho("✅ Sandbox Ready!", fg="green")
+        else:
+            if verbose:
+                click.secho("💎 Using Diamond Cage (WASM Sandbox) for isolation.", fg="cyan")
+
     # 1. GATHER THE FEDERATION
-    default_master = "finos-master.anchor"
+    dot_anchor = ".anchor"
+    cache_dir = os.path.join(dot_anchor, "cache")
+    cloud_master = os.path.join(cache_dir, "finos-master.anchor")
     active_policies = []
 
-    # Always prefer master constitution from cloud/local cache
-    if os.path.exists(default_master):
-        active_policies.append(default_master)
-
-    # Load project policy based on mode
-    if server_mode or (not policy and os.path.exists("policy.anchor")):
-        if os.path.exists("policy.anchor"):
-            active_policies.append("policy.anchor")
-    
-    for p in policy:
-        if os.path.exists(p):
-            active_policies.append(p)
+    # --- A. Universal Constitution (Cloud-First) ---
+    if verbose: click.secho("☁️ Syncing with Universal Constitution...", fg="blue")
+    try:
+        if not os.path.exists(cache_dir):
+            os.makedirs(cache_dir)
             
+        constitution_url = "https://raw.githubusercontent.com/Tanishq1030/Anchor/main/finos-master.anchor"
+        with urllib.request.urlopen(constitution_url, timeout=10) as response:
+            content = response.read().decode('utf-8')
+            with open(cloud_master, "w", encoding="utf-8") as f:
+                f.write(content)
+        active_policies.append(cloud_master)
+        if verbose: click.echo("   ✅ Updated Universal Constitution from cloud.")
+    except Exception as e:
+        if os.path.exists(cloud_master):
+            click.secho(f"⚠️  Cloud sync failed, using cached version: {e}", fg="yellow")
+            active_policies.append(cloud_master)
+        elif os.path.exists("finos-master.anchor"):
+            # Backward compatibility for old installations
+            click.secho("⚠️  Using legacy local constitution.", fg="yellow")
+            active_policies.append("finos-master.anchor")
+        else:
+            click.secho(f"❌ Critical Error: Could not fetch rules and no cache found: {e}", fg="red")
+            sys.exit(1)
+
+    # --- B. Project Policy (Local) ---
+    # We look for policy.anchor (default) or any .anchor file in .anchor/ or root
+    if policy:
+        for p in policy:
+            if os.path.exists(p):
+                active_policies.append(p)
+    else:
+        # 1. Check .anchor/ (New default)
+        search_dirs = [dot_anchor, "."]
+        found = False
+        for s_dir in search_dirs:
+            if not os.path.exists(s_dir): continue
+            
+            p_path = os.path.join(s_dir, "policy.anchor")
+            if os.path.exists(p_path):
+                active_policies.append(p_path)
+                found = True
+                break
+            
+            # Discover any .anchor that isn't master or example
+            root_anchors = [f for f in os.listdir(s_dir) if f.endswith('.anchor') and "finos-master" not in f]
+            if root_anchors:
+                active_policies.append(os.path.join(s_dir, root_anchors[0]))
+                if verbose: click.echo(f"   📂 Auto-detected project policy: {active_policies[-1]}")
+                found = True
+                break
+    
     if not active_policies:
         click.secho("❌ No policies found! Run 'anchor init' first.", fg="red")
         sys.exit(1)
@@ -159,11 +273,11 @@ def check(policy, dir, model, metadata, context, server_mode, generate_report, j
     merged_rules = []
     for p_file in active_policies:
         try:
-            loader = PolicyLoader(p_file)
+            loader = PolicyLoader(p_file, verbose=verbose)
             config = loader.load_policy()
             merged_rules.extend(config.get("rules", []))
         except Exception as e:
-            click.secho(f"❌ Failed to parse {p_file}: {e}", fg="red")
+            if verbose: click.secho(f"❌ Failed to parse {p_file}: {e}", fg="red")
 
     final_config = {"rules": merged_rules}
 
@@ -184,9 +298,12 @@ def check(policy, dir, model, metadata, context, server_mode, generate_report, j
     violations = []
     
     if model:
+        # Use Sandbox for Model Audit Weight analysis if enabled
         from anchor.core.model_auditor import ModelAuditor
         click.secho(f"\n🔍 Auditing Model Weights: {model}", fg="cyan", bold=True)
-        auditor = ModelAuditor(final_config)
+        
+        # Pass sandbox status to auditor
+        auditor = ModelAuditor(final_config, verbose=verbose)
         result = auditor.audit_weights(model, metadata)
         
         if result.status.value == "failed":
@@ -200,36 +317,115 @@ def check(policy, dir, model, metadata, context, server_mode, generate_report, j
                 f.write("## Recommendation\n" + result.recommendation + "\n")
             click.secho(f"📋 Report saved: {report_path}", fg="green")
 
-    elif dir or (not model and not dir):
-        scan_dir = dir or "."
+    elif path or dir or (not model and not dir):
+        scan_dir = path or dir or "."
         click.secho(f"🚀 Scanning '{scan_dir}' with {len(merged_rules)} active laws...", fg="yellow")
-        engine = PolicyEngine(config=final_config)
+        engine = PolicyEngine(config=final_config, verbose=verbose)
         results = engine.scan_directory(scan_dir)
         violations = results.get('violations', [])
+        metrics = results.get('metrics', {})
 
     # 4. REPORT & EXIT
+    # Filter violations based on severity level
+    severity_map = {"info": 0, "warning": 1, "error": 2, "blocker": 3, "critical": 3}
+    min_sev_score = severity_map.get(severity.lower(), 0)
+    
+    # Pre-process for counting
+    violations = [v for v in violations if severity_map.get(v['severity'].lower(), 0) >= min_sev_score]
+    
     if json_report:
-        with open("anchor-report.json", "w") as f:
-            json.dump({"violations": violations, "count": len(violations)}, f, indent=2)
+        with open("anchor-report-with-metrics.json", "w") as f:
+            json.dump({"violations": violations, "count": len(violations), "metrics": metrics}, f, indent=2)
         click.secho("📄 JSON report saved: anchor-report.json", fg="green")
 
-    if violations:
-        # Separate failures from warnings
+    if violations or metrics:
+        # Sort violations by severity
         failures = [v for v in violations if v['severity'] in ['critical', 'blocker', 'error']]
+        warnings = [v for v in violations if v['severity'] == 'warning']
+        info = [v for v in violations if v['severity'] == 'info']
+
+        # 1. Generate Plain Text Report (.anchor/violation_report.txt)
+        report_path = os.path.join(dot_anchor, "violation_report.txt")
+        try:
+            from datetime import datetime
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            with open(report_path, "w", encoding="utf-8") as f:
+                f.write("=" * 80 + "\n")
+                f.write("   ⚓ ANCHOR AUDIT REPORT\n")
+                f.write("=" * 80 + "\n\n")
+                f.write(f"Scan Source: {os.path.abspath(scan_dir)}\n")
+                f.write(f"Timestamp:   {timestamp}\n\n")
+                
+                f.write("--- SCAN STATISTICS ---\n")
+                f.write(f"Files Scanned: {metrics.get('scanned_files', 0)}\n")
+                f.write(f"Files Ignored: {metrics.get('ignored_files', 0)}\n")
+                f.write(f"Total Files:   {metrics.get('total_files', 0)}\n")
+                f.write(f"Total Dirs:    {metrics.get('total_dirs', 0)}\n\n")
+
+                f.write("--- VIOLATION SUMMARY ---\n")
+                f.write(f"Total Findings: {len(violations)}\n")
+                f.write(f"Breakdown:      {len(failures)} Violations, {len(warnings)} Warnings, {len(info)} Info\n\n")
+                f.write("-" * 80 + "\n\n")
+                
+                for v in violations:
+                    v_sev = v['severity'].upper()
+                    # Use symbolic tagging for "pseudo-color" in plain text
+                    tag = "[!]" if v_sev in ["CRITICAL", "BLOCKER", "ERROR"] else "[?]"
+                    f.write(f"{tag} [{v['id']}] {v['name']} ({v_sev})\n")
+                    f.write(f"    Location: {v['file']}:{v['line']}\n")
+                    f.write(f"    Message:  {v['message']}\n")
+                    f.write(f"    Details:  {v.get('description', 'No further details.')}\n")
+                    f.write(f"    Fix:      {v.get('mitigation')}\n")
+                    f.write("-" * 40 + "\n")
+            
+            # Force filesystem refresh for IDEs
+            try:
+                os.utime(dot_anchor, None)
+                os.utime(report_path, None)
+            except: pass
+
+            click.secho(f"\n📋 Full report generated: {os.path.abspath(report_path)}", fg="green", bold=True)
+        except Exception as e:
+            click.echo(f"⚠️  Failed to generate report file: {e}")
+
+        # 2. Terminal Summary Output
+        click.secho(f"\n🚫 TOTAL FINDINGS: {len(violations)} violations.", fg="yellow", bold=True)
+        click.echo("-" * 80)
         
-        click.secho(f"\n🚫 FOUND: {len(violations)} violations.", fg="yellow", bold=True)
-        for v in violations:
-            color = "red" if v['severity'] in ['critical', 'blocker', 'error'] else "yellow"
-            severity_suffix = f" ({v['severity'].upper()})"
-            click.secho(f"   [{v['id']}] {v['message']}{severity_suffix}", fg=color)
-            if 'file' in v:
-                click.echo(f"      File: {v['file']}:{v['line']}")
+        # Only show the first 5 violations in terminal to avoid clutter
+        display_limit = 5
+        # Sort by severity (blocker first) for terminal display
+        sorted_violations = sorted(violations, key=lambda x: severity_map.get(x['severity'].lower(), 0), reverse=True)
         
+        for v in sorted_violations[:display_limit]:
+            severity_color = "red" if v['severity'] in ['critical', 'blocker', 'error'] else "yellow"
+            click.secho(f"[{v['id']}] {v['name']} ({v['severity'].upper()})", fg=severity_color, bold=True)
+            click.echo(f"   Location: {v['file']}:{v['line']}")
+            click.echo("-" * 80)
+        
+        if len(violations) > display_limit:
+            click.secho(f"... and {len(violations)-display_limit} more findings in the report.", fg="white", dim=True)
+            click.echo("-" * 80)
+        
+        # 5. CLEANUP (If ephemeral)
+        if ephemeral_sandbox and not no_sandbox:
+            if verbose:
+                click.echo("\n🧹 Cleaning up ephemeral Diamond Cage...")
+            cage.uninstall()
+
         if failures:
-            click.secho(f"\n❌ FAILED: Blocking build due to {len(failures)} high-severity violations.", fg="red", bold=True)
+            if hook:
+                click.secho(f"\n🚫 COMMIT BLOCKED: Anchor detected {len(failures)} violations.", fg="red", bold=True)
+            else:
+                click.secho(f"\n❌ FAILED: Found {len(failures)} critical violations.", fg="red", bold=True)
+            
+            click.secho(f"   (See .anchor/violation_report.txt for details)", fg="white", dim=True)
             sys.exit(1)
         else:
-            click.secho("\n✅ PASSED (with warnings): No high-severity violations found.", fg="green", bold=True)
+            if hook:
+                click.secho("\n✅ COMMIT ALLOWED: No blocking violations found.", fg="green", bold=True)
+            else:
+                click.secho("\n✅ PASSED: No blocking violations found.", fg="green", bold=True)
             sys.exit(0)
     else:
         click.secho("\n✅ PASSED: Compliance Verified.", fg="green", bold=True)

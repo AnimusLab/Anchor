@@ -27,9 +27,11 @@ class RiskMapper:
     
     def __init__(self, 
                  master_policy_path: str = "finos-master.anchor",
-                 local_policy_path: str = "policy.anchor"):
+                 local_policy_path: str = "policy.anchor",
+                 verbose: bool = False):
         self.master_policy_path = master_policy_path
         self.local_policy_path = local_policy_path
+        self.verbose = verbose
         self.all_rules = self._load_federated_policies()
     
     def _load_federated_policies(self) -> List[Dict[str, Any]]:
@@ -48,12 +50,15 @@ class RiskMapper:
                 with open(self.master_policy_path, 'r', encoding='utf-8') as f:
                     master_policy = yaml.safe_load(f) or {}
                     master_rules = master_policy.get('rules', [])
-                    print(f"✅ Loaded {len(master_rules)} rules from FINOS Constitution")
+                    if self.verbose:
+                        print(f"✅ Loaded {len(master_rules)} rules from FINOS Constitution")
             except Exception as e:
-                print(f"❌ Failed to load master policy: {e}")
+                if self.verbose:
+                    print(f"❌ Failed to load master policy: {e}")
         else:
-            print(f"⚠️  Constitution not found at {self.master_policy_path}")
-            print(f"   Run 'anchor init' to download FINOS master policy.")
+            if self.verbose:
+                print(f"⚠️  Constitution not found at {self.master_policy_path}")
+                print(f"   Run 'anchor init' to download FINOS master policy.")
         
         # 2. Load State Law (Company-Specific)
         local_rules = []
@@ -62,15 +67,19 @@ class RiskMapper:
                 with open(self.local_policy_path, 'r', encoding='utf-8') as f:
                     local_policy = yaml.safe_load(f) or {}
                     local_rules = local_policy.get('rules', [])
-                    print(f"✅ Loaded {len(local_rules)} rules from Company Policy")
+                    if self.verbose:
+                        print(f"✅ Loaded {len(local_rules)} rules from Company Policy")
             except Exception as e:
-                print(f"❌ Failed to load local policy: {e}")
+                if self.verbose:
+                    print(f"❌ Failed to load local policy: {e}")
         else:
-            print(f"ℹ️  No local policy found at {self.local_policy_path}")
+            if self.verbose:
+                print(f"ℹ️  No local policy found at {self.local_policy_path}")
         
         # 3. Merge (State Law overrides Constitution)
         merged_rules = self._merge_rules(master_rules, local_rules)
-        print(f"📋 Total federated rules: {len(merged_rules)}")
+        if self.verbose:
+            print(f"📋 Total federated rules: {len(merged_rules)}")
         
         return merged_rules
     
@@ -90,7 +99,8 @@ class RiskMapper:
         for local_rule in local:
             rule_id = local_rule['id']
             if rule_id in rule_map:
-                print(f"🔧 Company override: {rule_id}")
+                if self.verbose:
+                    print(f"🔧 Company override: {rule_id}")
             rule_map[rule_id] = local_rule
         
         return list(rule_map.values())
@@ -114,9 +124,11 @@ class RiskMapper:
             if matching_rule:
                 filtered_rules.append(matching_rule)
                 source = "Company Policy" if risk_id.startswith("BANK-") or risk_id.startswith("PROJECT-") else "FINOS Constitution"
-                print(f"✅ Activated {risk_id} from {source}")
+                if self.verbose:
+                    print(f"✅ Activated {risk_id} from {source}")
             else:
-                print(f"⚠️  Risk {risk_id} not found in federated policies. Skipping.")
+                if self.verbose:
+                    print(f"⚠️  Risk {risk_id} not found in federated policies. Skipping.")
         
         return filtered_rules
 

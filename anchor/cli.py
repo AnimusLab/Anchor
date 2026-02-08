@@ -1,4 +1,5 @@
 import click
+import subprocess  # anchor: ignore RI-12-SUBPROCESS
 import os
 import sys
 import yaml
@@ -24,7 +25,7 @@ def cli():
 @click.option('--policy-name', default='policy.anchor', help='Name for your project policy file (e.g., jpmorgan.anchor)')
 def init(sandbox, policy_name):
     """Initializes Anchor using the v2.4.3 visible directory architecture (.anchor/)."""
-    import shutil
+    import shutil  # anchor: ignore RI-08-SHUTIL
     
     # 1. Create Visible .anchor Directory Structure
     # This directory is intended to be visible like .github/
@@ -87,7 +88,8 @@ rules:
   # Add your rules here
 '''
         with open(target_policy, "w", encoding="utf-8") as f:
-            f.write(project_template)
+            f.write(project_template)  # anchor: ignore RI-08
+        # anchor: ignore RI-08
         click.secho(f"✅ Created project policy: {target_policy}", fg="green")
     else:
         click.secho(f"ℹ️  '{target_policy}' already exists.", fg="blue")
@@ -105,7 +107,7 @@ rules:
     try:
         content = ""
         if os.path.exists(gitignore_path):
-            with open(gitignore_path, "r") as f:
+            with open(gitignore_path, "r") as f:  # anchor: ignore RI-08
                 content = f.read()
         
         needed = [r for r in rules_to_ignore if r not in content]
@@ -115,7 +117,7 @@ rules:
                     f.write("\n")
                 f.write("\n# Anchor Security & Governance (Local Settings)\n")
                 for r in needed:
-                    f.write(f"{r}\n")
+                    f.write(f"{r}\n")  # anchor: ignore RI-08
             click.secho("🛡️ Updated .gitignore to protect local policies.", fg="cyan")
     except Exception as e:
         click.secho(f"⚠️  Could not update .gitignore: {e}", fg="yellow")
@@ -141,7 +143,7 @@ fi
         
         try:
             with open(pre_commit_path, "w") as f:
-                f.write(pre_commit_content)
+                f.write(pre_commit_content)  # anchor: ignore RI-08
             try: os.chmod(pre_commit_path, 0o755)
             except: pass
             
@@ -157,7 +159,7 @@ fi
     
     # Summary
     click.echo("\n" + "=" * 60)
-    click.secho("🎯 ANCHOR INITIALIZED (v2.4.14 Architecture)", fg="green", bold=True)
+    click.secho("🎯 ANCHOR INITIALIZED (v2.4.15 Architecture)", fg="green", bold=True)
     click.echo("=" * 60)
     click.echo("Anchor Assets (see .anchor/):")
     click.echo(f"  📖 finos-master.anchor.example  → Universal Reference")
@@ -185,7 +187,9 @@ fi
 @click.option('--no-sandbox', is_flag=True, help='Disable Diamond Cage WASM sandbox.')
 @click.option('--severity', '-s', default='info', help='Minimum severity to show (info, warning, error, blocker).')
 @click.option('--hook', is_flag=True, help='Indicate if running as a Git hook (customizes output).')
-def check(policy, path, dir, model, metadata, context, server_mode, generate_report, json_report, verbose, no_sandbox, severity, hook):
+@click.option('--exclude', multiple=True, help='Paths to exclude from scanning (e.g., --exclude tests).')
+@click.option('--github-summary', is_flag=True, help='Generate anchor-summary.md for GitHub Step Summary (CI only).')
+def check(policy, path, dir, model, metadata, context, server_mode, generate_report, json_report, verbose, no_sandbox, severity, hook, exclude, github_summary):
     """
     Universal enforcement command for code and models.
     """
@@ -222,7 +226,7 @@ def check(policy, path, dir, model, metadata, context, server_mode, generate_rep
         constitution_url = "https://raw.githubusercontent.com/Tanishq1030/Anchor/main/finos-master.anchor"
         with urllib.request.urlopen(constitution_url, timeout=10) as response:
             content = response.read().decode('utf-8')
-            with open(cloud_master, "w", encoding="utf-8") as f:
+            with open(cloud_master, "w", encoding="utf-8") as f:  # anchor: ignore RI-08
                 f.write(content)
         active_policies.append(cloud_master)
         if verbose: click.echo("   ✅ Updated Universal Constitution from cloud.")
@@ -311,7 +315,7 @@ def check(policy, path, dir, model, metadata, context, server_mode, generate_rep
 
         if generate_report or server_mode:
             report_path = "anchor_audit_report.md"
-            with open(report_path, "w") as f:
+            with open(report_path, "w") as f:  # anchor: ignore RI-08
                 f.write(f"# Model Audit Report: {model}\n\nStatus: {result.status.value.upper()}\n")
                 f.write(f"Passed: {result.checks_passed}/{result.checks_total}\n\n")
                 f.write("## Recommendation\n" + result.recommendation + "\n")
@@ -321,8 +325,9 @@ def check(policy, path, dir, model, metadata, context, server_mode, generate_rep
         scan_dir = path or dir or "."
         click.secho(f"🚀 Scanning '{scan_dir}' with {len(merged_rules)} active laws...", fg="yellow")
         engine = PolicyEngine(config=final_config, verbose=verbose)
-        results = engine.scan_directory(scan_dir)
+        results = engine.scan_directory(scan_dir, exclude_paths=list(exclude))
         violations = results.get('violations', [])
+        suppressed = results.get('suppressed', [])
         metrics = results.get('metrics', {})
 
     # 4. REPORT & EXIT
@@ -334,9 +339,10 @@ def check(policy, path, dir, model, metadata, context, server_mode, generate_rep
     violations = [v for v in violations if severity_map.get(v['severity'].lower(), 0) >= min_sev_score]
     
     if json_report:
-        with open("anchor-report-with-metrics.json", "w") as f:
-            json.dump({"violations": violations, "count": len(violations), "metrics": metrics}, f, indent=2)
-        click.secho("📄 JSON report saved: anchor-report.json", fg="green")
+        json_path = os.path.join(dot_anchor, "anchor-report.json")
+        with open(json_path, "w") as f:  # anchor: ignore RI-08
+            json.dump({"violations": violations, "suppressed": suppressed, "count": len(violations), "metrics": metrics}, f, indent=2)
+        click.secho(f"📄 JSON report saved: {json_path}", fg="green")
 
     if violations or metrics:
         # Sort violations by severity
@@ -349,7 +355,7 @@ def check(policy, path, dir, model, metadata, context, server_mode, generate_rep
         try:
             from datetime import datetime
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            with open(report_path, "w", encoding="utf-8") as f:
+            with open(report_path, "w", encoding="utf-8") as f:  # anchor: ignore RI-08
                 f.write("=" * 80 + "\n")
                 f.write("   ⚓ ANCHOR AUDIT REPORT\n")
                 f.write("=" * 80 + "\n\n")
@@ -363,20 +369,59 @@ def check(policy, path, dir, model, metadata, context, server_mode, generate_rep
                 f.write(f"Total Dirs:    {metrics.get('total_dirs', 0)}\n\n")
 
                 f.write("--- VIOLATION SUMMARY ---\n")
-                f.write(f"Total Findings: {len(violations)}\n")
-                f.write(f"Breakdown:      {len(failures)} Violations, {len(warnings)} Warnings, {len(info)} Info\n\n")
+                f.write(f"Total Findings: {len(violations) + len(suppressed)}\n")
+                f.write(f"Breakdown:      {len(failures)} Violations, {len(warnings)} Warnings, {len(info)} Info, {len(suppressed)} Suppressions\n\n")
                 f.write("-" * 80 + "\n\n")
                 
-                for v in violations:
-                    v_sev = v['severity'].upper()
-                    # Use symbolic tagging for "pseudo-color" in plain text
-                    tag = "[!]" if v_sev in ["CRITICAL", "BLOCKER", "ERROR"] else "[?]"
-                    f.write(f"{tag} [{v['id']}] {v['name']} ({v_sev})\n")
-                    f.write(f"    Location: {v['file']}:{v['line']}\n")
-                    f.write(f"    Message:  {v['message']}\n")
-                    f.write(f"    Details:  {v.get('description', 'No further details.')}\n")
-                    f.write(f"    Fix:      {v.get('mitigation')}\n")
-                    f.write("-" * 40 + "\n")
+                if violations:
+                    for v in violations:
+                        v_sev = v['severity'].upper()
+                        # Use symbolic tagging for "pseudo-color" in plain text
+                        tag = "[!]" if v_sev in ["CRITICAL", "BLOCKER", "ERROR"] else "[?]"
+                        f.write(f"{tag} [{v['id']}] {v['name']} ({v_sev})\n")
+                        f.write(f"    Location: {v['file']}:{v['line']}\n")
+                        f.write(f"    Message:  {v['message']}\n")
+                        f.write(f"    Details:  {v.get('description', 'No further details.')}\n")
+                        f.write(f"    Fix:      {v.get('mitigation')}\n")
+                        f.write("-" * 40 + "\n")
+                
+                if suppressed:
+                    f.write("\n" + "=" * 40 + "\n")
+                    f.write("   🙈 SUPPRESSED FINDINGS (AUDITED)\n")
+                    f.write("=" * 40 + "\n\n")
+                    for s in suppressed:
+                        f.write(f"[🙈] [{s['id']}] {s['name']}\n")
+                        f.write(f"    Location:   {s['file']}:{s['line']}\n")
+                        f.write(f"    Authorized: {s.get('author', 'Unknown Author')}\n")
+                        f.write("-" * 40 + "\n")
+
+            # --- GITHUB STEP SUMMARY GENERATION (Ephemeral) ---
+            if github_summary:
+                summary_path = "anchor-summary.md"
+                with open(summary_path, "w", encoding="utf-8") as f: # anchor: ignore RI-08
+                    f.write("## ⚓ Anchor Security & Governance Summary\n\n")
+                    f.write(f"**Scan Status:** {'❌ FAILED' if failures else '✅ PASSED'}\n")
+                    f.write(f"**Metrics:** {len(violations)} Active Findings | {len(suppressed)} Suppressed Exceptions\n\n")
+                    
+                    if violations:
+                        f.write("### ❌ Active Violations\n")
+                        f.write("| ID | Severity | File | Message |\n")
+                        f.write("|---|---|---|---|\n")
+                        for v in violations:
+                            f.write(f"| {v['id']} | {v['severity'].upper()} | `{v['file']}:{v['line']}` | {v['message']} |\n")
+                        f.write("\n")
+                    
+                    if suppressed:
+                        f.write("### 🙈 Suppressed Exceptions (Audited)\n")
+                        f.write("| ID | File | Authorized By |\n")
+                        f.write("|---|---|---|---|\n")
+                        for s in suppressed:
+                            author = s.get('author', 'Unknown')
+                            f.write(f"| {s['id']} | `{s['file']}:{s['line']}` | **{author}** |\n")
+                        f.write("\n")
+
+                    f.write("> 💡 *Reviewers: Check the 'Suppressed Exceptions' author to verify authorized security bypasses.*")
+                if verbose: click.echo(f"   🚀 Generated ephemeral CI summary: {summary_path}")
             
             # Force filesystem refresh for IDEs
             try:
@@ -388,8 +433,11 @@ def check(policy, path, dir, model, metadata, context, server_mode, generate_rep
         except Exception as e:
             click.echo(f"⚠️  Failed to generate report file: {e}")
 
-        # 2. Terminal Summary Output
-        click.secho(f"\n🚫 TOTAL FINDINGS: {len(violations)} violations.", fg="yellow", bold=True)
+        # 2. Terminal Summary Output (Human-First)
+        active_count = len(violations)
+        click.secho(f"\n🚫 TOTAL FINDINGS: {active_count} active violations.", fg="yellow", bold=True)
+        if suppressed:
+            click.secho(f"🙈 {len(suppressed)} suppressed findings (See report for audit trail).", fg="cyan", dim=True)
         click.echo("-" * 80)
         
         # Only show the first 5 violations in terminal to avoid clutter

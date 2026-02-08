@@ -2,72 +2,40 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
 
 # Distribution / Packaging
 dist/
 build/
 *.egg-info/
+.eggs/
 
 # Environments
 .env
 venv/
 env/
-
-# IDEs
-.vscode/
-.idea/
-
-# Anchor Brain (Local Database)
-brain.db
-# Python Noise
-__pycache__/
-*.pyc
-build/
-dist/
-*.egg-info/
-
-# Virtual Env
-anchor_dev/
-venv/
-.env
-
-# Testing Noise
-victim.py
-debug_anchor.py
-test_policy.anchor
-# Python Artifacts
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Virtual Environments
-venv/
-env/
 anchor_dev/
 ENV/
 
-# Anchor Specific (Don't commit local test policies if you don't want to)
-# But we usually KEEP these for the demo
-# finos-master.anchor
-# policy.anchor
+# Anchor Specific
+.anchor/
+*.anchor.example
+!finos-master.anchor
+
+# Testing & Debug Items
+victim.py
+debug_anchor.py
+test_policy.anchor
+debug_ast.py
+debug_ts_query.py
+test.ts
+test_dir_unified/
+test_poc.py
+test_unified.py
+ts_probe.py
 
 # IDEs
 .vscode/
 .idea/
+*.swp
+*.swo

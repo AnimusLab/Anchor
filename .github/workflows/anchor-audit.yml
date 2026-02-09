@@ -13,6 +13,9 @@ jobs:
   anchor-audit:
     runs-on: ubuntu-latest
     name: Enforce FINOS Policies
+    permissions:
+      pull-requests: write
+      contents: read
 
     steps:
       - name: Checkout Code

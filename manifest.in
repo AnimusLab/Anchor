@@ -1,3 +1,5 @@
 include README.md
 include USAGE.md
 include LICENSE
+recursive-include anchor *.py
+recursive-include anchor/core/resources *

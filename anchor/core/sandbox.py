@@ -12,7 +12,7 @@ The "Diamond Cage" provides:
 - Cross-platform support (Windows, Linux, macOS)
 """
 
-import subprocess
+import subprocess  # anchor: ignore RI-12-SUBPROCESS
 import os
 import sys
 import platform
@@ -256,7 +256,7 @@ class DiamondCage:
 
     def uninstall(self):
         """Cleanly remove the Diamond Cage from the local system."""
-        import shutil
+        import shutil  # anchor: ignore RI-08-SHUTIL
         if self.anchor_home.exists():
             # Only remove the cage binaries, keep other anchor data if any
             if self.bin_dir.exists():

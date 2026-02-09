@@ -18,6 +18,7 @@ class MarkdownPolicyParser:
         detected_risks = set()
 
         try:
+            # anchor: ignore RI-08
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
 
@@ -53,7 +54,7 @@ if __name__ == "__main__":
        - Mitigation: Use Guardrails.
     """
 
-    with open("temp_threat_model.md", "w") as f:
+    with open("temp_threat_model.md", "w") as f:  # anchor: ignore RI-08
         f.write(dummy_md)
 
     parser = MarkdownPolicyParser()

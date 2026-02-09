@@ -4,17 +4,41 @@ from anchor.adapters.base import LanguageAdapter
 
 
 class PolicyEngine:
-    def __init__(self, config: Dict[str, Any], verbose: bool = False):
-        self.config = config
+    def __init__(self, config: Dict[str, Any] = None, verbose: bool = False):
+        self.config = config or {}
         self.verbose = verbose
         # Flatten rules from all loaded policies
-        self.rules = config.get("rules", [])
+        self.rules = config.get("rules", []) if config else []
+        self.allow_suppressions = self.config.get("allow_suppressions", True)
 
-    def scan_directory(self, dir_path: str) -> Dict[str, Any]:
+    def _get_suppression_author(self, file_path: str, line_num: int) -> str:
+        """Internal discovery of who authorized a security suppression."""
+        import subprocess
+        try:
+            # Normalize path for git on Windows
+            norm_path = file_path.replace("\\", "/")
+            cmd = ["git", "blame", "-L", f"{line_num},{line_num}", "--porcelain", norm_path]
+            result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+            if result.returncode == 0:
+                for line in result.stdout.splitlines():
+                    if line.startswith("author "):
+                        return line[7:].strip()
+        except:
+            pass
+        return "Unknown"
+
+    def scan_directory(self, dir_path: str, exclude_paths: List[str] = None) -> Dict[str, Any]:
         import os
         import click
+        from pathlib import Path
         all_violations = []
         
+        exclude_paths = exclude_paths or []
+        # Support both absolute and relative path matches
+        # Load from config if present
+        config_ignores = self.config.get("ignore_paths", []) if self.config else []
+        combined_excludes = set(exclude_paths + config_ignores)
+
         total_files_encountered = 0
         ignored_files = 0
         total_dirs = 0
@@ -25,14 +49,27 @@ class PolicyEngine:
             total_dirs += 1
             prune_list = ["build", "dist", "__pycache__", ".git", "node_modules", "target", "venv", ".venv", ".cache", "docs", "artifacts", ".anchor"]
             
-            # Count directories being ignored
-            for d in dirs:
-                if d in prune_list:
-                    # We don't recurse into these, so they are ignored
-                    pass
-            
+            # 1. Prune hardcoded defaults
             dirs[:] = [d for d in dirs if d not in prune_list]
-            
+
+            # 2. Prune user-defined exclusions
+            if combined_excludes:
+                # Check if current root or any child dir matches an exclusion
+                rel_root = os.path.relpath(root, dir_path)
+                
+                # Check dirs for dynamic pruning
+                new_dirs = []
+                for d in dirs:
+                    d_rel_path = os.path.normpath(os.path.join(rel_root, d))
+                    is_excluded = False
+                    for pattern in combined_excludes:
+                        if pattern in d_rel_path or d_rel_path.startswith(pattern):
+                            is_excluded = True
+                            break
+                    if not is_excluded:
+                        new_dirs.append(d)
+                dirs[:] = new_dirs
+
             for file in files:
                 total_files_encountered += 1
                 if file.endswith(('.png', '.jpg', '.jpeg', '.gif', '.ico', '.pdf', '.zip', '.gz', '.map')):
@@ -41,8 +78,8 @@ class PolicyEngine:
                 full_path = os.path.join(root, file)
                 target_files.append(full_path)
 
-        # Run Scan with Progress Bar
         scanned_count = 0
+        all_suppressed = [] # Tracking suppressed findings
         with click.progressbar(target_files, label="⚓ Analyzing Security Posture", fill_char="█", empty_char="░") as bar:
             for full_path in bar:
                 adapter = LanguageRegistry.get_adapter_for_file(full_path)
@@ -53,8 +90,9 @@ class PolicyEngine:
                             if len(content) > 2 * 1024 * 1024:
                                 ignored_files += 1
                                 continue
-                            violations = self.scan_file(content, full_path, adapter)
-                            all_violations.extend(violations)
+                            results = self.scan_file(content, full_path, adapter)
+                            all_violations.extend(results.get("violations", []))
+                            all_suppressed.extend(results.get("suppressed", []))
                             scanned_count += 1
                     except Exception as e:
                         if self.verbose: click.echo(f"⚠️  Error scanning {full_path}: {e}")
@@ -63,6 +101,7 @@ class PolicyEngine:
 
         return {
             "violations": all_violations,
+            "suppressed": all_suppressed,
             "metrics": {
                 "scanned_files": scanned_count,
                 "ignored_files": ignored_files,
@@ -71,8 +110,9 @@ class PolicyEngine:
             }
         }
 
-    def scan_file(self, content: bytes, file_path: str, adapter: LanguageAdapter) -> List[Dict]:
+    def scan_file(self, content: bytes, file_path: str, adapter: LanguageAdapter) -> Dict[str, List[Dict]]:
         violations = []
+        suppressed = []
         try:
             tree = adapter.parse(content)
         except Exception as e:
@@ -150,10 +190,42 @@ class PolicyEngine:
                                     click.echo(f"    ⏩ [FILTERED] False positive match for {rule['id']}")
                                 continue
 
-                            # 3. RECORD VIOLATION
-                            v_raw = match_data.get("violation")
-                            v_node = v_raw[0] if isinstance(v_raw, list) else v_raw
+                            line_num = v_node.start_point[0] + 1
                             
+                            # --- IN-LINE SUPPRESSION CHECK ---
+                            is_suppressed = False
+                            if self.allow_suppressions:
+                                try:
+                                    lines = content.decode('utf-8', errors='ignore').splitlines()
+                                    # Check current line and NEXT line for suppression (common in 'with open' blocks)
+                                    search_lines = []
+                                    if 0 < line_num <= len(lines):
+                                        search_lines.append(lines[line_num - 1])
+                                    if 0 < (line_num + 1) <= len(lines):
+                                        search_lines.append(lines[line_num])
+                                    
+                                    for l_content in search_lines:
+                                        if f"# anchor: ignore {rule['id']}" in l_content or "# anchor: ignore-all" in l_content:
+                                            author = self._get_suppression_author(file_path, line_num)
+                                            if self.verbose: 
+                                                import click
+                                                click.echo(f"    🙈 [SUPPRESSED] Rule {rule['id']} at line {line_num} (Author: {author})")
+                                            
+                                            suppressed.append({
+                                                "id": rule["id"],
+                                                "name": rule.get("name", "Unnamed Rule"),
+                                                "file": file_path,
+                                                "line": line_num,
+                                                "author": author,
+                                                "severity": rule.get("severity", "error")
+                                            })
+                                            is_suppressed = True
+                                            break
+                                except: pass
+                            
+                            if is_suppressed:
+                                continue
+
                             violations.append({
                                 "id": rule["id"],
                                 "name": rule.get("name", "Unnamed Rule"),
@@ -161,7 +233,7 @@ class PolicyEngine:
                                 "message": rule.get("message", "Policy Violation"),
                                 "mitigation": rule.get("mitigation", "No mitigation provided."),
                                 "file": file_path,
-                                "line": v_node.start_point[0] + 1,
+                                "line": line_num,
                                 "severity": rule.get("severity", "error")
                             })
                 except Exception as e:
@@ -172,8 +244,24 @@ class PolicyEngine:
 
             # --- MODE B: Regex (Fallback) ---
             elif "pattern" in rule:
-                found = self._check_regex(content.decode('utf-8', errors='ignore'), rule["pattern"])
+                found = self._check_regex(content.decode('utf-8', errors='ignore'), rule["pattern"], rule_id=rule.get("id"))
                 for line_num, match_text in found:
+                    is_suppressed = False
+                    if self.allow_suppressions:
+                        if f"# anchor: ignore {rule.get('id')}" in match_text or "# anchor: ignore-all" in match_text:
+                            author = self._get_suppression_author(file_path, line_num)
+                            suppressed.append({
+                                "id": rule["id"],
+                                "name": rule.get("name", "Unnamed Rule"),
+                                "file": file_path,
+                                "line": line_num,
+                                "author": author,
+                                "severity": rule.get("severity", "error")
+                            })
+                            is_suppressed = True
+                    
+                    if is_suppressed: continue
+
                     violations.append({
                         "id": rule["id"],
                         "name": rule.get("name", "Unnamed Rule"),
@@ -184,7 +272,7 @@ class PolicyEngine:
                         "severity": rule.get("severity", "error")
                     })
 
-        return violations
+        return {"violations": violations, "suppressed": suppressed}
 
     def _execute_query(self, root_node, adapter: LanguageAdapter, s_expr: str) -> List[Dict]:
         """Standardized query execution returning all capture groups for verification."""
@@ -285,12 +373,38 @@ class PolicyEngine:
         
         return results
 
-    def _check_regex(self, content: str, pattern: str) -> List[tuple]:
+    def _check_regex(self, content: str, pattern: str, rule_id: str = None) -> List[tuple]:
         import re
         results = []
         lines = content.split('\n')
         # Limit regex lines for performance
         for i, line in enumerate(lines[:5000]): 
             if re.search(pattern, line):
+                # Return match with its full line for later suppression check
                 results.append((i + 1, line.strip()))
         return results
+
+    def _get_suppression_author(self, file_path: str, line_num: int) -> str:
+        """Use git blame to identify who authorized the suppression."""
+        import subprocess
+        import os
+        
+        try:
+            # 1. Get the absolute path to ensure git finds the file
+            abs_path = os.path.abspath(file_path)
+            
+            # 2. Run git blame for the specific line
+            # -L <start>,<end> : only blame the specified line
+            # --porcelain      : machine-readable format
+            cmd = ["git", "blame", "-L", f"{line_num},{line_num}", "--porcelain", abs_path]
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            
+            # 3. Parse author from porcelain output
+            for line in result.stdout.splitlines():
+                if line.startswith("author "):
+                    return line.replace("author ", "").strip()
+        except Exception:
+            # Fallback for non-git files or errors
+            pass
+            
+        return "Not Committed Yet (Local)"

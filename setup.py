@@ -9,7 +9,7 @@ long_description = (here / "README.md").read_text(encoding="utf-8")
 
 setup(
     name="anchor-audit",
-    version="2.4.14",  # Dynamic Messaging Release - v2.4 Architecture
+    version="2.4.15",  # Packaging & Exclusions - v2.4 Architecture
     description="The Federated Governance Engine for AI (Universal Multi-Language)",
     long_description=long_description,
     long_description_content_type="text/markdown",

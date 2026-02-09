@@ -5,42 +5,55 @@ name: FINOS AI Governance Check
 
 on:
   pull_request:
-    branches: [ main, develop, master ]  # Works with any branch name
+    branches: [main, develop, master] # Works with any branch name
   push:
-    branches: [ main, master ]
+    branches: [main, master]
 
 jobs:
   anchor-audit:
     runs-on: ubuntu-latest
     name: Enforce FINOS Policies
-    
+    permissions:
+      pull-requests: write
+      contents: read
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
-      
+          python-version: "3.13"
+
       - name: Install Anchor-Audit
         run: |
           pip install .
-      
+
       # - name: Download FINOS Master Constitution
       #   run: |
       #     # Download the cloud constitution
       #     curl -o finos-master.anchor https://raw.githubusercontent.com/finos/anchor-rules/main/master.anchor
-      
+
       - name: Run Governance Check
         run: |
-          anchor check --dir ./anchor --json-report --verbose
+          python -m anchor check . --exclude examples --exclude tests --json-report --github-summary
         env:
           ANCHOR_STRICT: "true"
-      
-      - name: Upload Violation Report
-        if: failure()
+
+      - name: Generate Step Summary
+        if: always()
+        run: |
+          if [ -f anchor-summary.md ]; then
+            cat anchor-summary.md >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload Audit Artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: anchor-violations
-          path: anchor-report.json
+          name: anchor-audit-reports
+          path: |
+            .anchor/anchor-report.json
+            .anchor/violation_report.txt
+            anchor-summary.md

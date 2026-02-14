@@ -27,8 +27,8 @@ from anchor.core.config import settings
 # These CANNOT be overridden via environment.
 # Updated via: python -c "import hashlib; print(hashlib.sha256(open('FILE','rb').read()).hexdigest().upper())"
 
-CONSTITUTION_SHA256 = "3745014B26B42347A4C4F525B705937A36CBD7738E7401A58C6F40E990525AFF"
-MITIGATION_SHA256 = "E3E32531BD81942352DBEF700159DBC69FD63B41FCB5ACD9C17166D8F1B91DD2"
+CONSTITUTION_SHA256 = "7C24EE8648AC1DF496EA1EBDEE3F274BB75DE53E892D7210E4695D2DE731DFEF"
+MITIGATION_SHA256 = "0FE901378610EA77F8BA3239AB93035E454CEBC1C3884B9AB1D7CD3FD34451B2"
 
 
 # =============================================================================
@@ -49,11 +49,17 @@ def get_mitigation_url() -> str:
 # =============================================================================
 
 def compute_hash(file_path: str) -> str:
-    """Compute SHA-256 hash of a file."""
+    """Compute SHA-256 hash of a file (line-ending normalized).
+
+    Normalizes CRLF → LF before hashing to ensure identical results
+    across Windows (CRLF) and Linux/macOS (LF) environments.
+    """
     sha256 = hashlib.sha256()
     with open(file_path, "rb") as f:
-        for chunk in iter(lambda: f.read(8192), b""):
-            sha256.update(chunk)
+        content = f.read()
+    # Normalize: strip all \r so CRLF becomes LF
+    content = content.replace(b"\r\n", b"\n")
+    sha256.update(content)
     return sha256.hexdigest().upper()
 
 

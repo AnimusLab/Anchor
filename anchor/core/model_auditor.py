@@ -57,7 +57,7 @@ class ModelAuditor:
         Initialize auditor with policy configuration.
         
         Args:
-            policy_config: Merged policy from finos-master.anchor + policy.anchor
+            policy_config: Merged policy from constitution.anchor + policy.anchor
             verbose: Enable verbose logging
         """
         self.policy = policy_config

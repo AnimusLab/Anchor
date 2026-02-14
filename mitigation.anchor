@@ -1,0 +1,169 @@
+# =============================================================================
+# ANCHOR MITIGATION CATALOG — Detection Patterns (v3.1.0)
+# =============================================================================
+# This file defines the HOW — the detection patterns for risks.
+# Patterns are "regex" (line-level) or "ast" (tree-sitter queries).
+#
+# DESIGN PRINCIPLE: Patterns must be CONTEXT-AWARE.
+#   ✅ Flag: prompt = f"Process: {user_input}"
+#   ❌ Skip: click.echo(f"Loaded {count} rules")
+# =============================================================================
+
+version: "3.1.0"
+
+mitigations:
+  # =========================================================================
+  # TIER 1: CODE-SCANNABLE (High Confidence)
+  # =========================================================================
+
+  # --- ANC-001: Hosted Model Leakage ---
+  - id: "MIT-001-A"
+    rule_id: "ANC-001"
+    name: "Public LLM Endpoint Detection"
+    match:
+      type: "regex"
+      pattern: 'api\.(openai|anthropic|cohere)\.(com|ai)'
+    message: "Direct call to public LLM API detected. Route through a PII-scrubbing proxy."
+    severity: "blocker"
+
+  # --- ANC-004: Foundation Model Versioning ---
+  - id: "MIT-004-A"
+    rule_id: "ANC-004"
+    name: "Unpinned Model Alias"
+    match:
+      type: "regex"
+      pattern: 'model\s*=\s*["\x27](gpt-4|gpt-4o|gpt-3\.5-turbo|claude-3|claude-3\.5)["\x27]'
+    message: "Unpinned model alias detected. Pin to a dated snapshot (e.g., 'gpt-4-0613')."
+    severity: "warning"
+
+  # --- ANC-008: Data Poisoning ---
+  - id: "MIT-008-A"
+    rule_id: "ANC-008"
+    name: "Unverified Training Data Source"
+    match:
+      type: "regex"
+      pattern: 'load_dataset\s*\('
+    message: "External dataset loading detected. Verify data provenance and integrity."
+    severity: "error"
+
+  # --- ANC-009: Prompt Injection ---
+  # Context-aware: Only matches f-strings assigned to prompt-related variables
+  - id: "MIT-009-A"
+    rule_id: "ANC-009"
+    name: "Unsanitized User Input in Prompt"
+    match:
+      type: "regex"
+      pattern: '(prompt|system_prompt|user_message|instruction|content)\s*=\s*f["\x27]'
+    message: "User-controlled variable interpolated into LLM prompt via f-string. Use parameterized templates."
+    severity: "blocker"
+
+  # --- ANC-009: Prompt Injection (Pattern B) ---
+  # Catches .format() on prompt-like variables
+  - id: "MIT-009-B"
+    rule_id: "ANC-009"
+    name: "Prompt Template with .format()"
+    match:
+      type: "regex"
+      pattern: '(prompt|system_prompt|user_message|instruction)\s*=\s*["\x27].*\{.*\}.*["\x27]\.format\('
+    message: "String .format() used in prompt construction. Vulnerable to injection via format specifiers."
+    severity: "blocker"
+
+  # --- ANC-009: Prompt Injection (Pattern C) ---
+  # Catches string concatenation with user input in prompt context
+  - id: "MIT-009-C"
+    rule_id: "ANC-009"
+    name: "Prompt String Concatenation"
+    match:
+      type: "regex"
+      pattern: '(prompt|message|content)\s*(\+|=\s*.*\+)\s*(user_input|request\.body|input\()'
+    message: "String concatenation with user input in prompt variable. Use input sanitization."
+    severity: "blocker"
+
+  # --- ANC-018: Agent Auth Bypass ---
+  - id: "MIT-018-A"
+    rule_id: "ANC-018"
+    name: "Unsandboxed Subprocess in Agent"
+    match:
+      type: "regex"
+      pattern: 'subprocess\.(run|call|Popen|check_output)\s*\('
+    message: "Native subprocess execution detected. Use Diamond Cage (WASM) sandboxing for agent tools."
+    severity: "blocker"
+
+  # --- ANC-020: MCP Supply Chain ---
+  - id: "MIT-020-A"
+    rule_id: "ANC-020"
+    name: "External MCP Server Connection"
+    match:
+      type: "regex"
+      pattern: 'mcp.*connect\s*\(\s*["\x27]https?://'
+    message: "MCP server connection to external URL. Whitelist approved servers only."
+    severity: "blocker"
+
+  # --- ANC-023: Credential Harvesting ---
+  - id: "MIT-023-A"
+    rule_id: "ANC-023"
+    name: "Bulk Env Variable Access"
+    match:
+      type: "regex"
+      pattern: 'os\.environ\b(?!\.(get\(["\x27](PATH|HOME|USER|LANG)))'
+    message: "Broad environment variable access detected. Agents may harvest secrets from env."
+    severity: "error"
+
+  # =========================================================================
+  # TIER 2: MODEL AUDIT (Weight/Config Inspection)
+  # =========================================================================
+
+  # --- ANC-007: Model Tampering ---
+  - id: "MIT-007-A"
+    rule_id: "ANC-007"
+    name: "Unsigned Model Download"
+    match:
+      type: "regex"
+      pattern: 'from_pretrained\s*\(["\x27](?!.*trust_remote_code\s*=\s*False)'
+    message: "Model loaded without disabling remote code execution. Set trust_remote_code=False."
+    severity: "blocker"
+
+  # =========================================================================
+  # TIER 3: MISSING MITIGATION (Absence Detection)
+  # =========================================================================
+
+  # --- ANC-003: Hallucination ---
+  # Detects LLM API calls where output is used without a validation step
+  - id: "MIT-003-A"
+    rule_id: "ANC-003"
+    name: "LLM Output Without Validation"
+    match:
+      type: "regex"
+      pattern: '\.(ChatCompletion|completions|messages)\.(create|send)\s*\('
+    message: "LLM API call detected. Ensure output is validated before use (e.g., schema check, grounding)."
+    severity: "error"
+
+  # --- ANC-005: Non-Determinism ---
+  - id: "MIT-005-A"
+    rule_id: "ANC-005"
+    name: "Missing Temperature Lock"
+    match:
+      type: "regex"
+      pattern: 'temperature\s*=\s*([1-9]|0\.[1-9]|1\.0)'
+    message: "Non-zero temperature detected. Set temperature=0 for deterministic outputs in production."
+    severity: "warning"
+
+  # --- ANC-006: Availability ---
+  - id: "MIT-006-A"
+    rule_id: "ANC-006"
+    name: "Missing API Timeout"
+    match:
+      type: "regex"
+      pattern: '(openai|anthropic|cohere)\.(Client|ChatCompletion)\s*\((?!.*timeout)'
+    message: "LLM client initialized without explicit timeout. Add timeout parameter for resilience."
+    severity: "warning"
+
+  # --- ANC-021: State Poisoning ---
+  - id: "MIT-021-A"
+    rule_id: "ANC-021"
+    name: "Persistent Memory Without TTL"
+    match:
+      type: "regex"
+      pattern: '(save_memory|persist_state|store_context)\s*\((?!.*ttl|.*expire|.*max_age)'
+    message: "Agent memory persisted without TTL/expiry. Risk of long-term state poisoning."
+    severity: "error"

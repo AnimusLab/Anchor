@@ -1,9 +1,0 @@
-version: "2.1"
-rules:
-  - id: "PROJECT-001"
-    name: "Ban Requests Library"
-    match:
-      type: "import"
-      module: "requests"
-    message: "Project Policy: Use internal 'SecureFetch' instead."
-    severity: "warning"

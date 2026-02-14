@@ -18,7 +18,7 @@ class PolicyEngine:
             # Normalize path for git on Windows
             norm_path = file_path.replace("\\", "/")
             cmd = ["git", "blame", "-L", f"{line_num},{line_num}", "--porcelain", norm_path]
-            result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+            result = subprocess.run(cmd, capture_output=True, text=True, check=False)  # anchor: ignore ANC-018
             if result.returncode == 0:
                 for line in result.stdout.splitlines():
                     if line.startswith("author "):
@@ -136,6 +136,24 @@ class PolicyEngine:
                         s_expr = adapter.build_import_query([match_config.get("module")])
                     elif rule_type == "inheritance":
                         s_expr = adapter.build_inheritance_query([match_config.get("parent")])
+                    elif rule_type == "regex":
+                        # Nested regex support inside 'match' block
+                        pattern = match_config.get("pattern")
+                        found = self._check_regex(content.decode('utf-8', errors='ignore'), pattern, rule_id=rule.get("id"))
+                        for line_num, match_text in found:
+                            is_suppressed = False
+                            if self.allow_suppressions:
+                                if f"# anchor: ignore {rule.get('id')}" in match_text or "# anchor: ignore-all" in match_text:
+                                    author = self._get_suppression_author(file_path, line_num)
+                                    suppressed.append({
+                                        "id": rule["id"], "name": rule.get("name"), "file": file_path, "line": line_num, "author": author, "severity": rule.get("severity", "error")
+                                    })
+                                    is_suppressed = True
+                            if not is_suppressed:
+                                violations.append({
+                                    "id": rule["id"], "name": rule.get("name"), "description": rule.get("description"), "message": rule.get("message"), "mitigation": rule.get("mitigation"), "file": file_path, "line": line_num, "severity": rule.get("severity", "error")
+                                })
+                        continue # Regex handled, skip AST logic
                     else:
                         s_expr = rule.get("raw_query", "")
 
@@ -147,20 +165,15 @@ class PolicyEngine:
                         matches = self._execute_query(tree.root_node, adapter, s_expr)
                         if self.verbose:
                             click.secho(f"    🔢 Raw Matches: {len(matches)}", fg="white", dim=True)
-                        
-                        if self.verbose and not matches:
-                             # Silence this usually, but helpful for debugging specific rule failures
-                             # click.secho(f"    ℹ️  No AST matches for rule {rule['id']}", fg="white", dim=True)
-                             pass
 
                         for match_data in matches:
-                            if self.verbose:
-                                caps = ", ".join([f"{k}:({v[0].type if isinstance(v, list) else v.type})" for k, v in match_data.items()])
-                                click.secho(f"    🔬 Query Match: Captures=[{caps}]", fg="white", dim=True)
-
-                            # --- VERIFICATION LAYER ---
-                            # We verify that the captured nodes actually match the rule requirements.
-                            # Adapters must use: @module_name, @func_name, or @parent_name
+                            # 1. Selection Layer: Find the violation node
+                            v_nodes = match_data.get("violation")
+                            if not v_nodes:
+                                v_nodes = list(match_data.values())[0] if match_data else []
+                            
+                            if not v_nodes: continue
+                            v_node = v_nodes[0]
                             
                             is_valid = True
                             
@@ -397,7 +410,7 @@ class PolicyEngine:
             # -L <start>,<end> : only blame the specified line
             # --porcelain      : machine-readable format
             cmd = ["git", "blame", "-L", f"{line_num},{line_num}", "--porcelain", abs_path]
-            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)  # anchor: ignore ANC-018
             
             # 3. Parse author from porcelain output
             for line in result.stdout.splitlines():

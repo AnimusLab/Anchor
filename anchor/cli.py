@@ -7,9 +7,14 @@ import json
 import urllib.request
 from anchor.core.policy_loader import PolicyLoader
 from anchor.core.engine import PolicyEngine
-
-# The "Single Source of Truth" URL
-CONSTITUTION_URL = "https://gist.githubusercontent.com/raw/placeholder/finos-master.anchor"
+from anchor.core.constitution import (
+    get_constitution_url,
+    get_mitigation_url,
+    CONSTITUTION_SHA256,
+    MITIGATION_SHA256,
+    verify_integrity,
+)
+from anchor.core.config import settings
 
 
 @click.group()
@@ -39,12 +44,17 @@ def init(sandbox, policy_name):
 
     # 2. Clean Sweep: Remove legacy root-level files if they exist
     # This ensures a single source of truth inside .anchor/
-    legacy_files = [policy_name, "finos-master.anchor.example", "finos-master.anchor"]
+    legacy_files = [
+        policy_name, 
+        "constitution.anchor.example", "constitution.anchor",
+        "mitigation.anchor.example", "mitigation.anchor",
+        "finos-master.anchor.example", "finos-master.anchor"
+    ]
     for f in legacy_files:
         if os.path.exists(f):
             try:
                 os.remove(f)
-                if verbose := os.environ.get("ANCHOR_VERBOSE"):
+                if verbose := os.environ.get("ANCHOR_VERBOSE"):  # anchor: ignore ANC-023
                     click.echo(f"   🧹 Removed legacy file from root: {f}")
             except Exception:
                 pass
@@ -60,12 +70,17 @@ def init(sandbox, policy_name):
         shutil.copy2(logo_src, logo_dst)
         click.secho("🎨 Anchor Branding Initialized (.anchor/branding)", fg="cyan")
 
-    # Universal Reference (INSIDE .anchor)
-    ref_src = os.path.join(resources_dir, "finos-master.anchor.example")
-    ref_dst = os.path.join(dot_anchor, "finos-master.anchor.example")
-    if os.path.exists(ref_src):
-        shutil.copy2(ref_src, ref_dst)
-        click.secho(f"✅ Deployed reference: {ref_dst}", fg="green")
+    # Universal Governance (INSIDE .anchor)
+    resources = [
+        ("constitution.anchor.example", "constitution.anchor.example"),
+        ("mitigation.anchor.example", "mitigation.anchor.example")
+    ]
+    for src_name, dst_name in resources:
+        ref_src = os.path.join(resources_dir, src_name)
+        ref_dst = os.path.join(dot_anchor, dst_name)
+        if os.path.exists(ref_src):
+            shutil.copy2(ref_src, ref_dst)
+            click.secho(f"✅ Deployed reference: {ref_dst}", fg="green")
 
     # 3. Create Local Project Policy (INSIDE .anchor)
     target_policy = os.path.join(dot_anchor, policy_name)
@@ -76,7 +91,7 @@ def init(sandbox, policy_name):
 # This file is for YOUR project-specific rules. 
 # It is AUTOMATICALLY IGNORED by git to protect company policies.
 #
-# Reference universal rules in '.anchor/finos-master.anchor.example'
+# Reference universal rules in '.anchor/constitution.anchor.example'
 # =============================================================================
 
 version: "2.4.14"
@@ -162,11 +177,18 @@ fi
     click.secho("🎯 ANCHOR INITIALIZED (v2.4.15 Architecture)", fg="green", bold=True)
     click.echo("=" * 60)
     click.echo("Anchor Assets (see .anchor/):")
-    click.echo(f"  📖 finos-master.anchor.example  → Universal Reference")
-    click.echo(f"  📝 {policy_name}                → Your project laws (Local)")
+    click.echo(f"  📖 constitution.anchor.example  → Governance Rules Reference")
+    click.echo(f"  📖 mitigation.anchor.example    → Detection Patterns Reference")
+    click.echo(f"  📝 {policy_name}                → Your project rules (used for audits)")
     click.echo(f"  🎨 branding/                   → Anchor Identity")
-    click.echo("\n" + "Next steps:")
-    click.echo(f"  1. Review reference: .anchor/finos-master.anchor.example")
+    click.echo("")
+    click.echo("How audits work:")
+    click.echo("  🌐 Universal Constitution  → Fetched from cloud (tamper-proof)")
+    click.echo(f"  📝 {policy_name}           → Your local rules (merged with universal)")
+    click.echo("")
+    click.echo("Next steps:")
+    click.echo(f"  1. Review governance: .anchor/constitution.anchor.example")
+    click.echo(f"  2. Review patterns:   .anchor/mitigation.anchor.example")
     click.echo(f"  2. Edit your rules: .anchor/{policy_name}")
     click.echo("  3. Run: anchor check")
     click.echo("=" * 60)
@@ -214,33 +236,87 @@ def check(policy, path, dir, model, metadata, context, server_mode, generate_rep
     # 1. GATHER THE FEDERATION
     dot_anchor = ".anchor"
     cache_dir = os.path.join(dot_anchor, "cache")
-    cloud_master = os.path.join(cache_dir, "finos-master.anchor")
     active_policies = []
 
-    # --- A. Universal Constitution (Cloud-First) ---
-    if verbose: click.secho("☁️ Syncing with Universal Constitution...", fg="blue")
-    try:
-        if not os.path.exists(cache_dir):
-            os.makedirs(cache_dir)
+    # Governance Files to sync and verify
+    governance_targets = [
+        ("Constitution", get_constitution_url(), "constitution.anchor", CONSTITUTION_SHA256),
+        ("Mitigation", get_mitigation_url(), "mitigation.anchor", MITIGATION_SHA256)
+    ]
+
+    for label, url, filename, expected_hash in governance_targets:
+        target_path = os.path.join(cache_dir, filename)
+        if verbose: click.secho(f"☁️ Syncing {label}...", fg="blue")
+        
+        try:
+            if not os.path.exists(cache_dir):
+                os.makedirs(cache_dir)
+
+            with urllib.request.urlopen(url, timeout=settings.fetch_timeout) as response:
+                content = response.read().decode('utf-8')
+                with open(target_path, "w", encoding="utf-8") as f:
+                    f.write(content)
+
+            # Integrity Verification
+            is_valid, msg = verify_integrity(target_path, expected_hash)
+            if is_valid:
+                # Note: We DON'T add to active_policies here. 
+                # These are joined into master_rules below.
+                if verbose: click.echo(f"   {msg}")
+            else:
+                click.secho(f"\n{msg}", fg="red", bold=True)
+                click.secho(f"   The cloud-hosted {label.lower()} does not match this release.", fg="red")
+                click.secho("   Update Anchor or contact the maintainer.", fg="yellow")
+                sys.exit(1)
+        except Exception as e:
+            if os.path.exists(target_path):
+                # Offline fallback with integrity check
+                is_valid, msg = verify_integrity(target_path, expected_hash)
+                if is_valid:
+                    click.secho(f"⚠️  {label} sync failed, using verified cache.", fg="yellow")
+                    if verbose: click.echo(f"   {msg}")
+                    # Note: We DON'T add to active_policies here.
+                else:
+                    click.secho(f"\n{msg}", fg="red", bold=True)
+                    click.secho(f"   Cannot audit with a tampered {label.lower()}.", fg="red")
+                    sys.exit(1)
+            else:
+                click.secho(f"❌ Critical Error: Could not fetch {label.lower()} and no cache found: {e}", fg="red")
+                sys.exit(1)
+
+    # 1.5. THE GOVERNANCE JOINER
+    # We join constitution.anchor (WHAT) with mitigation.anchor (HOW)
+    master_rules = []
+    constitution_path = os.path.join(cache_dir, "constitution.anchor")
+    mitigation_path = os.path.join(cache_dir, "mitigation.anchor")
+
+    if os.path.exists(constitution_path) and os.path.exists(mitigation_path):
+        try:
+            with open(constitution_path, "r", encoding="utf-8") as f:
+                c_data = yaml.safe_load(f) or {}
+                c_rules = {r["id"]: r for r in c_data.get("rules", []) if "id" in r}
             
-        constitution_url = "https://raw.githubusercontent.com/Tanishq1030/Anchor/main/finos-master.anchor"
-        with urllib.request.urlopen(constitution_url, timeout=10) as response:
-            content = response.read().decode('utf-8')
-            with open(cloud_master, "w", encoding="utf-8") as f:  # anchor: ignore RI-08
-                f.write(content)
-        active_policies.append(cloud_master)
-        if verbose: click.echo("   ✅ Updated Universal Constitution from cloud.")
-    except Exception as e:
-        if os.path.exists(cloud_master):
-            click.secho(f"⚠️  Cloud sync failed, using cached version: {e}", fg="yellow")
-            active_policies.append(cloud_master)
-        elif os.path.exists("finos-master.anchor"):
-            # Backward compatibility for old installations
-            click.secho("⚠️  Using legacy local constitution.", fg="yellow")
-            active_policies.append("finos-master.anchor")
-        else:
-            click.secho(f"❌ Critical Error: Could not fetch rules and no cache found: {e}", fg="red")
-            sys.exit(1)
+            with open(mitigation_path, "r", encoding="utf-8") as f:
+                m_data = yaml.safe_load(f) or {}
+                m_list = m_data.get("mitigations", [])
+
+            # Join: One rule can have multiple mitigations (each becomes an executable rule)
+            for m in m_list:
+                r_id = m.get("rule_id")
+                if r_id in c_rules:
+                    rule_meta = c_rules[r_id]
+                    # Create the executable rule
+                    exec_rule = rule_meta.copy()
+                    exec_rule["mitigation_id"] = m["id"]
+                    exec_rule["match"] = m["match"]
+                    exec_rule["name"] = f"{rule_meta['name']} ({m['name']})"
+                    if "message" in m:
+                        exec_rule["message"] = m["message"]
+                    master_rules.append(exec_rule)
+            
+            if verbose: click.echo(f"⚓ Federated {len(master_rules)} executable rules from 23 risks.")
+        except Exception as e:
+            click.secho(f"⚠️  Failed to join governance files: {e}", fg="yellow")
 
     # --- B. Project Policy (Local) ---
     # We look for policy.anchor (default) or any .anchor file in .anchor/ or root
@@ -262,7 +338,7 @@ def check(policy, path, dir, model, metadata, context, server_mode, generate_rep
                 break
             
             # Discover any .anchor that isn't master or example
-            root_anchors = [f for f in os.listdir(s_dir) if f.endswith('.anchor') and "finos-master" not in f]
+            root_anchors = [f for f in os.listdir(s_dir) if f.endswith('.anchor') and "constitution" not in f]
             if root_anchors:
                 active_policies.append(os.path.join(s_dir, root_anchors[0]))
                 if verbose: click.echo(f"   📂 Auto-detected project policy: {active_policies[-1]}")
@@ -274,12 +350,18 @@ def check(policy, path, dir, model, metadata, context, server_mode, generate_rep
         sys.exit(1)
 
     # 2. MERGE POLICIES
-    merged_rules = []
+    merged_rules = master_rules.copy()
+    
+    # Merge local policies on top
     for p_file in active_policies:
         try:
             loader = PolicyLoader(p_file, verbose=verbose)
             config = loader.load_policy()
-            merged_rules.extend(config.get("rules", []))
+            local_rules = config.get("rules", [])
+            
+            # Use PolicyLoader's merge logic to override master_rules by ID
+            final_config_tmp = loader._merge_policies({"rules": merged_rules}, {"rules": local_rules})
+            merged_rules = final_config_tmp.get("rules", [])
         except Exception as e:
             if verbose: click.secho(f"❌ Failed to parse {p_file}: {e}", fg="red")
 

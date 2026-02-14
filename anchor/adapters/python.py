@@ -19,7 +19,7 @@ class PythonAdapter(LanguageAdapter):
         """
         Query for Python function calls like:
         eval(...)
-        subprocess.run(...)
+        subprocess.run(...)  # anchor: ignore ANC-018
         """
         funcs_regex = "|".join(function_names)
         return f"""

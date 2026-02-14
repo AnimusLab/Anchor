@@ -5,6 +5,18 @@ import sys
 from typing import Dict, Any, List, Optional
 
 
+# Severity hierarchy (higher index = more severe)
+SEVERITY_LEVELS = ["info", "warning", "error", "blocker", "critical"]
+
+
+def _severity_rank(severity: str) -> int:
+    """Return numeric rank for a severity string. Higher = more severe."""
+    try:
+        return SEVERITY_LEVELS.index(severity.lower())
+    except ValueError:
+        return 0  # Unknown severity defaults to lowest
+
+
 class PolicyLoader:
     def __init__(self, local_policy_path: str, verbose: bool = False):
         self.local_policy_path = local_policy_path
@@ -56,7 +68,6 @@ class PolicyLoader:
             with urllib.request.urlopen(url, timeout=10) as response:
                 content = response.read().decode('utf-8')
                 return yaml.safe_load(content) or {}
-                return yaml.safe_load(content) or {}
         except Exception as e:
             if self.verbose:
                 print(f"⚠️   Warning: Could not fetch Master Policy from {url}.")
@@ -65,10 +76,13 @@ class PolicyLoader:
 
     def _merge_policies(self, parent: Dict, local: Dict) -> Dict:
         """
-        Deep merges the policies.
+        Deep merges the policies with FLOOR SEVERITY enforcement.
+
         Strategy:
         1. Rules are merged by ID (local overwrites Parent).
-        2. 'Context' and global settings are taken from local if preent.
+        2. If a parent rule has 'min_severity', the local override
+           CANNOT set severity below that floor.
+        3. 'Context' and global settings are taken from local if present.
         """
         merged = parent.copy()
 
@@ -81,17 +95,42 @@ class PolicyLoader:
         local_rules = local.get("rules") or []
 
         # Map parent rules by ID for easy lookup
-        # Ensure 'r' is a dict and has an 'id'
         rule_map = {r["id"]: r for r in parent_rules if isinstance(r, dict) and "id" in r}
 
-        # Apply local Rules (Add new ones OR Overwrite exisiting ones)
+        # Apply local Rules with Floor Severity Enforcement
         for rule in local_rules:
             if not isinstance(rule, dict) or "id" not in rule:
                 continue
             r_id = rule["id"]
+
             if r_id in rule_map:
-                if verbose := os.environ.get("ANCHOR_VERBOSE"):
-                    print(f"🔧  Local Override applied for rule: {r_id}")
+                # ── FLOOR SEVERITY CHECK ──────────────────────────
+                parent_rule = rule_map[r_id]
+                floor = parent_rule.get("min_severity")
+
+                if floor and "severity" in rule:
+                    local_sev = rule["severity"].lower()
+                    floor_rank = _severity_rank(floor)
+                    local_rank = _severity_rank(local_sev)
+
+                    if local_rank < floor_rank:
+                        # REJECTED: Local tried to go below the floor
+                        print(
+                            f"🚨 Override REJECTED for {r_id}: "
+                            f"Cannot downgrade severity to '{local_sev}'. "
+                            f"Constitutional floor is '{floor}'."
+                        )
+                        # Keep the local rule BUT enforce the floor severity
+                        rule = {**rule, "severity": floor}
+                    else:
+                        if os.environ.get("ANCHOR_VERBOSE"):  # anchor: ignore ANC-023
+                            print(f"🔧 Local Override applied for rule: {r_id}")
+                # ──────────────────────────────────────────────────
+
+                # Preserve min_severity from constitution (cannot be overridden)
+                if "min_severity" in parent_rule:
+                    rule["min_severity"] = parent_rule["min_severity"]
+
             rule_map[r_id] = rule
 
         merged["rules"] = list(rule_map.values())

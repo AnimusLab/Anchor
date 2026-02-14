@@ -1,7 +1,7 @@
 # =============================================================================
 # FINOS AI Governance Framework - Universal Constitution
 # =============================================================================
-# Version: 2.3.0
+# Version: 2.4.16-OFFICIAL
 # Status: PRODUCTION
 # Authority: FINOS (Fintech Open Source Foundation)
 # 
@@ -9,359 +9,152 @@
 # under FINOS governance must follow. Individual projects can extend but
 # CANNOT weaken these rules.
 #
-# HOW TO READ THIS FILE:
-# - Each rule has an ID (e.g., FINOS-001, RI-24) that maps to a specific risk
-# - Rules marked "blocker" will FAIL the build and block merges
-# - Rules marked "error" will fail but can be overridden locally
-# - Rules marked "warning" will notify but allow the build to proceed
-#
-# HOW TO OVERRIDE LOCALLY:
-# Create a policy.anchor file in your project root with:
-#   - Same rule ID to override severity/message
-#   - New rule IDs to add project-specific rules
+# Rule IDs (RI-*) are mapped directly to the Official FINOS Risk Taxonomy.
 # =============================================================================
 
-version: "2.4.3"
+version: "2.4.16"
 
 metadata:
   framework: "FINOS AI Governance Framework"
-  version: "2.3.0"
-  last_updated: "2026-02-07"
-  maintainer: "FINOS Security Working Group"
-  repository: "https://github.com/finos/anchor-rules"
+  version: "2025.Q1.Spec"
+  last_updated: "2026-02-09"
+  maintainer: "FINOS AI Security Working Group"
+  repository: "https://github.com/finos/ai-governance-framework"
   
 # =============================================================================
-# SECTION 1: CODE EXECUTION RULES
-# These rules prevent arbitrary code execution vulnerabilities
+# SECTION 1: PROMPT & INPUT GOVERNANCE (RI-10, RI-25)
 # =============================================================================
 
 rules:
-  - id: "FINOS-001"
-    name: "Ban Dynamic Code Execution (eval)"
-    category: "code_execution"
+  - id: "RI-10-PI"
+    name: "Prompt Injection - Unsanitized Input Concatenation"
+    category: "security"
     description: |
-      The eval() function executes arbitrary code from strings which can lead to remote code execution.
-      This is strictly forbidden in AI systems to prevent prompt injection from compromising the host environment.
+      LLMs do not distinguish between instructions and data. Concatenating user
+      input directly into prompt strings creates a direct prompt injection vector.
     match:
-      type: "function_call"
-      name: "eval"
-    message: "FINOS-001: Dynamic code execution via eval() is forbidden."
-    severity: "blocker"
-    mitigation: |
-      Replace eval() with ast.literal_eval() for safe parsing of literal structures.
-      If you need dynamic logic, refactor the code to use a dictionary mapping or a registry instead.
+      type: "regex"
+      pattern: "(prompt|system_msg|query).*[:=].*f?['\"].*\\{.*(user_input|data|req).*\\}.*['\"]"
+    message: "RI-10: Potential Prompt Injection via f-string concatenation. Use Template classes with strict schema enforcement."
+    severity: "error"
+    mitigation: "Use 'from anchor.ai import PromptTemplate' to isolate instructions from untrusted data."
     references:
-      - "https://owasp.org/Top10/A03_2021-Injection/"
-      - "https://finos.github.io/ai-governance/risks/code-execution"
+      - "OWASP:LLM01-2025"
+      - "MITRE:T1055"
 
-  - id: "FINOS-002"
-    name: "Ban Dynamic Code Execution (exec)"
-    category: "code_execution"
+  - id: "RI-25-TCM"
+    name: "Tool Chain Manipulation - Unchecked Parameters"
+    category: "security"
     description: |
-      The exec() function allows for the execution of arbitrary Python code blocks dynamically.
-      This poses a critical security risk as it can be exploited to bypass process isolation and access sensitive data.
+      Adversaries can manipulate agents into passing malicious parameters to 
+      legitimate tools (e.g., modified account numbers or amounts).
     match:
       type: "function_call"
-      name: "exec"
-    message: "FINOS-002: Dynamic code execution via exec() is forbidden."
+      name: "call_tool"
+      check_params: true
+    message: "RI-25: Tool calls must implement dynamic parameter validation."
     severity: "blocker"
-    mitigation: |
-      Use explicit function calls and standard object-oriented patterns instead of building code as strings.
-      For dynamic module loading, use the importlib library with strict whitelist validation of module names.
-
-  - id: "FINOS-003"
-    name: "Ban Compile for Code Generation"
-    category: "code_execution"
-    match:
-      type: "function_call"
-      name: "compile"
-    message: "FINOS-003: compile() for code generation is restricted."
-    severity: "error"
-    mitigation: "Only use compile() for static template rendering with trusted inputs."
+    mitigation: "Implement Pydantic-based validation on all agent tool schemas."
 
 # =============================================================================
-# SECTION 2: SUPPLY CHAIN / NETWORK RULES
-# These rules prevent unauthorized data exfiltration and supply chain attacks
+# SECTION 2: INFORMATION LEAKAGE & PRIVACY (RI-01, RI-02)
 # =============================================================================
 
-  - id: "RI-24"
-    name: "Supply Chain Attack - Raw Network Access"
-    category: "network"
+  - id: "RI-01-HL"
+    name: "Information Leakage to Hosted Models"
+    category: "data_privacy"
     description: |
-      Direct use of the requests library allows AI agents to communicate with arbitrary external endpoints.
-      This bypasses organizational security controls and can lead to unauthorized data exfiltration or model weight theft.
+      Sending sensitive PII or corporate secrets to third-party hosted models
+      risks memorization and secondary exfiltration.
     match:
-      type: "import"
-      module: "requests"
-    message: "RI-24: Raw network access forbidden. Use approved MCP/SecureClient."
+      type: "regex"
+      pattern: "(api\\.openai\\.com|anthropic\\.com|base_url.*['\"]http)"
+    message: "RI-01: Direct connection to public LLM endpoints requires the Enterprise Proxy."
     severity: "blocker"
-    mitigation: |
-      Replace 'import requests' with your organization's approved and monitored SecureClient library.
-      For simple data fetching, use a dedicated Model Context Protocol (MCP) server that enforces strict access limits.
+    mitigation: "Use 'from anchor.net import HostedModelGate' to ensure data sanitization before egress."
     references:
-      - "https://finos.github.io/ai-governance/risks/supply-chain"
+      - "NIST-AI-600-1:2.4"
+      - "GDPR-Article-32"
 
-  - id: "RI-24-HTTPX"
-    name: "Supply Chain Attack - Raw Network Access (httpx)"
-    category: "network"
+  - id: "RI-02-VS"
+    name: "Information Leakage to Vector Stores"
+    category: "data_privacy"
     match:
       type: "import"
-      module: "httpx"
-    message: "RI-24: Raw network access via httpx forbidden."
-    severity: "blocker"
-
-  - id: "RI-24-AIOHTTP"
-    name: "Supply Chain Attack - Raw Network Access (aiohttp)"
-    category: "network"
-    match:
-      type: "import"
-      module: "aiohttp"
-    message: "RI-24: Raw network access via aiohttp forbidden."
+      module: "pinecone"
+    message: "RI-02: Vector store indexing of sensitive data requires PII scrubbing."
     severity: "error"
-
-  - id: "RI-25"
-    name: "WebSocket Without Approval"
-    category: "network"
-    match:
-      type: "import"
-      module: "websockets"
-    message: "RI-25: WebSocket connections require security review."
-    severity: "warning"
+    mitigation: "Enable 'anchor: privacy-scrub' in the ingest pipeline."
 
 # =============================================================================
-# SECTION 3: UNSAFE DESERIALIZATION
-# Pickle and similar formats can execute arbitrary code during loading
+# SECTION 3: AGENTIC PRIVILEGE & BOUNDARIES (RI-24, RI-28)
 # =============================================================================
 
-  - id: "AI-15"
-    name: "Unsafe Deserialization (pickle)"
-    category: "deserialization"
+  - id: "RI-24-EA"
+    name: "Excessive Agency - Unauthorized System Access"
+    category: "security"
     description: |
-      Pickle can execute arbitrary code during deserialization. AI models
-      saved as pickle files can contain backdoors that execute when loaded.
-    match:
-      type: "import"
-      module: "pickle"
-    message: "AI-15: Pickle deserialization forbidden. Use safetensors or JSON."
-    severity: "error"
-    mitigation: |
-      For model weights: Use safetensors format
-      For config: Use JSON or YAML
-      For data: Use msgpack or protobuf
-
-  - id: "AI-15-JOBLIB"
-    name: "Unsafe Deserialization (joblib)"
-    category: "deserialization"
-    match:
-      type: "import"
-      module: "joblib"
-    message: "AI-15: Joblib uses pickle internally. Consider alternatives."
-    severity: "warning"
-
-  - id: "AI-15-DILL"
-    name: "Unsafe Deserialization (dill)"
-    category: "deserialization"
-    match:
-      type: "import"
-      module: "dill"
-    message: "AI-15: Dill extends pickle with more code execution risks."
-    severity: "blocker"
-
-  - id: "AI-15-CLOUDPICKLE"
-    name: "Unsafe Deserialization (cloudpickle)"
-    category: "deserialization"
-    match:
-      type: "import"
-      module: "cloudpickle"
-    message: "AI-15: Cloudpickle serializes functions - high risk."
-    severity: "blocker"
-
-# =============================================================================
-# SECTION 4: PRIVILEGE ESCALATION
-# Rules preventing unauthorized privilege escalation
-# =============================================================================
-
-  - id: "RI-12"
-    name: "Privilege Escalation via Threading"
-    category: "threading"
-    description: |
-      Direct thread creation via the threading module or Thread class bypasses sandbox resource limits and isolation controls.
-      Malicious code can spawn background threads to evade monitoring or exfiltrate data while the main thread appears idle.
-    match:
-      type: "inheritance"
-      parent: "Thread"
-    message: "RI-12: Direct threading forbidden. Use managed TaskQueue."
-    severity: "error"
-    mitigation: |
-      Use the managed TaskQueue from the anchor.runtime module to handle asynchronous operations within governance boundaries.
-      This ensures that all background tasks are properly instrumented and respect the overall security policy of the project.
-
-  - id: "RI-12-SUBPROCESS"
-    name: "Privilege Escalation via Subprocess"
-    category: "subprocess"
-    description: |
-      The subprocess module allows for the execution of arbitrary shell commands which can lead to host system compromise.
-      AI agents using this module can execute shell scripts to install malware or elevate their own execution privileges.
+      Agents must not have direct access to system-level APIs (subprocess, os)
+      unless isolated within a deterministic sandbox.
     match:
       type: "import"
       module: "subprocess"
-    message: "RI-12: Direct subprocess forbidden. Use Diamond Cage sandbox."
-    severity: "warning"
-    mitigation: |
-      Execute all external commands within the Diamond Cage sandbox to ensure they are isolated from the host filesystem and network.
-      This prevents any side-effects from escaping the restricted execution environment while allowing the necessary computation to proceed.
+    message: "RI-24: Direct subprocess usage in agent handlers is forbidden. Use Diamond Cage (WASM)."
+    severity: "blocker"
+    mitigation: "Refactor to use 'anchor.core.sandbox.DiamondCage' for all side-effects."
+    references:
+      - "OWASP:LLM06-2025"
 
-  - id: "RI-12-OS-SYSTEM"
-    name: "Privilege Escalation via os.system"
-    category: "system"
+  - id: "RI-28-TB"
+    name: "Multi-Agent Trust Boundary Violation"
+    category: "security"
     match:
       type: "function_call"
-      name: "system"
-    message: "RI-12: os.system() is forbidden. Use Diamond Cage sandbox."
-    severity: "blocker"
-
-  - id: "RI-12-CTYPES"
-    name: "Privilege Escalation via ctypes"
-    category: "native"
-    match:
-      type: "import"
-      module: "ctypes"
-    message: "RI-12: ctypes for native code access requires security review."
+      name: "transfer_state"
+    message: "RI-28: State transfer between agents must be signed and verified."
     severity: "error"
+    mitigation: "Implement 'anchor.crypto.StateSigner' for cross-agent communication."
 
 # =============================================================================
-# SECTION 5: MODEL GOVERNANCE RULES
-# Rules for validating AI model weights and provenance
+# SECTION 4: SUPPLY CHAIN & MCP (RI-26)
 # =============================================================================
 
-  - id: "MODEL-001"
-    name: "Training Data Provenance Required"
-    category: "model_governance"
-    check_type: "data_provenance"
+  - id: "RI-26-MCP"
+    name: "MCP Server Supply Chain Compromise"
+    category: "supply_chain"
     description: |
-      All models must document their training data sources to ensure
-      compliance with licensing and regulatory requirements.
-    allowed_sources:
-      - "verified_exchanges"
-      - "licensed_datasets"
-      - "internal_data"
-      - "public_domain"
-      - "synthetic_data"
-    message: "MODEL-001: Model must include verified training data provenance."
+      Unverified MCP (Model Context Protocol) servers can inject tainted data
+      or logic into the agent reasoning loop.
+    match:
+      type: "regex"
+      pattern: "mcp_server_url.*=.*['\"](?!https://approved\\.internal).*['\"]"
+    message: "RI-26: Connection to unverified MCP server detected."
     severity: "blocker"
-    mitigation: "Provide training_metadata.json with 'data_sources' field."
+    mitigation: "Whitelist MCP servers in the project policy.anchor file."
+    references:
+      - "NIST-SCRM:Software-Supply-Chain"
 
-  - id: "MODEL-002"
-    name: "Model Size Limits"
-    category: "model_governance"
-    check_type: "metadata_check"
-    metadata_field: "size_mb"
-    max_value: 100000
-    min_value: 1
-    message: "MODEL-002: Model size must be between 1MB and 100GB."
-    severity: "error"
+# =============================================================================
+# SECTION 5: MODEL INTEGRITY (RI-08, RI-09)
+# =============================================================================
 
-  - id: "MODEL-003"
-    name: "No Backdoor Patterns"
+  - id: "RI-08-TM"
+    name: "Tampering with Foundational Model (Weights)"
     category: "model_security"
     check_type: "weight_analysis"
-    description: |
-      Model weights are analyzed for statistical anomalies that may
-      indicate adversarial backdoors or trojan patterns.
-    message: "MODEL-003: Weight analysis detected potential backdoor patterns."
+    message: "RI-08: Model weight anomaly detected. Potential backdoor/trojan."
     severity: "blocker"
 
-  - id: "MODEL-004"
-    name: "Model License Verification"
-    category: "model_governance"
-    check_type: "license_check"
-    allowed_licenses:
-      - "MIT"
-      - "Apache-2.0"
-      - "BSD-3-Clause"
-      - "CC-BY-4.0"
-      - "Llama-2-Community"
-      - "Gemma-Terms"
-    message: "MODEL-004: Model license must be in approved list."
-    severity: "error"
-
-  - id: "MODEL-005"
-    name: "Quantization Transparency"
-    category: "model_governance"
-    check_type: "metadata_check"
-    metadata_field: "quantization"
-    message: "MODEL-005: Quantization method must be documented."
-    severity: "warning"
-
-# =============================================================================
-# SECTION 6: FILESYSTEM RULES
-# Rules for safe file system access
-# =============================================================================
-
-  - id: "RI-08"
-    name: "Uncontrolled File System Write"
-    category: "filesystem"
-    pattern: "open\\s*\\([^)]*['\"]w['\"]"
-    message: "RI-08: Direct file writes should use controlled storage API."
-    severity: "warning"
-    mitigation: "Use 'from anchor.storage import SecureWriter' for file operations."
-
-  - id: "RI-08-SHUTIL"
-    name: "Bulk File Operations"
-    category: "filesystem"
+  - id: "RI-09-DP"
+    name: "Data Poisoning - Training Feedback Loop"
+    category: "model_security"
     match:
-      type: "import"
-      module: "shutil"
-    message: "RI-08: Bulk file operations (shutil) require review."
-    severity: "warning"
-
-  - id: "RI-08-TEMPFILE"
-    name: "Temporary File Creation"
-    category: "filesystem"
-    description: |
-      The tempfile library creates files in shared system directories that can be vulnerable to symlink attacks or data leakage.
-      Using this library without strict permission controls can allow other users or processes on the host system to view sensitive agent data.
-    match:
-      type: "import"
-      module: "tempfile"
-    message: "RI-08: Temp file usage is allowed but monitored."
-    severity: "info"
-    mitigation: |
-      Configure tempfile to use a project-specific subdirectory within the .anchor/cache/ path for better isolation.
-      Always use SecureNamedTemporaryFile if available to ensure that file permissions are set correctly from the moment of creation.
-
-# =============================================================================
-# SECTION 7: AI-SPECIFIC RISKS (GenAI Threat Model)
-# =============================================================================
-
-  - id: "AI-20"
-    name: "Model Hallucination Risk"
-    category: "ai_safety"
-    check_type: "output_validation"
-    description: |
-      AI model outputs are non-deterministic and can produce logically incorrect or fabricated information known as hallucinations.
-      Relying on raw model output for business-critical decisions without secondary verification can lead to severe financial or operational errors.
-    message: "AI-20: Model outputs require validation before critical operations."
-    severity: "warning"
-    mitigation: |
-      Implement a multi-step validation pipeline that cross-references AI outputs against a ground-truth database or a deterministic engine.
-      Ensure that all high-risk actions triggered by model output require an explicit human-in-the-loop approval before execution.
-
-  - id: "AI-21"
-    name: "Prompt Injection Vulnerability"
-    category: "ai_safety"
-    pattern: "(user_input|prompt).*\\+.*\\.format\\("
-    message: "AI-21: Potential prompt injection - validate and sanitize inputs."
+      type: "function_call"
+      name: "fine_tune"
+    message: "RI-09: Unverified user data used for fine-tuning risks poisoning."
     severity: "error"
-
-  - id: "AI-22"
-    name: "Training Data Poisoning"
-    category: "ai_safety"
-    check_type: "data_integrity"
-    message: "AI-22: Training data integrity must be verified."
-    severity: "blocker"
+    mitigation: "Enable 'clean_room' validation for all fine-tuning datasets."
 
 # =============================================================================
-# END OF CONSTITUTION
-# To add project-specific rules, create a policy.anchor file in your repo.
+# END OF OFFICIAL CONSTITUTION
 # =============================================================================

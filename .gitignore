@@ -20,7 +20,9 @@ ENV/
 # Anchor Specific
 .anchor/
 *.anchor.example
-!finos-master.anchor
+
+# Research / Internal docs
+Risks of LLM Models & Weights.pdf
 
 # Testing & Debug Items
 victim.py
@@ -39,3 +41,9 @@ ts_probe.py
 .idea/
 *.swp
 *.swo
+
+# Anchor Security & Governance (Local Settings)
+/.anchor/policy.anchor
+/.anchor/cache/
+/.anchor/violation_report.txt
+/.anchor/branding/

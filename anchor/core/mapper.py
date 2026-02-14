@@ -5,9 +5,9 @@ This module bridges GenAI-identified items (risks, regulations, rules, policies)
 to executable AST enforcement rules.
 
 ARCHITECTURE (Constitution + State Law Model):
-- finos-master.anchor = Federal Constitution (universal FINOS rules)
+- constitution.anchor = Federal Constitution (universal Anchor rules)
 - policy.anchor = State Law (company-specific rules)
-- Merges both, with policy.anchor overriding finos-master.anchor by ID
+- Merges both, with policy.anchor overriding constitution.anchor by ID
 
 HANDLES:
 - Risks (RI-24, AI-20)
@@ -26,14 +26,14 @@ class PolicyMapper:
     Maps policy identifiers to tree-sitter enforcement rules.
     
     ARCHITECTURE:
-    - Loads from finos-master.anchor (Constitution)
+    - Loads from constitution.anchor (Constitution)
     - Loads from policy.anchor (State Law)
     - Merges: State law overrides Constitution by rule ID
     - Filters by IDs from GenAI threat model
     """
     
     def __init__(self, 
-                 master_policy_path: str = "finos-master.anchor",
+                 master_policy_path: str = "constitution.anchor",
                  local_policy_path: str = "policy.anchor"):
         self.master_policy_path = master_policy_path
         self.local_policy_path = local_policy_path
@@ -44,7 +44,7 @@ class PolicyMapper:
         Load and merge rules from both Constitution and State Law.
         
         Merge Strategy:
-        1. Load finos-master.anchor (Constitution)
+        1. Load constitution.anchor (Constitution)
         2. Load policy.anchor (State Law)
         3. Merge: Local rules override master rules by ID
         """
@@ -55,12 +55,12 @@ class PolicyMapper:
                 with open(self.master_policy_path, 'r', encoding='utf-8') as f:
                     master_policy = yaml.safe_load(f) or {}
                     master_rules = master_policy.get('rules', [])
-                    print(f"✅ Loaded {len(master_rules)} rules from FINOS Constitution")
+                    print(f"✅ Loaded {len(master_rules)} rules from Anchor Constitution")
             except Exception as e:
                 print(f"❌ Failed to load master policy: {e}")
         else:
             print(f"⚠️  Constitution not found at {self.master_policy_path}")
-            print(f"   Run 'anchor init' to download FINOS master policy.")
+            print(f"   Run 'anchor init' to download Anchor master policy.")
         
         # 2. Load State Law (Company-Specific)
         local_rules = []
@@ -120,7 +120,7 @@ class PolicyMapper:
             
             if matching_rule:
                 filtered_rules.append(matching_rule)
-                source = "Company Policy" if policy_id.startswith(("BANK-", "PROJECT-", "COMP-")) else "FINOS Constitution"
+                source = "Company Policy" if policy_id.startswith(("BANK-", "PROJECT-", "COMP-")) else "Anchor Constitution"
                 print(f"✅ Activated {policy_id} from {source}")
             else:
                 print(f"⚠️  Policy {policy_id} not found in federated policies. Skipping.")

@@ -9,7 +9,7 @@ long_description = (here / "README.md").read_text(encoding="utf-8")
 
 setup(
     name="anchor-audit",
-    version="2.4.15",  # Packaging & Exclusions - v2.4 Architecture
+    version="2.8.1",  # Dual Governance Architecture — 23 FINOS Risks + Mitigation Catalog
     description="The Federated Governance Engine for AI (Universal Multi-Language)",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -17,12 +17,19 @@ setup(
     author="Tanishq",
     author_email="tanishqdasari2004@gmail.com",
     packages=find_packages(),
+    package_data={
+        "anchor": [
+            "core/resources/*.example",
+            "core/resources/*.png",
+        ],
+    },
     install_requires=[
         "click",
         "pyyaml",
         "tree-sitter>=0.22.0",
         "tree-sitter-python",
-        "tree-sitter-typescript"
+        "tree-sitter-typescript",
+        "pydantic-settings>=2.0.0",
     ],
     entry_points={
         'console_scripts': [

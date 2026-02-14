@@ -180,7 +180,7 @@ class DiamondCage:
         ])
         
         try:
-            result = subprocess.run(
+            result = subprocess.run(  # anchor: ignore ANC-018
                 cmd,
                 capture_output=True,
                 text=True,

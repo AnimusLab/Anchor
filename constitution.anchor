@@ -230,3 +230,31 @@ rules:
     severity: "blocker"
     min_severity: "error"
     min_mitigations: 1
+
+  # --- Tier 7: Model Internals (Weights & Embeddings) ---
+  - id: "ANC-W001"
+    name: "Super Weight Integrity"
+    category: "robustness"
+    description: "Pruning or corrupting super weights disproportionately destroys model coherence."
+    references: ["ANC-PDF:W001"]
+    severity: "blocker"
+    min_severity: "error"
+    min_mitigations: 1
+
+  - id: "ANC-W002"
+    name: "Static Weight Decay Rigidity"
+    category: "robustness"
+    description: "Fixed weight decay leads to robust overfitting. Use adaptive decay."
+    references: ["ANC-PDF:W002"]
+    severity: "warning"
+    min_severity: "info"
+    min_mitigations: 1
+
+  - id: "ANC-W003"
+    name: "Single-Objective Embedding Optimization"
+    category: "bias"
+    description: "Song/User embeddings optimized for single metrics introduce popularity bias."
+    references: ["ANC-PDF:W003"]
+    severity: "warning"
+    min_severity: "info"
+    min_mitigations: 1

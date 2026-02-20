@@ -2,6 +2,9 @@ from typing import Dict, Type, Optional
 from anchor.adapters.base import LanguageAdapter
 from anchor.adapters.typescript import TypeScriptAdapter
 from anchor.adapters.python import PythonAdapter
+from anchor.adapters.java import JavaAdapter
+from anchor.adapters.go import GoAdapter
+from anchor.adapters.rust import RustAdapter
 import os
 
 class LanguageRegistry:
@@ -35,3 +38,6 @@ class LanguageRegistry:
 # Auto-register supported languages on import
 LanguageRegistry.register(TypeScriptAdapter)
 LanguageRegistry.register(PythonAdapter)
+LanguageRegistry.register(JavaAdapter)
+LanguageRegistry.register(GoAdapter)
+LanguageRegistry.register(RustAdapter)

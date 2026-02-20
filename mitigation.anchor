@@ -167,3 +167,37 @@ mitigations:
       pattern: '(save_memory|persist_state|store_context)\s*\((?!.*ttl|.*expire|.*max_age)'
     message: "Agent memory persisted without TTL/expiry. Risk of long-term state poisoning."
     severity: "error"
+
+  # =========================================================================
+  # TIER 4: MODEL INTERNALS (Phase 26)
+  # =========================================================================
+
+  # --- ANC-W001: Super Weights ---
+  - id: "MIT-W001-A"
+    rule_id: "ANC-W001"
+    name: "Unsafe Pruning Operation"
+    match:
+      type: "regex"
+      pattern: '\\.prune\\(.*amount'
+    message: "Model pruning detected. Ensure Super Weights are preserved (0.01% outliers) to avoid model collapse."
+    severity: "warning"
+
+  # --- ANC-W002: Weight Decay ---
+  - id: "MIT-W002-A"
+    rule_id: "ANC-W002"
+    name: "Fixed Weight Decay Detection"
+    match:
+      type: "regex"
+      pattern: 'weight_decay\s*=\s*[0-9\.]+(?!.*adaptive)'
+    message: "Fixed weight decay parameter detected. Consider Adaptive Weight Decay to prevent robust overfitting."
+    severity: "warning"
+
+  # --- ANC-W003: Embedding Optimization ---
+  - id: "MIT-W003-A"
+    rule_id: "ANC-W003"
+    name: "Word2Vec Single-Objective"
+    match:
+      type: "regex"
+      pattern: 'Word2Vec\s*\(.*iter'
+    message: "Word2Vec usage detected. Ensure multi-objective optimization to avoid popularity bias."
+    severity: "info"

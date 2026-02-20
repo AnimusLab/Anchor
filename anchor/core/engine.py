@@ -178,7 +178,7 @@ class PolicyEngine:
                             is_valid = True
                             
                             # 1. Verify Module Name (Imports)
-                            m_nodes = match_data.get("module_name") or match_data.get("import_name")
+                            m_nodes = match_data.get("import_name")
                             if m_nodes and rule_type == "import":
                                 m_node = m_nodes[0]
                                 m_text = m_node.text
@@ -196,6 +196,15 @@ class PolicyEngine:
                                 # Check against the exact name or list of names
                                 expected_names = [match_config.get("name")] if "name" in match_config else []
                                 if f_text not in expected_names:
+                                    is_valid = False
+
+                            # 3. Verify Parent Name (Inheritance)
+                            p_nodes = match_data.get("parent_name")
+                            if p_nodes and rule_type == "inheritance":
+                                p_node = p_nodes[0]
+                                p_text = p_node.text
+                                if hasattr(p_text, "decode"): p_text = p_text.decode('utf-8', errors='ignore')
+                                if p_text != match_config.get("parent"):
                                     is_valid = False
 
                             if not is_valid:

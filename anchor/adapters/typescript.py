@@ -44,12 +44,12 @@ class TypeScriptAdapter(LanguageAdapter):
         modules_regex = "|".join(module_names)
         return f"""
         [
-            (import_statement source: (string (string_fragment) @module_name))
+            (import_statement source: (string (string_fragment) @import_name))
             (call_expression
                 function: (identifier) @func (#eq? @func "require")
-                arguments: (arguments (string (string_fragment) @module_name)))
+                arguments: (arguments (string (string_fragment) @import_name)))
         ] @violation
-        (#match? @module_name "^({modules_regex})$")
+        (#match? @import_name "^({modules_regex})$")
         """
 
     def build_inheritance_query(self, class_names: List[str]) -> str:

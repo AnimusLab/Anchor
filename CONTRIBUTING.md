@@ -100,7 +100,13 @@ Anchor uses `tree-sitter` for AST parsing. To add a new language:
 
 1. Install the tree-sitter grammar: `pip install tree-sitter-<language>`
 2. Create an adapter in `anchor/adapters/`
-3. Register the file extension mapping in `engine.py`
+3. Register the file extension mapping in `anchor/core/registry.py`
+
+**Standardization Requirement**: You MUST use these capture names in your queries:
+
+- `@func_name` for function calls
+- `@import_name` for imports
+- `@parent_name` for inheritance/embedding
 
 ### 4. Bug Fixes & Feature Development
 

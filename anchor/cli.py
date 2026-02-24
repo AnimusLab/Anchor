@@ -562,8 +562,160 @@ def check(policy, path, dir, model, metadata, context, server_mode, generate_rep
         sys.exit(0)
 
 
+@click.command()
+@click.argument('symbol')
+@click.option('--repo', '-r', default='.', show_default=True,
+              help='Path to the git repository to analyse (default: current dir).')
+@click.option('--since', default=None,
+              help='Limit git history search to commits after this date (YYYY-MM-DD).')
+@click.option('--json', 'as_json', is_flag=True,
+              help='Output verdict as JSON (for tool/agent consumption).')
+@click.option('--verbose', '-v', is_flag=True, help='Show debug output.')
+def drift(symbol, repo, since, as_json, verbose):
+    """
+    Detect architectural drift for a single symbol.
+
+    SYMBOL format:  path/to/file.py::SymbolName
+
+    Examples:\n
+      anchor drift anchor/core/engine.py::PolicyEngine\n
+      anchor drift django/forms/forms.py::BaseForm --repo D:/django\n
+      anchor drift src/auth.py::authenticate --json
+    """
+    import json as _json
+    from anchor.core.history import HistoryEngine
+    from anchor.core.contexts import extract_usages
+    from anchor.core.verdicts import analyze_drift
+    from anchor.core.models import CodeSymbol
+
+    # --- Parse SYMBOL argument ---
+    if '::' not in symbol:
+        click.secho(
+            "❌ Invalid symbol format. Use:  path/to/file.py::SymbolName",
+            fg='red'
+        )
+        raise SystemExit(1)
+
+    file_part, sym_name = symbol.rsplit('::', 1)
+
+    # Determine symbol type heuristic (class = starts uppercase, else function)
+    sym_type = 'class' if sym_name[0].isupper() else 'function'
+
+    code_symbol = CodeSymbol(
+        name=sym_name,
+        type=sym_type,
+        file_path=file_part,
+        line_number=0,
+    )
+
+    click.secho(f"\n⚓ Anchor Drift Analysis", fg='cyan', bold=True)
+    click.secho(f"   Symbol : {sym_name}  ({sym_type})", fg='white')
+    click.secho(f"   File   : {file_part}", fg='white')
+    click.secho(f"   Repo   : {repo}", fg='white')
+    click.echo()
+
+    # --- Step 1: Find the frozen intent from git history ---
+    click.secho("🔍 Step 1/3 — Hunting origin in git history...", fg='yellow')
+    try:
+        engine = HistoryEngine(repo)
+        anchor = engine.find_anchor(code_symbol)
+    except Exception as e:
+        click.secho(f"❌ Git error: {e}", fg='red')
+        raise SystemExit(1)
+
+    if not anchor:
+        click.secho(
+            f"⚠️  Could not find origin for '{sym_name}' in git history.\n"
+            f"   The symbol may be new, untracked, or the repo history is too shallow.",
+            fg='yellow'
+        )
+        raise SystemExit(0)
+
+    click.secho(
+        f"   ✅ Anchored at commit {anchor.commit_sha[:7]} "
+        f"({anchor.commit_date.date()})  "
+        f"[confidence: {anchor.confidence.value.upper()}]",
+        fg='green'
+    )
+    if anchor.intent_description and anchor.intent_description != "No docstring found in early history.":
+        click.secho(f"   Intent : \"{anchor.intent_description[:120]}...\"", fg='white', dim=True)
+    click.echo()
+
+    # --- Step 2: Extract current call contexts ---
+    click.secho("🔍 Step 2/3 — Scanning codebase for call sites...", fg='yellow')
+    try:
+        contexts = extract_usages(repo, sym_name)
+    except Exception as e:
+        click.secho(f"⚠️  Usage scan failed: {e}", fg='yellow')
+        contexts = []
+
+    click.secho(f"   Found {len(contexts)} call site(s).", fg='green')
+    click.echo()
+
+    # --- Step 3: Run verdict engine ---
+    click.secho("⚖️  Step 3/3 — Running verdict engine...", fg='yellow')
+    result = analyze_drift(sym_name, anchor, contexts)
+    click.echo()
+
+    # --- Output ---
+    VERDICT_COLORS = {
+        'aligned':            ('green',  '✅'),
+        'intent_violation':   ('red',    '🛑'),
+        'semantic_overload':  ('yellow', '⚠️ '),
+        'dependency_inertia': ('blue',   '📦'),
+        'complexity_drift':   ('magenta','📈'),
+        'confidence_too_low': ('white',  '❓'),
+    }
+    color, icon = VERDICT_COLORS.get(result.verdict.value, ('white', '❓'))
+
+    if as_json:
+        output = {
+            'symbol':  result.symbol,
+            'verdict': result.verdict.value,
+            'rationale': result.rationale,
+            'evidence': result.evidence,
+            'anchor': {
+                'commit': result.anchor.commit_sha[:7],
+                'date':   str(result.anchor.commit_date.date()),
+                'intent': result.anchor.intent_description,
+                'confidence': result.anchor.confidence.value,
+            },
+            'roles': [
+                {'name': r.name, 'pct': f"{r.usage_percentage:.0%}", 'calls': r.call_count}
+                for r in result.observed_roles
+            ],
+            'remediation': result.remediation,
+        }
+        click.echo(_json.dumps(output, indent=2))
+    else:
+        click.echo("=" * 70)
+        click.secho(f"{icon}  VERDICT: {result.verdict.value.upper().replace('_', ' ')}", fg=color, bold=True)
+        click.echo("=" * 70)
+        click.echo(f"Rationale : {result.rationale}")
+        click.echo()
+
+        if result.observed_roles:
+            click.secho("Usage Breakdown:", bold=True)
+            for role in result.observed_roles:
+                bar_len = int(role.usage_percentage * 30)
+                bar = '█' * bar_len + '░' * (30 - bar_len)
+                compat = '✅' if role.compatible_with_intent else '❌'
+                click.echo(f"  {compat} {bar} {role.usage_percentage:5.0%}  {role.name}")
+        click.echo()
+
+        if result.remediation:
+            click.secho("─" * 70, fg=color)
+            click.secho(result.remediation, fg=color)
+            click.secho("─" * 70, fg=color)
+        else:
+            click.secho("No remediation required.", fg='green')
+
+        click.echo()
+
+
 cli.add_command(init)
 cli.add_command(check)
+cli.add_command(drift)
 
 if __name__ == '__main__':
     cli()

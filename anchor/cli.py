@@ -195,7 +195,7 @@ fi
 
 
 
-@click.command()
+@cli.group('check', invoke_without_command=True)
 @click.option('--policy', '-p', multiple=True, help='Policy file(s) to apply.')
 @click.argument('path', required=False)
 @click.option('--dir', '-d', '--directory', help='Directory to scan (for code).')
@@ -211,10 +211,23 @@ fi
 @click.option('--hook', is_flag=True, help='Indicate if running as a Git hook (customizes output).')
 @click.option('--exclude', multiple=True, help='Paths to exclude from scanning (e.g., --exclude tests).')
 @click.option('--github-summary', is_flag=True, help='Generate anchor-summary.md for GitHub Step Summary (CI only).')
-def check(policy, path, dir, model, metadata, context, server_mode, generate_report, json_report, verbose, no_sandbox, severity, hook, exclude, github_summary):
+@click.pass_context
+def check(ctx, policy, path, dir, model, metadata, context, server_mode, generate_report, json_report, verbose, no_sandbox, severity, hook, exclude, github_summary):
     """
-    Universal enforcement command for code and models.
+    Universal enforcement command for code, models, and architectural drift.
+
+    Run security governance check (default):
+
+      anchor check .
+
+    Detect architectural drift across a codebase:
+
+      anchor check drift .
+
+      anchor check drift src/models.py
     """
+    if ctx.invoked_subcommand is not None:
+        return  # Let the subcommand handle it
     from anchor.core.sandbox import DiamondCage, install_diamond_cage
     cage = DiamondCage()
 
@@ -579,160 +592,179 @@ def check(policy, path, dir, model, metadata, context, server_mode, generate_rep
         sys.exit(0)
 
 
-@click.command()
-@click.argument('symbol')
+@check.command('drift')
+@click.argument('target', default='.')
 @click.option('--repo', '-r', default='.', show_default=True,
-              help='Path to the git repository to analyse (default: current dir).')
-@click.option('--since', default=None,
-              help='Limit git history search to commits after this date (YYYY-MM-DD).')
+              help='Path to the git repository root (default: current dir).')
+@click.option('--limit', '-l', default=30, show_default=True,
+              help='Max number of symbols to analyse (safeguard for large codebases).')
+@click.option('--only-violations', is_flag=True,
+              help='Only show symbols with non-ALIGNED verdicts.')
 @click.option('--json', 'as_json', is_flag=True,
-              help='Output verdict as JSON (for tool/agent consumption).')
+              help='Output results as JSON.')
 @click.option('--verbose', '-v', is_flag=True, help='Show debug output.')
-def drift(symbol, repo, since, as_json, verbose):
+def check_drift(target, repo, limit, only_violations, as_json, verbose):
     """
-    Detect architectural drift for a single symbol.
-
-    SYMBOL format:  path/to/file.py::SymbolName
+    Scan for architectural drift across a codebase, directory, or file.
 
     Examples:\n
-      anchor drift anchor/core/engine.py::PolicyEngine\n
-      anchor drift django/forms/forms.py::BaseForm --repo D:/django\n
-      anchor drift src/auth.py::authenticate --json
+      anchor check drift .\n
+      anchor check drift src/models.py\n
+      anchor check drift anchor/core/ --only-violations\n
+      anchor check drift . --json > drift-report.json
     """
+    import ast as _ast
     import json as _json
+    from pathlib import Path as _Path
     from anchor.core.history import HistoryEngine
     from anchor.core.contexts import extract_usages
     from anchor.core.verdicts import analyze_drift
     from anchor.core.models import CodeSymbol
 
-    # --- Parse SYMBOL argument ---
-    if '::' not in symbol:
-        click.secho(
-            "❌ Invalid symbol format. Use:  path/to/file.py::SymbolName",
-            fg='red'
-        )
+    VERDICT_COLORS = {
+        'aligned':            ('green',   '✅'),
+        'intent_violation':   ('red',     '🛑'),
+        'semantic_overload':  ('yellow',  '⚠️ '),
+        'dependency_inertia': ('blue',    '📦'),
+        'complexity_drift':   ('magenta', '📈'),
+        'confidence_too_low': ('white',   '❓'),
+    }
+
+    # --- Collect Python files to analyse ---
+    target_path = _Path(target).resolve()
+    repo_path   = _Path(repo).resolve()
+
+    if target_path.is_file():
+        py_files = [target_path] if target_path.suffix == '.py' else []
+    elif target_path.is_dir():
+        skip_dirs = {'.git', '__pycache__', 'venv', '.venv', 'node_modules',
+                     'dist', 'build', 'migrations', '.anchor'}
+        py_files = [
+            _Path(root) / f
+            for root, dirs, files in os.walk(target_path)
+            for f in files
+            if f.endswith('.py')
+            for _ in [dirs.__setitem__(slice(None), [d for d in dirs if d not in skip_dirs])]
+        ]
+    else:
+        click.secho(f"❌ Target not found: {target}", fg='red')
         raise SystemExit(1)
 
-    file_part, sym_name = symbol.rsplit('::', 1)
-
-    # Determine symbol type heuristic (class = starts uppercase, else function)
-    sym_type = 'class' if sym_name[0].isupper() else 'function'
-
-    code_symbol = CodeSymbol(
-        name=sym_name,
-        type=sym_type,
-        file_path=file_part,
-        line_number=0,
-    )
-
-    click.secho(f"\n⚓ Anchor Drift Analysis", fg='cyan', bold=True)
-    click.secho(f"   Symbol : {sym_name}  ({sym_type})", fg='white')
-    click.secho(f"   File   : {file_part}", fg='white')
-    click.secho(f"   Repo   : {repo}", fg='white')
-    click.echo()
-
-    # --- Step 1: Find the frozen intent from git history ---
-    click.secho("🔍 Step 1/3 — Hunting origin in git history...", fg='yellow')
-    try:
-        engine = HistoryEngine(repo)
-        anchor = engine.find_anchor(code_symbol)
-    except Exception as e:
-        click.secho(f"❌ Git error: {e}", fg='red')
-        raise SystemExit(1)
-
-    if not anchor:
-        click.secho(
-            f"⚠️  Could not find origin for '{sym_name}' in git history.\n"
-            f"   The symbol may be new, untracked, or the repo history is too shallow.",
-            fg='yellow'
-        )
+    if not py_files:
+        click.secho("⚠️  No Python files found in target.", fg='yellow')
         raise SystemExit(0)
 
-    click.secho(
-        f"   ✅ Anchored at commit {anchor.commit_sha[:7]} "
-        f"({anchor.commit_date.date()})  "
-        f"[confidence: {anchor.confidence.value.upper()}]",
-        fg='green'
-    )
-    if anchor.intent_description and anchor.intent_description != "No docstring found in early history.":
-        click.secho(f"   Intent : \"{anchor.intent_description[:120]}...\"", fg='white', dim=True)
-    click.echo()
+    # --- Extract all symbols from those files ---
+    def extract_symbols(file_path):
+        try:
+            source = file_path.read_text(encoding='utf-8', errors='ignore')
+            tree   = _ast.parse(source)
+            syms   = []
+            for node in _ast.walk(tree):
+                if isinstance(node, (_ast.ClassDef, _ast.FunctionDef)):
+                    sym_type = 'class' if isinstance(node, _ast.ClassDef) else 'function'
+                    rel      = os.path.relpath(str(file_path), str(repo_path))
+                    syms.append(CodeSymbol(
+                        name=node.name, type=sym_type,
+                        file_path=rel, line_number=node.lineno,
+                    ))
+            return syms
+        except Exception:
+            return []
 
-    # --- Step 2: Extract current call contexts ---
-    click.secho("🔍 Step 2/3 — Scanning codebase for call sites...", fg='yellow')
-    try:
-        contexts = extract_usages(repo, sym_name)
-    except Exception as e:
-        click.secho(f"⚠️  Usage scan failed: {e}", fg='yellow')
-        contexts = []
+    all_symbols = []
+    for f in py_files:
+        all_symbols.extend(extract_symbols(f))
 
-    click.secho(f"   Found {len(contexts)} call site(s).", fg='green')
-    click.echo()
+    if not all_symbols:
+        click.secho("⚠️  No symbols (classes/functions) found.", fg='yellow')
+        raise SystemExit(0)
 
-    # --- Step 3: Run verdict engine ---
-    click.secho("⚖️  Step 3/3 — Running verdict engine...", fg='yellow')
-    result = analyze_drift(sym_name, anchor, contexts)
-    click.echo()
+    # Apply limit
+    if len(all_symbols) > limit:
+        click.secho(
+            f"⚓ Found {len(all_symbols)} symbols. Analysing first {limit} "
+            f"(use --limit to change).", fg='yellow'
+        )
+        all_symbols = all_symbols[:limit]
+    else:
+        click.secho(f"⚓ Found {len(all_symbols)} symbols to analyse.", fg='cyan')
+
+    # --- Run drift analysis on each symbol ---
+    history_engine = HistoryEngine(str(repo_path))
+    results = []
+    json_results = []
+
+    with click.progressbar(all_symbols, label='⚓ Drift Scan',
+                           fill_char='█', empty_char='░') as bar:
+        for symbol in bar:
+            anchor = history_engine.find_anchor(symbol)
+            if not anchor:
+                continue
+            contexts = extract_usages(str(repo_path), symbol.name)
+            result   = analyze_drift(symbol.name, anchor, contexts)
+
+            # Filter if --only-violations
+            if only_violations and result.verdict.value == 'aligned':
+                continue
+
+            results.append(result)
+            json_results.append({
+                'symbol':   result.symbol,
+                'file':     symbol.file_path,
+                'line':     symbol.line_number,
+                'verdict':  result.verdict.value,
+                'rationale': result.rationale,
+                'evidence': result.evidence,
+                'anchor': {
+                    'commit':     result.anchor.commit_sha[:7],
+                    'date':       str(result.anchor.commit_date.date()),
+                    'confidence': result.anchor.confidence.value,
+                },
+            })
 
     # --- Output ---
-    VERDICT_COLORS = {
-        'aligned':            ('green',  '✅'),
-        'intent_violation':   ('red',    '🛑'),
-        'semantic_overload':  ('yellow', '⚠️ '),
-        'dependency_inertia': ('blue',   '📦'),
-        'complexity_drift':   ('magenta','📈'),
-        'confidence_too_low': ('white',  '❓'),
-    }
-    color, icon = VERDICT_COLORS.get(result.verdict.value, ('white', '❓'))
-
+    click.echo()
     if as_json:
-        output = {
-            'symbol':  result.symbol,
-            'verdict': result.verdict.value,
-            'rationale': result.rationale,
-            'evidence': result.evidence,
-            'anchor': {
-                'commit': result.anchor.commit_sha[:7],
-                'date':   str(result.anchor.commit_date.date()),
-                'intent': result.anchor.intent_description,
-                'confidence': result.anchor.confidence.value,
-            },
-            'roles': [
-                {'name': r.name, 'pct': f"{r.usage_percentage:.0%}", 'calls': r.call_count}
-                for r in result.observed_roles
-            ],
-            'remediation': result.remediation,
-        }
-        click.echo(_json.dumps(output, indent=2))
-    else:
-        click.echo("=" * 70)
-        click.secho(f"{icon}  VERDICT: {result.verdict.value.upper().replace('_', ' ')}", fg=color, bold=True)
-        click.echo("=" * 70)
-        click.echo(f"Rationale : {result.rationale}")
+        click.echo(_json.dumps(json_results, indent=2))
+        raise SystemExit(0)
+
+    if not results:
+        click.secho("✅ No drift detected across the scanned codebase.", fg='green', bold=True)
+        raise SystemExit(0)
+
+    # Summary header
+    violations = [r for r in results if r.verdict.value != 'aligned']
+    aligned    = [r for r in results if r.verdict.value == 'aligned']
+    click.echo("=" * 70)
+    click.secho(f"⚓  ANCHOR DRIFT REPORT", bold=True)
+    click.echo("=" * 70)
+    click.secho(f"  ✅ Aligned:    {len(aligned)}", fg='green')
+    click.secho(f"  ⚠️  Violations: {len(violations)}", fg='red' if violations else 'green')
+    click.echo("=" * 70)
+    click.echo()
+
+    for result in results:
+        color, icon = VERDICT_COLORS.get(result.verdict.value, ('white', '❓'))
+        click.secho(
+            f"{icon} {result.symbol}  [{result.verdict.value.upper().replace('_', ' ')}]",
+            fg=color, bold=True
+        )
+        click.secho(f"   {result.rationale[:120]}", fg=color, dim=True)
+        if result.evidence:
+            for e in result.evidence[:3]:
+                click.echo(f"   · {e}")
+        if result.remediation and not only_violations:
+            click.secho("   ↳ Remediation available (run with single symbol for full details)",
+                        fg=color)
         click.echo()
 
-        if result.observed_roles:
-            click.secho("Usage Breakdown:", bold=True)
-            for role in result.observed_roles:
-                bar_len = int(role.usage_percentage * 30)
-                bar = '█' * bar_len + '░' * (30 - bar_len)
-                compat = '✅' if role.compatible_with_intent else '❌'
-                click.echo(f"  {compat} {bar} {role.usage_percentage:5.0%}  {role.name}")
-        click.echo()
-
-        if result.remediation:
-            click.secho("─" * 70, fg=color)
-            click.secho(result.remediation, fg=color)
-            click.secho("─" * 70, fg=color)
-        else:
-            click.secho("No remediation required.", fg='green')
-
-        click.echo()
+    # Exit non-zero if any violations found
+    if violations:
+        raise SystemExit(1)
 
 
 cli.add_command(init)
-cli.add_command(check)
-cli.add_command(drift)
 
 if __name__ == '__main__':
     cli()

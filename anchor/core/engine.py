@@ -27,7 +27,8 @@ class PolicyEngine:
             pass
         return "Unknown"
 
-    def scan_directory(self, dir_path: str, exclude_paths: List[str] = None) -> Dict[str, Any]:
+    def scan_directory(self, dir_path: str, exclude_paths: List[str] = None,
+                        cage=None) -> Dict[str, Any]:
         import os
         import click
         from pathlib import Path
@@ -79,7 +80,9 @@ class PolicyEngine:
                 target_files.append(full_path)
 
         scanned_count = 0
-        all_suppressed = [] # Tracking suppressed findings
+        all_suppressed   = []
+        behavioral_hits  = []
+
         with click.progressbar(target_files, label="⚓ Analyzing Security Posture", fill_char="█", empty_char="░") as bar:
             for full_path in bar:
                 adapter = LanguageRegistry.get_adapter_for_file(full_path)
@@ -94,19 +97,32 @@ class PolicyEngine:
                             all_violations.extend(results.get("violations", []))
                             all_suppressed.extend(results.get("suppressed", []))
                             scanned_count += 1
+
+                            # --- Diamond Cage: behavioral scan on Python files ---
+                            if cage and full_path.endswith(".py"):
+                                context_dir = str(Path(full_path).parent)
+                                cage_result = cage.behavioral_scan(
+                                    target_file=full_path,
+                                    context_dir=context_dir,
+                                )
+                                behavioral_hits.extend(
+                                    cage_result.get("behavioral_violations", [])
+                                )
                     except Exception as e:
                         if self.verbose: click.echo(f"⚠️  Error scanning {full_path}: {e}")
                 else:
                     ignored_files += 1
 
         return {
-            "violations": all_violations,
-            "suppressed": all_suppressed,
+            "violations":          all_violations,
+            "suppressed":          all_suppressed,
+            "behavioral_findings": behavioral_hits,
             "metrics": {
                 "scanned_files": scanned_count,
                 "ignored_files": ignored_files,
-                "total_files": total_files_encountered,
-                "total_dirs": total_dirs
+                "total_files":   total_files_encountered,
+                "total_dirs":    total_dirs,
+                "cage_active":   cage is not None and cage.is_installed(),
             }
         }
 
@@ -116,7 +132,7 @@ class PolicyEngine:
         try:
             tree = adapter.parse(content)
         except Exception as e:
-            return []
+            return {"violations": [], "suppressed": []}
 
         for rule in self.rules:
             if rule.get("severity") == "ignore":

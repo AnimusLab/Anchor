@@ -403,14 +403,31 @@ def check(policy, path, dir, model, metadata, context, server_mode, generate_rep
                 f.write("## Recommendation\n" + result.recommendation + "\n")
             click.secho(f"📋 Report saved: {report_path}", fg="green")
 
-    elif path or dir or (not model and not dir):
         scan_dir = path or dir or "."
         click.secho(f"🚀 Scanning '{scan_dir}' with {len(merged_rules)} active laws...", fg="yellow")
+
+        # --- Diamond Cage activation ---
+        active_cage = None
+        if not no_sandbox:
+            from anchor.core.sandbox import DiamondCage
+            _cage = DiamondCage(verbose=verbose)
+            if _cage.is_installed():
+                active_cage = _cage
+                click.secho("💎 Diamond Cage: ACTIVE (behavioral verification enabled)", fg="cyan")
+            else:
+                if verbose:
+                    click.secho("💎 Diamond Cage: not installed (use 'anchor init' to enable)", fg="white", dim=True)
+
         engine = PolicyEngine(config=final_config, verbose=verbose)
-        results = engine.scan_directory(scan_dir, exclude_paths=list(exclude))
-        violations = results.get('violations', [])
-        suppressed = results.get('suppressed', [])
-        metrics = results.get('metrics', {})
+        results = engine.scan_directory(scan_dir, exclude_paths=list(exclude), cage=active_cage)
+        violations         = results.get('violations', [])
+        suppressed         = results.get('suppressed', [])
+        behavioral_findings= results.get('behavioral_findings', [])
+        metrics            = results.get('metrics', {})
+
+        # Merge behavioral findings into violations for unified reporting
+        violations.extend(behavioral_findings)
+
 
     # 4. REPORT & EXIT
     # Filter violations based on severity level

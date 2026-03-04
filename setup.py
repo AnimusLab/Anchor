@@ -9,7 +9,7 @@ long_description = (here / "README.md").read_text(encoding="utf-8")
 
 setup(
     name="anchor-audit",
-    version="2.8.1",  # Dual Governance Architecture — 23 FINOS Risks + Mitigation Catalog
+    version="3.0.0-alpha",  # V3: Interceptor SDK + Diamond Cage Behavioral Verification
     description="The Federated Governance Engine for AI (Universal Multi-Language)",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -30,7 +30,14 @@ setup(
         "tree-sitter-python",
         "tree-sitter-typescript",
         "pydantic-settings>=2.0.0",
+        "wrapt",           # SDK-level interceptor patches (Layer 1)
+        "requests",        # HTTP backstop (Layer 2)
     ],
+    extras_require={
+        "dev": ["pytest", "black", "mypy"],
+        "all": ["openai", "anthropic", "google-generativeai", "langchain",
+                "ollama", "groq", "cohere", "mistralai", "transformers", "httpx"],
+    },
     entry_points={
         'console_scripts': [
             'anchor=anchor.cli:cli',

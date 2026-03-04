@@ -12,9 +12,10 @@ case-studies/
 ├── architectural_audits/     ← Multi-symbol drift audits on real open-source projects
 │   └── django/               ← Django auth + forms: 6 symbols audited, 2 verdicts
 │
-└── perspective/              ← Qualitative & compliance perspective analysis
-    ├── audit_summary.md
-    └── violation_report.txt
+└── governance_audits/        ← Compliance, policy, and qualitative governance analysis
+    └── perspective/          ← Qualitative & compliance perspective study
+        ├── audit_summary.md
+        └── violation_report.txt
 ```
 
 ---
@@ -30,12 +31,12 @@ These demonstrate that architectural drift is measurable, reproducible, and acti
 
 ---
 
-## Perspective Studies
+## Governance Audits
 
-Qualitative analysis from governance and compliance viewpoints — how Anchor's findings
-map to real organizational risk, remediation costs, and policy decisions.
+Compliance and policy-oriented studies — how Anchor drift findings map to organizational
+risk, remediation costs, and governance decisions.
 
-See [`perspective/`](./perspective/).
+See [`governance_audits/`](./governance_audits/).
 
 ---
 

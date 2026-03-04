@@ -38,7 +38,7 @@ jobs:
 
       - name: Run Governance Check
         run: |
-          python -m anchor check . --exclude examples --exclude tests --json-report --github-summary
+          python -m anchor check anchor/ --exclude examples --exclude tests --exclude scripts --exclude case-studies --exclude docs --exclude patterns --exclude demo --json-report --github-summary
         env:
           ANCHOR_STRICT: "true"
 

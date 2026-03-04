@@ -47,8 +47,7 @@ def init(sandbox, policy_name):
     legacy_files = [
         policy_name, 
         "constitution.anchor.example", "constitution.anchor",
-        "mitigation.anchor.example", "mitigation.anchor",
-        "finos-master.anchor.example", "finos-master.anchor"
+        "mitigation.anchor.example", "mitigation.anchor"
     ]
     for f in legacy_files:
         if os.path.exists(f):

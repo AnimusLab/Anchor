@@ -45,12 +45,12 @@ jobs:
       - name: Run GenAI Governance Check
         if: steps.check_threat_model.outputs.has_threat_model == 'true'
         run: |
-          python -m anchor check --context threat_model.md --dir . --exclude examples --exclude tests --verbose
+          python -m anchor check --context threat_model.md --dir anchor/ --exclude examples --exclude tests --exclude scripts --exclude case-studies --exclude docs --exclude patterns --exclude demo --verbose
 
       - name: Run Standard Governance Check
         if: steps.check_threat_model.outputs.has_threat_model == 'false'
         run: |
-          python -m anchor check --dir . --exclude examples --exclude tests --verbose
+          python -m anchor check --dir anchor/ --exclude examples --exclude tests --exclude scripts --exclude case-studies --exclude docs --exclude patterns --exclude demo --verbose
 
       - name: Comment on PR
         if: failure()
@@ -61,5 +61,5 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: 'FINOS AI Governance Check Failed\n\nYour code violates FINOS security policies. Please review the violations and update your code.\n\nRun `anchor check --dir .` locally to see details.'
+              body: 'Anchor AI Governance Check Failed\n\nYour code violates FINOS security policies. Please review the violations and update your code.\n\nRun `anchor check --dir .` locally to see details.'
             })

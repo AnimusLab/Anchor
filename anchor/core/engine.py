@@ -11,6 +11,39 @@ class PolicyEngine:
         self.rules = config.get("rules", []) if config else []
         self.allow_suppressions = self.config.get("allow_suppressions", True)
 
+    def _is_path_excluded(self, rel_path: str, combined_excludes: set) -> bool:
+        """Unified logic to check if a path should be excluded from scanning."""
+        from fnmatch import fnmatch
+        
+        # Standardize slashes and remove leading markers
+        rel_path = rel_path.replace("\\", "/").lstrip("./")
+        while rel_path.startswith("/"): rel_path = rel_path[1:]
+        
+        for pattern in combined_excludes:
+            # Clean the pattern (remove leading ./ and trailing /)
+            clean_pat = pattern.replace("\\", "/").rstrip("/").lstrip("./")
+            while clean_pat.startswith("/"): clean_pat = clean_pat[1:]
+            
+            # 1. Exact Match
+            if rel_path == clean_pat:
+                return True
+            
+            # 2. Directory + Glob (e.g. tests/* or tests/**)
+            if clean_pat.endswith("*"):
+                base_dir = clean_pat.rstrip("*").rstrip("/")
+                if rel_path.startswith(f"{base_dir}/") or rel_path == base_dir:
+                    return True
+
+            # 3. Directory Prefix Match
+            if rel_path.startswith(f"{clean_pat}/"):
+                return True
+
+            # 4. Standard Glob Match (fnmatch)
+            if fnmatch(rel_path, clean_pat):
+                return True
+                
+        return False
+
     def _get_suppression_author(self, file_path: str, line_num: int) -> str:
         """Internal discovery of who authorized a security suppression."""
         import subprocess
@@ -36,8 +69,8 @@ class PolicyEngine:
         
         exclude_paths = exclude_paths or []
         # Support both absolute and relative path matches
-        # Load from config if present
-        config_ignores = self.config.get("ignore_paths", []) if self.config else []
+        # Load from config if present (V3 supports 'exclude' key)
+        config_ignores = self.config.get("exclude", []) or self.config.get("ignore_paths", [])
         combined_excludes = set(exclude_paths + config_ignores)
 
         total_files_encountered = 0
@@ -50,40 +83,48 @@ class PolicyEngine:
         # Handle single file targets
         if os.path.isfile(dir_path):
             if not dir_path.endswith(('.png', '.jpg', '.jpeg', '.gif', '.ico', '.pdf', '.zip', '.gz', '.map')):
-                target_files.append(dir_path)
-                total_files_encountered = 1
+                rel_path = os.path.relpath(dir_path, ".")
+                if not self._is_path_excluded(rel_path, combined_excludes):
+                    target_files.append(dir_path)
+                    total_files_encountered = 1
+                else:
+                    ignored_files = 1
         else:
             for root, dirs, files in os.walk(dir_path):
                 total_dirs += 1
-                prune_list = ["build", "dist", "__pycache__", ".git", "node_modules", "target", "venv", ".venv", ".cache", "docs", "artifacts", ".anchor"]
+                prune_list = [
+                    "build", "dist", "__pycache__", ".git", "node_modules", 
+                    "target", "venv", ".venv", ".cache", "docs", "artifacts", 
+                    ".anchor", "tests", "benchmarks"
+                ]
                 
                 # 1. Prune hardcoded defaults
                 dirs[:] = [d for d in dirs if d not in prune_list]
 
-                # 2. Prune user-defined exclusions
+                # 2. Prune user-defined exclusions (Supports Globs)
                 if combined_excludes:
-                    # Check if current root or any child dir matches an exclusion
                     rel_root = os.path.relpath(root, dir_path)
                     
-                    # Check dirs for dynamic pruning
                     new_dirs = []
                     for d in dirs:
                         d_rel_path = os.path.normpath(os.path.join(rel_root, d))
-                        is_excluded = False
-                        for pattern in combined_excludes:
-                            if pattern in d_rel_path or d_rel_path.startswith(pattern):
-                                is_excluded = True
-                                break
-                        if not is_excluded:
+                        if not self._is_path_excluded(d_rel_path, combined_excludes):
                             new_dirs.append(d)
                     dirs[:] = new_dirs
 
                 for file in files:
                     total_files_encountered += 1
+                    full_path = os.path.join(root, file)
+                    rel_file_path = os.path.relpath(full_path, dir_path)
+                    
                     if file.endswith(('.png', '.jpg', '.jpeg', '.gif', '.ico', '.pdf', '.zip', '.gz', '.map')):
                         ignored_files += 1
                         continue
-                    full_path = os.path.join(root, file)
+                        
+                    if self._is_path_excluded(rel_file_path, combined_excludes):
+                        ignored_files += 1
+                        continue
+
                     target_files.append(full_path)
 
         scanned_count = 0

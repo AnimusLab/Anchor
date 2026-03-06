@@ -376,8 +376,19 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
                 found = True
                 break
             
-            # Discover any .anchor that isn't master or example
-            root_anchors = [f for f in os.listdir(s_dir) if f.endswith('.anchor') and "constitution" not in f]
+            # Check for policy inside .anchor/ directory
+            dot_anchor_dir = os.path.join(s_dir, '.anchor')
+            if os.path.exists(dot_anchor_dir) and os.path.isdir(dot_anchor_dir):
+                anchors = [os.path.join('.anchor', f) for f in os.listdir(dot_anchor_dir) 
+                          if f.endswith('.anchor') and "constitution" not in f and "mitigation" not in f]
+                if anchors:
+                    active_policies.append(os.path.join(s_dir, anchors[0]))
+                    if verbose: click.echo(f"   Auto-detected project policy: {active_policies[-1]}")
+                    found = True
+                    break
+            
+            # Legacy/Root-level fallback
+            root_anchors = [f for f in os.listdir(s_dir) if f.endswith('.anchor') and "constitution" not in f and "mitigation" not in f]
             if root_anchors:
                 active_policies.append(os.path.join(s_dir, root_anchors[0]))
                 if verbose: click.echo(f"   Auto-detected project policy: {active_policies[-1]}")
@@ -401,10 +412,15 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
             # Use PolicyLoader's merge logic to override master_rules by ID
             final_config_tmp = loader._merge_policies({"rules": merged_rules}, {"rules": local_rules})
             merged_rules = final_config_tmp.get("rules", [])
+            
+            # Merge exclusions from policy into the global exclude list
+            policy_excludes = config.get("exclude", [])
+            if isinstance(policy_excludes, list):
+                exclude = list(exclude) + policy_excludes
         except Exception as e:
             if verbose: click.secho(f"Failed to parse {p_file}: {e}", fg="red")
 
-    final_config = {"rules": merged_rules}
+    final_config = {"rules": merged_rules, "exclude": list(exclude)}
 
     # === NEW: GenAI THREAT MODEL INTEGRATION ===
     if context:

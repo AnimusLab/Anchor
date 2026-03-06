@@ -1,5 +1,5 @@
 # violation.py
-import requests  # <--- This triggers RI-24
+import requests
 
 
 def hack_the_planet():

@@ -30,23 +30,17 @@ jobs:
         run: |
           pip install .
 
-      - name: Seed Governance Cache
-        run: |
-          mkdir -p .anchor/cache
-          cp constitution.anchor .anchor/cache/constitution.anchor
-          cp mitigation.anchor .anchor/cache/mitigation.anchor
-
       - name: Run Governance Check
         run: |
-          python -m anchor check anchor/ --exclude examples --exclude tests --exclude scripts --exclude case-studies --exclude docs --exclude patterns --exclude demo --json-report --github-summary
+          python -m anchor check . --exclude tests --exclude scripts --exclude docs --exclude demo
         env:
           ANCHOR_STRICT: "true"
 
       - name: Generate Step Summary
         if: always()
         run: |
-          if [ -f anchor-summary.md ]; then
-            cat anchor-summary.md >> $GITHUB_STEP_SUMMARY
+          if [ -f .anchor/reports/governance_audit.md ]; then
+            cat .anchor/reports/governance_audit.md >> $GITHUB_STEP_SUMMARY
           fi
 
       - name: Upload Audit Artifacts
@@ -55,6 +49,29 @@ jobs:
         with:
           name: anchor-audit-reports
           path: |
-            .anchor/anchor-report.json
-            .anchor/violation_report.txt
-            anchor-summary.md
+            .anchor/telemetry/governance_report.json
+            .anchor/violations/governance_violations.txt
+            .anchor/reports/governance_audit.md
+
+      - name: Comment on PR
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const reportPath = '.anchor/reports/governance_audit.md';
+            let body = '### Anchor AI Governance Check Failed\n\nYour code violates security policies. Please review the findings below.\n\n';
+
+            if (fs.existsSync(reportPath)) {
+              const reportContent = fs.readFileSync(reportPath, 'utf8');
+              body += reportContent;
+            } else {
+              body += 'Detailed report not found. Run `anchor check` locally to debug.';
+            }
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            })

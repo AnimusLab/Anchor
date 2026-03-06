@@ -33,7 +33,7 @@
         "architecture": "Llama-2"
     },
     "compliance": {
-        "finos_compliant": true,
+        "anchor_compliant": true,
         "data_privacy_verified": true,
         "no_pii_in_training": true,
         "adversarial_testing_passed": true

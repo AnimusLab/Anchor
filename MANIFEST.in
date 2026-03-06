@@ -16,4 +16,3 @@ recursive-include anchor/core/resources *
 # (they are served from GitHub Raw, not bundled with the package)
 exclude constitution.anchor
 exclude mitigation.anchor
-exclude finos-master.anchor

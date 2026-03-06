@@ -1,23 +1,23 @@
 # Anchor — The Federated Governance Engine for AI
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT](https://img.shields.io/badge/License-MIT-gray.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![Status: Production](https://img.shields.io/badge/Status-Production-green.svg)]()
-[![Version: 2.8.1](https://img.shields.io/badge/Version-2.8.1-blue.svg)]()
+[![Status: Alpha](https://img.shields.io/badge/Status-Alpha-orange.svg)]()
+[![Version: 3.0.0-alpha](https://img.shields.io/badge/Version-3.0.0--alpha-blue.svg)]()
 
 > "Code drifts. Intent shouldn't. Governance must scale."
 
-Anchor is an **autonomous governance platform** for the AI-Native era. It ensures that your **Code**, **AI Models**, and **Agent Pipelines** comply with universal standards ([FINOS AI Risk Taxonomy](https://www.finos.org/)) and local company policies — all enforced deterministically via AST analysis, with zero LLM cost.
+Anchor is an **autonomous governance platform** for the AI-Native era. It ensures that your **Codebase**, **AI Models**, and **Agent Pipelines** comply with universal standards and local company policies — enforced deterministically via AST analysis and runtime interceptors.
 
 ---
 
-## What's New in v2.8.1
+## What's New in v3.0.0-alpha
 
-- **23-Risk Coverage**: Full mapping of the [FINOS AI Risk & Controls](https://www.finos.org/) taxonomy to `ANC-001` through `ANC-023`.
-- **Dual-File Governance Architecture**: Separated **WHAT** risks exist (`constitution.anchor`) from **HOW** to detect them (`mitigation.anchor`).
-- **Context-Aware Detection**: Refined mitigation patterns that avoid false positives (e.g., only flagging f-strings in prompt variables, not CLI output).
-- **SHA-256 Tamper-Proofing**: Both governance files are cryptographically sealed. Any local edit to the cached rules blocks the audit.
-- **Governance Joiner**: Runtime merger of constitution rules with mitigation patterns into executable enforcement policies.
+- **Hybrid Healer (Sovereign Scalpel)**: Moves beyond detection to remediation. Proposes file-specific fixes and applies them in-place via the `anchor heal` command.
+- **Interceptor SDK**: First-party support for 20+ LLM providers. Includes `AnchorGuard` for manual pipeline integration and `register_provider` for custom/internal model support.
+- **Multi-Language Adapters**: Expanded AST scanning for Python, Go, Java, and Rust.
+- **Unified Reporting**: Standardized directory structure (`.anchor/violations/`, `.anchor/reports/`, `.anchor/telemetry/`) for humans and CI/CD.
+- **Architectural Drift Check**: The `anchor check drift` command analyzes if code intent has drifted from its original design patterns.
 
 ---
 
@@ -37,26 +37,30 @@ Anchor operates on a three-layer architecture inspired by Constitutional Law:
 
 ## Key Capabilities
 
-### 1. Code Enforcement (v2.8)
+### 1. Multi-Language Enforcement
 
-Turns the FINOS AI Risk Taxonomy into executable CI/CD blockers using high-speed AST analysis (`tree-sitter`).
+Turns governance taxonomies into executable CI/CD blockers using high-speed AST analysis (`tree-sitter`).
 
-- **23-Risk Coverage**: Prompt injection, hallucination, data poisoning, model tampering, credential harvesting, and 18 more.
-- **Bridge Mode**: Parse Markdown Threat Models and activate only the relevant rules dynamically.
-- **Context-Aware Patterns**: Detection rules scoped to LLM-specific contexts (prompt variables, API calls), not generic code.
+- **Cross-Language**: Support for Python, Go, Java, and Rust.
+- **23+ Risk Catalog**: Mapped to industry standards like FINOS and OWASP LLM Top 10.
+- **Bridge Mode**: Parses Markdown Threat Models and activates relevant rules dynamically.
 
-### 2. Model Auditing (Diamond Cage)
+### 2. Hybrid Healer
 
-A vendor-agnostic plugin system to validate LLM model weights (GGUF, SafeTensors) inside a **WASM-based sandbox**.
+Deterministic AST patching replaces dangerous code with secure alternatives.
 
-- **Verify Provenance**: Ensure training data sources are license-compliant.
-- **Analyze Weights**: Detect potential backdoors or corruption in model files.
+- **Automated Suggestions**: Fixes proposed directly in the violation report.
+- **Interactive Remediation**: Review and apply fixes via `anchor heal --apply`.
 
-### 3. The "Hybrid Healer" (v3 Vision)
+### 3. Interceptor SDK
 
-Moves from "Blocking" to "Fixing." Deterministic AST patching replaces dangerous code with secure alternatives, verified inside the Diamond Cage.
+Secure your AI pipeline mid-flight.
 
-[**View v3 Technical Roadmap**](V3_TECHNICAL_ROADMAP.md)
+- **AnchorGuard**: Explicitly scan prompts and responses in your own application code.
+- **Global Interceptors**: Auto-patch common SDKs (OpenAI, Anthropic, LangChain) to enforce policy at the network boundary.
+- **Provider Agnostic**: Unified detection patterns regardless of the underlying model.
+
+### 4. Model Auditing (Diamond Cage)
 
 ---
 
@@ -81,13 +85,27 @@ anchor init
 ### 3. Scan Your Code
 
 ```bash
-anchor check --dir ./src --verbose
+# Security audit
+anchor check ./src
+
+# Architectural drift audit
+anchor check drift ./src
 ```
 
-### 4. Audit a Model
+### 4. Review and Apply Fixes
 
 ```bash
-anchor check --model ./my-model.gguf --metadata ./metadata.json
+# Review suggested fixes
+anchor heal
+
+# Apply all auto-fixable issues
+anchor heal --apply
+```
+
+### 5. Audit a Model
+
+```bash
+anchor check --model ./my-model.gguf
 ```
 
 **Full command reference**: [USAGE.md](USAGE.md)
@@ -152,15 +170,15 @@ Anchor/
 │   ├── cli.py                  # CLI entry point (click)
 │   ├── core/
 │   │   ├── engine.py           # PolicyEngine — AST scanning via tree-sitter
+│   │   ├── healer.py           # Hybrid Healer fix suggestion and patching
 │   │   ├── constitution.py     # SHA-256 integrity verification
-│   │   ├── config.py           # Pydantic-validated settings (.env)
 │   │   ├── policy_loader.py    # Federated policy merger
 │   │   ├── mapper.py           # GenAI threat model -> rule mapper
-│   │   ├── model_auditor.py    # Model weight validation (Diamond Cage)
-│   │   ├── sandbox.py          # WASM sandbox (Wasmtime)
-│   │   └── resources/          # Bundled .example reference files
-│   ├── adapters/               # Language-specific tree-sitter adapters
-│   └── plugins/                # Extensible plugin system
+│   │   └── model_auditor.py    # Model weight validation (Diamond Cage)
+│   ├── runtime/                # Interceptor SDK
+│   │   ├── guard.py            # AnchorGuard application safety API
+│   │   └── interceptors/       # SDK and HTTP library patches
+│   ├── adapters/               # Language-specific tree-sitter adapters (Go, Java, Rust)
 ├── tests/                      # Test suite
 │   ├── compliance_test.py      # 23-risk compliance validation
 │   ├── test_integration.py     # Integration tests
@@ -254,4 +272,4 @@ MIT License. Built for the era of AI-Assisted Engineering and Automated Governan
 
 ---
 
-_Anchor v2.8.1 — Zero-Trust Governance for the AI-Native Stack._
+_Anchor v3.0.0-alpha — Deterministic Governance for the AI-Native Stack._

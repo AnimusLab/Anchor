@@ -60,13 +60,23 @@ jobs:
           script: |
             const fs = require('fs');
             const reportPath = '.anchor/reports/governance_audit.md';
-            let body = '### Anchor AI Governance Check Failed\n\nYour code violates security policies. Please review the findings below.\n\n';
+            let body = '### Anchor AI Governance Check Failed\n\n';
 
             if (fs.existsSync(reportPath)) {
-              const reportContent = fs.readFileSync(reportPath, 'utf8');
-              body += reportContent;
+              const content = fs.readFileSync(reportPath, 'utf8');
+              const summaryMatch = content.match(/## Summary[\s\S]*?(?=##|$)/);
+              const violationsMatch = content.match(/## Active Violations[\s\S]*?(?=##|$)/);
+              
+              if (summaryMatch) body += summaryMatch[0];
+              if (violationsMatch) {
+                const lines = violationsMatch[0].split('\n');
+                // Header + Table Header + first 5 violations = ~10 lines
+                const truncated = lines.slice(0, 10).join('\n');
+                body += truncated;
+                if (lines.length > 10) body += '\n\n*... and more found in the full report.*';
+              }
             } else {
-              body += 'Detailed report not found. Run `anchor check` locally to debug.';
+              body += 'Detailed report not found. The check may have crashed. Run `anchor check` locally to debug.';
             }
 
             github.rest.issues.createComment({

@@ -29,6 +29,9 @@ setup(
         "tree-sitter>=0.22.0",
         "tree-sitter-python",
         "tree-sitter-typescript",
+        "tree-sitter-go",
+        "tree-sitter-java",
+        "tree-sitter-rust",
         "pydantic-settings>=2.0.0",
         "wrapt",           # SDK-level interceptor patches (Layer 1)
         "requests",        # HTTP backstop (Layer 2)

@@ -9,8 +9,8 @@ Anchor-audit uses a **federated policy architecture** with two key files:
 #### 1. `constitution.anchor` (Cloud Constitution)
 
 **Location:** Cloud (GitHub Raw URL)  
-**Purpose:** Universal FINOS risk catalog  
-**Managed By:** FINOS Foundation  
+**Purpose:** Universal Anchor risk catalog  
+**Managed By:** Anchor Foundation  
 **Immutable:** Banks cannot tamper with this
 
 **Example:**
@@ -50,7 +50,7 @@ rules:
 
 ```yaml
 version: "2.1"
-extends: "https://raw.githubusercontent.com/finos/anchor-rules/main/master.anchor"
+extends: "https://raw.githubusercontent.com/anchor/anchor-rules/main/master.anchor"
 
 rules:
   - id: "BANK-001"
@@ -61,7 +61,7 @@ rules:
     message: "Use internal API gateway instead."
     severity: "warning"
 
-  # Override FINOS rule severity
+  # Override Anchor rule severity
   - id: "RI-24"
     severity: "critical" # Downgrade from blocker to critical
 ```
@@ -72,7 +72,7 @@ rules:
 
 #### ✅ **Security:**
 
-- Banks cannot tamper with FINOS rules (cloud-hosted)
+- Banks cannot tamper with Anchor rules (cloud-hosted)
 - Local overrides are transparent (version controlled)
 - Audit trail: Git history shows who changed what
 
@@ -84,7 +84,7 @@ rules:
 
 #### ✅ **Federation:**
 
-- Single source of truth (FINOS cloud)
+- Single source of truth (Anchor cloud)
 - Local customization (policy.anchor)
 - Merge strategy: Local rules extend/override cloud rules
 
@@ -222,7 +222,7 @@ GitHub Actions (CI/CD)
 ```bash
 # Bank tries to remove RI-24 from local constitution.anchor
 # GitHub Actions workflow:
-curl -o constitution.anchor https://raw.githubusercontent.com/finos/anchor-rules/main/master.anchor
+curl -o constitution.anchor https://raw.githubusercontent.com/anchor/anchor-rules/main/master.anchor
 # ↑ This overwrites any local tampering
 ```
 

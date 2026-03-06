@@ -90,7 +90,7 @@ This security analysis yields risks like “prompt injection could cause data le
 
 ### G. Controls and Safeguards Identification
 
-At this point, you should be able to identify a comprehensive set of risks - using the FINOS AI Governance Framework as a guidance. One risks have been identified, list potential controls and see if they are in place:   
+At this point, you should be able to identify a comprehensive set of risks - using the finos AI Governance Framework as a guidance. One risks have been identified, list potential controls and see if they are in place:   
 
 - For each risk noted, ask *“What controls do we have or need for this?”* – If a risk has no current mitigation, mark it clearly.
 - Determine if additional tooling is required (maybe a content filter, or a bias detection tool, or an encryption module for data in transit).

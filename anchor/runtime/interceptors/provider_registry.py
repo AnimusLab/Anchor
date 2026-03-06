@@ -62,16 +62,50 @@ AI_API_DOMAINS: list[tuple[str, str]] = [
     ("localhost:1234",               "lm-studio"),
 ]
 
+# ---------------------------------------------------------------------------
+# Runtime-registered custom providers (populated via register_provider())
+# ---------------------------------------------------------------------------
+_CUSTOM_PROVIDERS: list[tuple[str, str]] = []
+
+
+def register_provider(domain: str, name: str) -> None:
+    """
+    Register a custom or unknown AI provider so Anchor can intercept its calls.
+
+    Call this BEFORE anchor.runtime.activate(). Example::
+
+        import anchor.runtime
+        anchor.runtime.register_provider("api.moonshot.cn", "kimi")
+        anchor.runtime.register_provider("api.perplexity.ai", "perplexity")
+        anchor.runtime.activate()
+
+    Args:
+        domain: The hostname (or fragment) of the provider's API endpoint.
+                Matched as: ``domain in request_host``.
+                Examples: "api.kimi.ai", "my-company.ai/v1/chat"
+        name:   A short human-readable label (used in reports and logs).
+    """
+    entry = (domain.lower(), name)
+    if entry not in _CUSTOM_PROVIDERS:
+        _CUSTOM_PROVIDERS.append(entry)
+
 
 def identify_provider(url: str) -> Optional[str]:
     """
     Return the provider name if the URL points to a known AI API.
     Returns None if the URL is not recognised as an AI API endpoint.
+
+    Custom providers (registered via register_provider) are checked first.
     """
     try:
-        host = urlparse(url).netloc.lower()
-        path = urlparse(url).path.lower()
+        host     = urlparse(url).netloc.lower()
+        path     = urlparse(url).path.lower()
         combined = host + path
+        # Custom providers take precedence
+        for fragment, name in _CUSTOM_PROVIDERS:
+            if fragment in combined:
+                return name
+        # Built-in registry
         for fragment, name in AI_API_DOMAINS:
             if fragment in combined:
                 return name

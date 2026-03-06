@@ -10,12 +10,26 @@ One import activates full runtime governance across ALL AI providers:
     anchor.runtime.activate(mode='warn')         # warn but don't block
     anchor.runtime.activate(mode='audit')        # log only, no interruptions
 
+For providers not in the built-in list, register them before activating:
+
+    anchor.runtime.register_provider("api.kimi.ai", "kimi")
+    anchor.runtime.activate()
+
+For developers building their own AI, use AnchorGuard directly:
+
+    from anchor.runtime import AnchorGuard
+    guard = AnchorGuard(provider="my-ai", mode="block")
+    guard.scan_prompt(user_input)
+    guard.scan_response(model_output)
+
 API
 ---
-    activate(mode, verbose)     Install all patches (HTTP backstop + SDKs)
-    deactivate()                Remove all patches, restore originals
-    get_session_stats()         Return session counters dict
-    is_active()                 True if interceptors are installed
+    activate(mode, verbose)                 Install all patches
+    deactivate()                            Remove all patches
+    register_provider(domain, name)         Register a custom AI provider
+    get_session_stats()                     Session counters dict
+    is_active()                             True if interceptors are installed
+    AnchorGuard                             First-party pipeline integration class
 """
 
 from __future__ import annotations
@@ -27,6 +41,7 @@ from anchor.runtime.interceptors.base import (
     InterceptorMode, SessionStats, AnchorViolationError,
     PromptScanResult, ResponseScanResult,
 )
+from anchor.runtime.guard import AnchorGuard
 
 logger = logging.getLogger("anchor.runtime")
 
@@ -94,7 +109,7 @@ def activate(
     }
 
     if verbose:
-        print(f"\n⚓ Anchor Runtime activated  [{mode.upper()}]")
+        print(f"\nAnchor Runtime activated  [{mode.upper()}]")
         if sdk_patches:
             print(f"   SDK patches : {', '.join(sdk_patches)}")
         else:
@@ -120,6 +135,52 @@ def deactivate() -> None:
     # For production, process restart is the clean deactivation path.
     _active = False
     logger.info("[Anchor] Runtime deactivated.")
+
+
+def register_provider(domain: str, name: str) -> None:
+    """
+    Register a custom or unknown AI provider domain.
+
+    Must be called BEFORE activate(). Example::
+
+        import anchor.runtime
+        anchor.runtime.register_provider("api.moonshot.cn", "kimi")
+        anchor.runtime.activate()
+
+    Args:
+        domain: Hostname fragment matched against outgoing HTTP request URLs.
+        name:   Short provider label used in reports and error messages.
+    """
+    from anchor.runtime.interceptors.provider_registry import register_provider as _reg
+    _reg(domain, name)
+
+
+def _load_custom_providers_from_policy() -> None:
+    """
+    Auto-load any custom_providers declared in .anchor/policy.anchor.
+
+    Expected YAML format inside policy.anchor::
+
+        custom_providers:
+          - domain: api.kimi.ai
+            name: kimi
+          - domain: my-company.ai/chat
+            name: my-company-ai
+    """
+    import os, yaml  # anchor: ignore RI-08
+    policy_path = os.path.join(".anchor", "policy.anchor")
+    if not os.path.exists(policy_path):
+        return
+    try:
+        with open(policy_path, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+        for entry in data.get("custom_providers", []):
+            domain = entry.get("domain", "").strip()
+            name   = entry.get("name", "custom").strip()
+            if domain:
+                register_provider(domain, name)
+    except Exception:
+        pass  # Policy file is optional; never crash on load
 
 
 def is_active() -> bool:
@@ -148,6 +209,7 @@ def get_session_stats() -> dict:
 # ---------------------------------------------------------------------------
 # Auto-activate on import (BLOCK mode, no verbose)
 # ---------------------------------------------------------------------------
+_load_custom_providers_from_policy()
 activate()
 
 
@@ -155,8 +217,10 @@ activate()
 __all__ = [
     "activate",
     "deactivate",
+    "register_provider",
     "is_active",
     "get_session_stats",
+    "AnchorGuard",
     "AnchorViolationError",
     "InterceptorMode",
 ]

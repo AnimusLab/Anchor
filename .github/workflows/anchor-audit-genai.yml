@@ -1,7 +1,7 @@
 # GitHub Actions Workflow for Anchor-Audit with GenAI Integration
 # Enforces risks identified in threat_model.md
 
-name: FINOS AI Governance Check (GenAI)
+name: Anchor AI Governance Check (GenAI)
 
 on:
   pull_request:
@@ -10,7 +10,7 @@ on:
 jobs:
   anchor-audit-genai:
     runs-on: ubuntu-latest
-    name: Enforce GenAI-Identified Risks
+    name: Enforce Anchor-Identified Risks
     permissions:
       pull-requests: write
       contents: read

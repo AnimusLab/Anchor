@@ -46,38 +46,45 @@ class PolicyEngine:
         
         # Collect files first for progress bar
         target_files = []
-        for root, dirs, files in os.walk(dir_path):
-            total_dirs += 1
-            prune_list = ["build", "dist", "__pycache__", ".git", "node_modules", "target", "venv", ".venv", ".cache", "docs", "artifacts", ".anchor"]
-            
-            # 1. Prune hardcoded defaults
-            dirs[:] = [d for d in dirs if d not in prune_list]
-
-            # 2. Prune user-defined exclusions
-            if combined_excludes:
-                # Check if current root or any child dir matches an exclusion
-                rel_root = os.path.relpath(root, dir_path)
+        
+        # Handle single file targets
+        if os.path.isfile(dir_path):
+            if not dir_path.endswith(('.png', '.jpg', '.jpeg', '.gif', '.ico', '.pdf', '.zip', '.gz', '.map')):
+                target_files.append(dir_path)
+                total_files_encountered = 1
+        else:
+            for root, dirs, files in os.walk(dir_path):
+                total_dirs += 1
+                prune_list = ["build", "dist", "__pycache__", ".git", "node_modules", "target", "venv", ".venv", ".cache", "docs", "artifacts", ".anchor"]
                 
-                # Check dirs for dynamic pruning
-                new_dirs = []
-                for d in dirs:
-                    d_rel_path = os.path.normpath(os.path.join(rel_root, d))
-                    is_excluded = False
-                    for pattern in combined_excludes:
-                        if pattern in d_rel_path or d_rel_path.startswith(pattern):
-                            is_excluded = True
-                            break
-                    if not is_excluded:
-                        new_dirs.append(d)
-                dirs[:] = new_dirs
+                # 1. Prune hardcoded defaults
+                dirs[:] = [d for d in dirs if d not in prune_list]
 
-            for file in files:
-                total_files_encountered += 1
-                if file.endswith(('.png', '.jpg', '.jpeg', '.gif', '.ico', '.pdf', '.zip', '.gz', '.map')):
-                    ignored_files += 1
-                    continue
-                full_path = os.path.join(root, file)
-                target_files.append(full_path)
+                # 2. Prune user-defined exclusions
+                if combined_excludes:
+                    # Check if current root or any child dir matches an exclusion
+                    rel_root = os.path.relpath(root, dir_path)
+                    
+                    # Check dirs for dynamic pruning
+                    new_dirs = []
+                    for d in dirs:
+                        d_rel_path = os.path.normpath(os.path.join(rel_root, d))
+                        is_excluded = False
+                        for pattern in combined_excludes:
+                            if pattern in d_rel_path or d_rel_path.startswith(pattern):
+                                is_excluded = True
+                                break
+                        if not is_excluded:
+                            new_dirs.append(d)
+                    dirs[:] = new_dirs
+
+                for file in files:
+                    total_files_encountered += 1
+                    if file.endswith(('.png', '.jpg', '.jpeg', '.gif', '.ico', '.pdf', '.zip', '.gz', '.map')):
+                        ignored_files += 1
+                        continue
+                    full_path = os.path.join(root, file)
+                    target_files.append(full_path)
 
         scanned_count = 0
         all_suppressed   = []
@@ -414,11 +421,11 @@ class PolicyEngine:
     def _check_regex(self, content: str, pattern: str, rule_id: str = None) -> List[tuple]:
         import re
         results = []
+        if not pattern:
+            return results
         lines = content.split('\n')
-        # Limit regex lines for performance
         for i, line in enumerate(lines[:5000]): 
             if re.search(pattern, line):
-                # Return match with its full line for later suppression check
                 results.append((i + 1, line.strip()))
         return results
 

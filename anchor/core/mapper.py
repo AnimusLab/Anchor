@@ -133,7 +133,7 @@ if __name__ == "__main__":
     mapper = PolicyMapper()
     
     # Simulate markdown parser output (mix of risks, regulations, rules)
-    detected_ids = ['RI-24', 'AI-20', 'PROJECT-001', 'FINOS-001', 'REG-001']
+    detected_ids = ['RI-24', 'AI-20', 'PROJECT-001', 'ANCHOR-001', 'REG-001']
     
     # Filter rules from both Constitution and State Law
     rules = mapper.get_rules_for_ids(detected_ids)

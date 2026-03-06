@@ -19,16 +19,8 @@ from typing import Tuple
 from anchor.core.config import settings
 
 
-# =============================================================================
-# IMMUTABLE HASHES (Updated each release)
-# =============================================================================
-
-# SHA-256 of the official files at this release.
-# These CANNOT be overridden via environment.
-# Updated via: python -c "import hashlib; print(hashlib.sha256(open('FILE','rb').read()).hexdigest().upper())"
-
+# SHA-256 of the official legacy files (optional in V3).
 CONSTITUTION_SHA256 = "98D160DEB4F4FE3E297D16B7940313F90F671B862F962187B634CE58B054BCCE"
-MITIGATION_SHA256 = "24FBE06E92BE5D7F777CB3751F30CAAC983159E2830134D1F466EFF25BFAA587"
 
 
 # =============================================================================
@@ -49,12 +41,10 @@ def get_mitigation_url() -> str:
 # =============================================================================
 
 def compute_hash(file_path: str) -> str:
-    """Compute SHA-256 hash of a file (line-ending normalized).
-
-    Normalizes CRLF → LF before hashing to ensure identical results
-    across Windows (CRLF) and Linux/macOS (LF) environments.
-    """
+    """Compute SHA-256 hash of a file (line-ending normalized)."""
     sha256 = hashlib.sha256()
+    if not os.path.exists(file_path):
+        return ""
     with open(file_path, "rb") as f:
         content = f.read()
     # Normalize: strip all \r so CRLF becomes LF
@@ -66,26 +56,19 @@ def compute_hash(file_path: str) -> str:
 def verify_integrity(file_path: str, expected_hash: str) -> Tuple[bool, str]:
     """
     Verify that a cached file has not been tampered with.
-
-    Args:
-        file_path: Path to the cached file
-        expected_hash: The hardcoded SHA-256 string
-
-    Returns:
-        (is_valid, message) tuple
     """
     if not os.path.exists(file_path):
-        return False, f"File not found: {os.path.basename(file_path)}"
+        # In V3, we allow missing legacy files as we migrate to patterns/ directory
+        return True, f"Legacy file {os.path.basename(file_path)} not present, skipping integrity check."
 
     actual_hash = compute_hash(file_path)
 
     if actual_hash == expected_hash:
-        return True, f"✅ Integrity verified: {os.path.basename(file_path)} (SHA-256: {actual_hash[:12]}...)"
+        return True, f"Integrity verified: {os.path.basename(file_path)} (SHA-256: {actual_hash[:12]}...)"
     else:
         return False, (
-            f"🚨 INTEGRITY VIOLATION DETECTED in {os.path.basename(file_path)}!\n"
+            f"INTEGRITY VIOLATION DETECTED in {os.path.basename(file_path)}!\n"
             f"   Expected: {expected_hash[:12]}...\n"
             f"   Got:      {actual_hash[:12]}...\n"
             f"   The cached policy has been tampered with.\n"
-            f"   Re-run with internet access to fetch the authentic version."
         )

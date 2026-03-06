@@ -27,7 +27,7 @@ Enforces via PolicyEngine
 
 ### **Scenario: JPMorgan Chase**
 
-#### **FINOS Constitution (constitution.anchor):**
+#### **Anchor Constitution (constitution.anchor):**
 
 ```yaml
 rules:
@@ -40,7 +40,7 @@ rules:
 #### **JPMorgan State Law (policy.anchor):**
 
 ```yaml
-extends: "https://finos.org/anchor/master.anchor"
+extends: "https://anchor.org/anchor/master.anchor"
 
 rules:
   # Company-specific rule
@@ -52,7 +52,7 @@ rules:
     severity: "blocker"
     message: "Use internal.jpmc.api instead"
 
-  # Override FINOS severity
+  # Override Anchor severity
   - id: "RI-24"
     severity: "warning" # Downgrade from blocker
     message: "RI-24: Use MCP Client (JPMorgan approved)"
@@ -92,7 +92,7 @@ rules = mapper.get_rules_for_risks(['RI-24', 'JPMC-001'])
 
 ### **1. Federal + State Flexibility:**
 
-- **FINOS** sets baseline (Constitution)
+- **Anchor** sets baseline (Constitution)
 - **Banks** customize for their needs (State Law)
 - **Merge strategy** ensures local control
 
@@ -101,7 +101,7 @@ rules = mapper.get_rules_for_risks(['RI-24', 'JPMC-001'])
 ```yaml
 # Bank can downgrade severity if they have compensating controls
 - id: "RI-24"
-  severity: "warning" # Instead of FINOS "blocker"
+  severity: "warning" # Instead of Anchor "blocker"
   message: "We use VPN, so this is less critical"
 ```
 
@@ -137,7 +137,7 @@ rules = mapper.get_rules_for_risks(['RI-24', 'JPMC-001'])
 
 ---
 
-## 🚀 Why This Matters for FINOS
+## 🚀 Why This Matters for Anchor
 
 ### **Problem:**
 
@@ -147,7 +147,7 @@ rules = mapper.get_rules_for_risks(['RI-24', 'JPMC-001'])
 
 ### **Solution:**
 
-- **Constitution** = Shared baseline (FINOS)
+- **Constitution** = Shared baseline (Anchor)
 - **State Law** = Local customization (Banks)
 - **Federated** = Best of both worlds
 

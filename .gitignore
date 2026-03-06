@@ -47,3 +47,7 @@ ts_probe.py
 /.anchor/cache/
 /.anchor/violation_report.txt
 /.anchor/branding/
+
+# Anchor Security & Governance (Local Settings)
+/.anchor/violations/
+/.anchor/telemetry/

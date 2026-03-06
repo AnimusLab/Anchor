@@ -16,7 +16,7 @@ import os
 
 class RiskMapper:
     """
-    Maps FINOS Risk IDs to tree-sitter enforcement rules.
+    Maps Anchor Risk IDs to tree-sitter enforcement rules.
     
     ARCHITECTURE:
     - Loads from constitution.anchor (Constitution)
@@ -137,8 +137,8 @@ class RiskMapper:
 if __name__ == "__main__":
     mapper = RiskMapper()
     
-    # Simulate markdown parser output (mix of FINOS and company risks)
-    detected_risks = ['RI-24', 'AI-20', 'PROJECT-001', 'FINOS-001']
+    # Simulate markdown parser output (mix of Anchor and company risks)
+    detected_risks = ['RI-24', 'AI-20', 'PROJECT-001', 'ANCHOR-001']
     
     # Filter rules from both Constitution and State Law
     rules = mapper.get_rules_for_risks(detected_risks)

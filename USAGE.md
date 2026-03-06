@@ -1,6 +1,6 @@
 # Anchor CLI Command Reference
 
-Anchor v2.8.1 provides a unified interface for code auditing, model weight validation, and governance management.
+Anchor v3.0.0-alpha provides a unified interface for security auditing, architectural drift analysis, autonomous remediation, and runtime governance.
 
 ---
 
@@ -21,49 +21,71 @@ anchor init [OPTIONS]
 
 ### What It Does
 
-1. Creates `.anchor/` directory for caching rules and storing local policies.
-2. Deploys reference copies of the **Constitution** (`constitution.anchor.example`) and **Mitigation Catalog** (`mitigation.anchor.example`).
+1. Creates the `.anchor/` workspace with standard subdirectories:
+   - `violations/`: For detailed text results (`governance_violations.txt`, `drift_violations.txt`).
+   - `reports/`: For markdown documentation (`governance_audit.md`, `drift_audit.md`).
+   - `telemetry/`: For CI/CD JSON exports (`governance_report.json`, `drift_report.json`).
+2. Deploys reference copies of the Constitution and Mitigation Catalog.
 3. Generates a boilerplate local `policy.anchor` for project-specific overrides.
-4. Auto-configures `.gitignore` to protect sensitive local policies.
-5. Installs a **Git Pre-Commit Hook** to prevent violations from being committed.
+4. installs a Git Pre-Commit Hook to prevent violations from being committed.
 
 ---
 
-## 2. **anchor check**
-
-The universal enforcement command for code repositories and AI models.
-
-```bash
-anchor check [OPTIONS] [PATH]
-```
-
 ### Core Options
 
-| Flag                          | Description                                                 |
-| ----------------------------- | ----------------------------------------------------------- |
-| `-d, --dir, --directory PATH` | Directory to scan for code violations                       |
-| `-m, --model PATH`            | Path to LLM model weights (GGUF, SafeTensors)               |
-| `--metadata PATH`             | Path to training metadata JSON for model audits             |
-| `-c, --context PATH`          | Path to a **Markdown Threat Model** for dynamic enforcement |
+| Flag                          | Description                                             |
+| ----------------------------- | ------------------------------------------------------- |
+| `-d, --dir, --directory PATH` | Directory to scan for code violations                   |
+| `-m, --model PATH`            | Path to LLM model weights (GGUF, SafeTensors)           |
+| `-c, --context PATH`          | Path to a Markdown Threat Model for dynamic enforcement |
 
-### Reporting Options
+### Reporting
 
-| Flag                | Description                                         |
-| ------------------- | --------------------------------------------------- |
-| `--generate-report` | Generates `anchor_audit_report.md` (human-readable) |
-| `-j, --json-report` | Generates `anchor-report.json` for CI/CD pipelines  |
-| `--github-summary`  | Generates GitHub Actions Step Summary output        |
-| `-v, --verbose`     | Shows detailed sync, loading, and scanning logs     |
+Anchor V3 automatically generates human-readable reports and machine-readable telemetry in the `.anchor/` folder.
 
-### Advanced Options
+| Flag                | Description                                        |
+| ------------------- | -------------------------------------------------- |
+| `-j, --json-report` | Force generation of JSON telemetry (auto-on in CI) |
+| `-v, --verbose`     | Shows detailed sync, loading, and scanning logs    |
 
-| Flag                                             | Description                                       |
-| ------------------------------------------------ | ------------------------------------------------- |
-| `-p, --policy PATH`                              | Apply additional specific policy files            |
-| `-s, --severity [info\|warning\|error\|blocker]` | Minimum severity level to report. Default: `info` |
-| `--exclude PATH`                                 | Paths to exclude from scan (repeatable)           |
-| `--no-sandbox`                                   | Disables Diamond Cage WASM sandbox                |
-| `--server-mode`                                  | Optimized for server-side environments            |
+---
+
+## 3. **anchor check drift**
+
+Analyzes the architectural integrity of the codebase.
+
+```bash
+anchor check drift [PATH]
+```
+
+### What It Does
+
+1. Analyzes symbols (classes, functions) to determine if their usage matches their original intent.
+2. Assigns a verdict: **Aligned**, **Semantic Overload**, **Intent Violation**, or **Dependency Inertia**.
+3. Generates `drift_violations.txt` and `drift_audit.md`.
+
+---
+
+## 4. **anchor heal**
+
+The "Sovereign Scalpel" — autonomous remediation of security violations.
+
+```bash
+anchor heal [OPTIONS] [PATH]
+```
+
+### Options
+
+| Flag       | Description                                           |
+| ---------- | ----------------------------------------------------- |
+| `--apply`  | Automatically applies all suggested fixes to the code |
+| `--status` | Shows a summary of fixed vs. pending violations       |
+
+### What It Does
+
+1. Reads the latest `governance_violations.txt`.
+2. Proposes deterministic AST patches for high-confidence violations.
+3. Provides an interactive diff for developer review.
 
 ---
 
@@ -206,4 +228,4 @@ All optional. See [`.env.example`](.env.example) for a full reference.
 
 ---
 
-_Anchor v2.8.1 | Zero-Trust Governance for the AI-Native Stack._
+_Anchor v3.0.0-alpha | Deterministic Governance for the AI-Native Stack._

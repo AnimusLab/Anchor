@@ -1,7 +1,7 @@
 """
 Model Auditor for Anchor-Audit
 
-Validates LLM model weights against FINOS policies.
+Validates LLM model weights against Anchor policies.
 Vendor-agnostic: Works with LM Studio, AnchorGrid, HuggingFace, OpenAI, etc.
 
 Architecture:

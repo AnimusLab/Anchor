@@ -1,6 +1,6 @@
-# FINOS AI Governance Framework - Risk Catalog
+# Anchor AI Governance Framework - Risk Catalog
 # This file maps Risk IDs to executable enforcement rules for anchor-audit
-# 
+#
 # Format:
 #   risks:
 #     - id: "RI-XX"
@@ -16,9 +16,9 @@
 version: "2.1"
 risks:
   # ========================================
-  # PLACEHOLDER RISKS (Will be replaced with FINOS catalog)
+  # PLACEHOLDER RISKS (Will be replaced with Anchor catalog)
   # ========================================
-  
+
   - id: "RI-24"
     name: "Supply Chain Attack - Raw Network Access"
     description: "Direct network library usage bypasses security controls and enables data exfiltration"
@@ -28,7 +28,7 @@ risks:
       module: "requests"
     message: "Risk RI-24: Raw network access forbidden. Use MCP Client for controlled API access."
     mitigation: "Replace 'import requests' with 'from mcp import Client'"
-  
+
   - id: "AI-20"
     name: "Model Hallucination Risk"
     description: "Unconstrained LLM outputs can generate malicious code"
@@ -38,7 +38,7 @@ risks:
       name: "exec"
     message: "Risk AI-20: Dynamic code execution from LLM output is forbidden."
     mitigation: "Use static code generation with AST validation"
-  
+
   - id: "RI-12"
     name: "Privilege Escalation via Threading"
     description: "Direct thread creation bypasses agent isolation"
@@ -50,12 +50,12 @@ risks:
     mitigation: "Use 'from anchor.runtime import TaskQueue' instead of threading.Thread"
 
 # ========================================
-# NOTES FOR FINOS INTEGRATION:
+# NOTES FOR ANCHOR INTEGRATION:
 # ========================================
-# 
-# Once you provide the FINOS AI Governance Framework link, I will:
+#
+# Once you provide the Anchor AI Governance Framework link, I will:
 # 1. Parse the official risk taxonomy
 # 2. Map each risk to tree-sitter enforcement patterns
 # 3. Populate this file with the complete catalog
 # 4. Add risk categories (e.g., "Supply Chain", "Model Security", "Data Privacy")
-# 5. Link to official FINOS documentation for each risk
+# 5. Link to official Anchor documentation for each risk

@@ -40,10 +40,11 @@ class GoAdapter(LanguageAdapter):
         """
         # Go imports are string literals, often with quotes
         modules_regex = "|".join(module_names)
+        escaped_regex = modules_regex.replace('"', '\\"')
         return f"""
         (import_spec
             path: (interpreted_string_literal) @import_name
-            (#match? @import_name "{modules_regex.replace('"', '\\"')}")
+            (#match? @import_name "{escaped_regex}")
         ) @violation
         """
 

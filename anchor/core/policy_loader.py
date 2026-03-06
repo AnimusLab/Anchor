@@ -86,9 +86,17 @@ class PolicyLoader:
         """
         merged = parent.copy()
 
-        # Merge Meta-data
+        # Merge Meta-data and Exclusions
         if "version" in local:
             merged["version"] = local["version"]
+        
+        # Merge Exclusions (List union)
+        p_exclude = parent.get("exclude", [])
+        l_exclude = local.get("exclude", [])
+        if isinstance(p_exclude, list) and isinstance(l_exclude, list):
+            merged["exclude"] = list(set(p_exclude + l_exclude))
+        elif isinstance(l_exclude, list):
+            merged["exclude"] = l_exclude
 
         # Merge Rules
         parent_rules = merged.get("rules") or []

@@ -98,8 +98,15 @@ class PolicyEngine:
                     ".anchor", "tests", "benchmarks"
                 ]
                 
+                if self.verbose: 
+                    click.secho(f"   Searching for files in: {root}", fg="white", dim=True)
+                
                 # 1. Prune hardcoded defaults
-                dirs[:] = [d for d in dirs if d not in prune_list]
+                try:
+                    dirs[:] = [d for d in dirs if d not in prune_list]
+                except Exception as e:
+                    if self.verbose: click.secho(f"   [!] Error pruning dirs: {e}", fg="red")
+                    continue
 
                 # 2. Prune user-defined exclusions (Supports Globs)
                 if combined_excludes:
@@ -127,12 +134,28 @@ class PolicyEngine:
 
                     target_files.append(full_path)
 
+        metrics = {
+            "scanned_files": 0,
+            "ignored_files": ignored_files,
+            "total_files":   total_files_encountered,
+            "total_dirs":    total_dirs,
+            "cage_active":   cage is not None and cage.is_installed(),
+        }
+
+        if not target_files:
+            if self.verbose:
+                click.secho(f"   [!] No scannable files found in {dir_path}", fg="yellow")
+            return {"violations": [], "suppressed": [], "metrics": metrics, "behavioral_findings": []}
+
         scanned_count = 0
         all_suppressed   = []
         behavioral_hits  = []
 
-        with click.progressbar(target_files, label="⚓ Analyzing Security Posture", fill_char="█", empty_char="░") as bar:
-            for full_path in bar:
+        if self.verbose:
+            click.secho(f"   [VERBOSE] Scanning {len(target_files)} files...", fg="cyan")
+            for full_path in target_files:
+                click.echo(f"   Scanning: {full_path}")
+                scanned_count += 1
                 adapter = LanguageRegistry.get_adapter_for_file(full_path)
                 if adapter:
                     try:
@@ -144,10 +167,10 @@ class PolicyEngine:
                             results = self.scan_file(content, full_path, adapter)
                             all_violations.extend(results.get("violations", []))
                             all_suppressed.extend(results.get("suppressed", []))
-                            scanned_count += 1
 
                             # --- Diamond Cage: behavioral scan on Python files ---
                             if cage and full_path.endswith(".py"):
+                                click.echo(f"      [CAGE] Behavioral scan starting for {full_path}...")
                                 context_dir = str(Path(full_path).parent)
                                 cage_result = cage.behavioral_scan(
                                     target_file=full_path,
@@ -156,10 +179,44 @@ class PolicyEngine:
                                 behavioral_hits.extend(
                                     cage_result.get("behavioral_violations", [])
                                 )
+                                click.echo(f"      [CAGE] Result: {cage_result.get('snapshot', {}).get('elapsed_ms', 0):.2f}ms")
                     except Exception as e:
-                        if self.verbose: click.echo(f"⚠️  Error scanning {full_path}: {e}")
+                        click.echo(f"[!] Error scanning {full_path}: {e}")
                 else:
                     ignored_files += 1
+        else:
+            with click.progressbar(target_files, label="Analyzing Security Posture", fill_char="#", empty_char=".") as bar:
+                for full_path in bar:
+                    adapter = LanguageRegistry.get_adapter_for_file(full_path)
+                    if adapter:
+                        try:
+                            with open(full_path, "rb") as f:
+                                content = f.read()
+                                if len(content) > 2 * 1024 * 1024:
+                                    ignored_files += 1
+                                    continue
+                                results = self.scan_file(content, full_path, adapter)
+                                all_violations.extend(results.get("violations", []))
+                                all_suppressed.extend(results.get("suppressed", []))
+                                scanned_count += 1
+
+                                # --- Diamond Cage: behavioral scan on Python files ---
+                                if cage and full_path.endswith(".py"):
+                                    context_dir = str(Path(full_path).parent)
+                                    cage_result = cage.behavioral_scan(
+                                        target_file=full_path,
+                                        context_dir=context_dir,
+                                    )
+                                    behavioral_hits.extend(
+                                        cage_result.get("behavioral_violations", [])
+                                    )
+                        except Exception as e:
+                            pass
+                    else:
+                        ignored_files += 1
+
+        if self.verbose:
+            click.secho(f"   Scan Prep Complete: {len(target_files)} files found.", fg="green", dim=True)
 
         return {
             "violations":          all_violations,
@@ -224,7 +281,7 @@ class PolicyEngine:
                     if s_expr:
                         if self.verbose:
                             import click
-                            click.secho(f"    🔍 Running Query: {s_expr.strip()}", fg="white", dim=True)
+                            click.secho(f"    SCAN: Running Query: {s_expr.strip()}", fg="white", dim=True)
                         
                         matches = self._execute_query(tree.root_node, adapter, s_expr)
                         if self.verbose:
@@ -325,7 +382,7 @@ class PolicyEngine:
                 except Exception as e:
                     if self.verbose:
                         import click
-                        click.secho(f"    ⚠️  Rule Error ({rule.get('id', 'unknown')}): {e}", fg="yellow", dim=True)
+                        click.secho(f"    [!]️  Rule Error ({rule.get('id', 'unknown')}): {e}", fg="yellow", dim=True)
                     pass
 
             # --- MODE B: Regex (Fallback) ---

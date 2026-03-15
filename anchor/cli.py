@@ -1,5 +1,5 @@
 import click
-import subprocess  # anchor: ignore RI-12-SUBPROCESS
+import subprocess  # anchor: ignore ANC-018
 import os
 import sys
 import yaml
@@ -11,6 +11,7 @@ from anchor.core.constitution import (
     get_constitution_url,
     get_mitigation_url,
     CONSTITUTION_SHA256,
+    MITIGATION_SHA256,
     verify_integrity,
 )
 from anchor.core.config import settings
@@ -29,7 +30,7 @@ def cli():
 @click.option('--policy-name', default='policy.anchor', help='Name for your project policy file (e.g., jpmorgan.anchor)')
 def init(sandbox, policy_name):
     """Initializes Anchor using the V3 modular directory architecture (.anchor/)."""
-    import shutil  # anchor: ignore RI-08-SHUTIL
+    import shutil  # anchor: ignore ANC-007
     
     # 1. Create Visible .anchor Directory Structure
     # This directory is intended to be visible like .github/
@@ -48,8 +49,8 @@ def init(sandbox, policy_name):
     # This ensures a single source of truth inside .anchor/
     legacy_files = [
         policy_name, 
-        "constitution.anchor.example", "constitution.anchor",
-        "mitigation.anchor.example", "mitigation.anchor"
+        "constitution.anchor.example",
+        "mitigation.anchor.example",
     ]
     for f in legacy_files:
         if os.path.exists(f):
@@ -71,17 +72,51 @@ def init(sandbox, policy_name):
         shutil.copy2(logo_src, logo_dst)
         click.secho("Anchor Branding Initialized (.anchor/branding)", fg="cyan")
 
-    # Universal Governance (INSIDE .anchor)
+    # 2. Universal Governance (INSIDE .anchor)
+    import urllib.request
+    from anchor.core.constitution import get_constitution_url, get_mitigation_url
+    from anchor.core.config import settings
+
     resources = [
-        ("constitution.anchor.example", "constitution.anchor.example"),
-        ("mitigation.anchor.example", "mitigation.anchor.example")
+        ("constitution.anchor", get_constitution_url()),
+        ("mitigation.anchor", get_mitigation_url())
     ]
-    for src_name, dst_name in resources:
+    
+    for filename, url in resources:
+        # Reference file (.example)
+        src_name = f"{filename}.example"
         ref_src = os.path.join(resources_dir, src_name)
-        ref_dst = os.path.join(dot_anchor, dst_name)
+        ref_dst = os.path.join(dot_anchor, src_name)
+        
+        # 1. Deploy Reference (.example)
         if os.path.exists(ref_src):
             shutil.copy2(ref_src, ref_dst)
             click.secho(f"Deployed reference: {ref_dst}", fg="green")
+            
+        # 2. Seed the cache (Cloud-First)
+        cache_dst = os.path.join(cache_dir, filename)
+        success = False
+        
+        try:
+            if verbose := os.environ.get("ANCHOR_VERBOSE"):  # anchor: ignore ANC-023
+                click.echo(f"   Attempting to fetch {filename} from cloud...")
+            
+            with urllib.request.urlopen(url, timeout=settings.fetch_timeout) as response:
+                content = response.read()
+                with open(cache_dst, "wb") as f:
+                    f.write(content)
+                if verbose:
+                    click.echo(f"   [V] Synced {filename} from cloud.")
+                success = True
+        except Exception as e:
+            if verbose := os.environ.get("ANCHOR_VERBOSE"):  # anchor: ignore ANC-023
+                click.echo(f"   [!] Cloud fetch failed for {filename}: {e}")
+
+        if not success and os.path.exists(ref_src):
+            # Fallback to local seeding
+            shutil.copy2(ref_src, cache_dst)
+            if verbose := os.environ.get("ANCHOR_VERBOSE"):  # anchor: ignore ANC-023
+                click.echo(f"   [V] Seeded cache from LOCAL example: {cache_dst}")
 
     # 3. Create Local Project Policy (INSIDE .anchor)
     target_policy = os.path.join(dot_anchor, policy_name)
@@ -104,8 +139,8 @@ rules:
   # Add your rules here
 '''
         with open(target_policy, "w", encoding="utf-8") as f:
-            f.write(project_template)  # anchor: ignore RI-08
-        # anchor: ignore RI-08
+            f.write(project_template)  # anchor: ignore ANC-007
+        # anchor: ignore ANC-007
         click.secho(f"Created project policy: {target_policy}", fg="green")
     else:
         click.secho(f"  '{target_policy}' already exists.", fg="blue")
@@ -124,7 +159,7 @@ rules:
     try:
         content = ""
         if os.path.exists(gitignore_path):
-            with open(gitignore_path, "r") as f:  # anchor: ignore RI-08
+            with open(gitignore_path, "r") as f:  # anchor: ignore ANC-007
                 content = f.read()
         
         needed = [r for r in rules_to_ignore if r not in content]
@@ -134,7 +169,7 @@ rules:
                     f.write("\n")
                 f.write("\n# Anchor Security & Governance (Local Settings)\n")
                 for r in needed:
-                    f.write(f"{r}\n")  # anchor: ignore RI-08
+                    f.write(f"{r}\n")  # anchor: ignore ANC-007
             click.secho("Updated .gitignore to protect local policies.", fg="cyan")
     except Exception as e:
         click.secho(f"WARNING: Could not update .gitignore: {e}", fg="yellow")
@@ -172,7 +207,7 @@ fi
         
         try:
             with open(pre_commit_path, "w") as f:
-                f.write(pre_commit_content)  # anchor: ignore RI-08
+                f.write(pre_commit_content)  # anchor: ignore ANC-007
             try: os.chmod(pre_commit_path, 0o755)
             except: pass
             
@@ -193,12 +228,12 @@ fi
     click.echo("Anchor Assets (see .anchor/):")
     click.echo(f"  constitution.anchor.example  -> Governance Rules Reference")
     click.echo(f"  mitigation.anchor.example    -> Detection Patterns Reference")
-    click.echo(f"  {policy_name}                → Your project rules (used for audits)")
+    click.echo(f"  {policy_name}                -> Your project rules (used for audits)")
     click.echo(f"  branding/                   -> Anchor Identity")
     click.echo("")
     click.echo("How audits work:")
     click.echo("  Universal Constitution  -> Fetched from cloud (tamper-proof)")
-    click.echo(f"  {policy_name}           → Your local rules (merged with universal)")
+    click.echo(f"  {policy_name}           -> Your local rules (merged with universal)")
     click.echo("")
     click.echo("Next steps:")
     click.echo(f"  1. Review governance: .anchor/constitution.anchor.example")
@@ -242,6 +277,22 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
     """
     if ctx.invoked_subcommand is not None:
         return  # Let the subcommand handle it
+    
+    # --- SUBCOMMAND REDIRECTION FIX ---
+    # Click's greedy 'paths' argument may consume the subcommand name (e.g., 'drift').
+    # If we are here, no subcommand was explicitly invoked, so we check 'paths'.
+    if paths and paths[0] in check.commands:
+        cmd_name = paths[0]
+        cmd = check.commands[cmd_name]
+        # Only pass 'target' for commands that have a target parameter (e.g. drift, not verify-sync)
+        has_target = any(p.name == "target" for p in cmd.params)
+        if has_target:
+            target = paths[1] if len(paths) > 1 else "."
+            return ctx.invoke(cmd, target=target)
+        else:
+            return ctx.invoke(cmd)
+    # ----------------------------------
+
     from anchor.core.sandbox import DiamondCage, install_diamond_cage
     cage = DiamondCage()
 
@@ -265,9 +316,10 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
     cache_dir = os.path.join(dot_anchor, "cache")
     active_policies = []
 
-    # Governance Files to sync and verify (V3: Constitution only for now, patterns are local/built-in)
+    # Governance Files to sync and verify
     governance_targets = [
         ("Constitution", get_constitution_url(), "constitution.anchor", CONSTITUTION_SHA256),
+        ("Mitigation Catalog", get_mitigation_url(), "mitigation.anchor", MITIGATION_SHA256),
     ]
     for label, url, filename, expected_hash in governance_targets:
         target_path = os.path.join(cache_dir, filename)
@@ -296,7 +348,7 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
                 # Offline fallback with integrity check
                 is_valid, msg = verify_integrity(target_path, expected_hash)
                 if is_valid:
-                    click.secho(f"WARNING: {label} sync failed, using verified cache.", fg="yellow")
+                    click.secho(f"INFO: {label} cloud unreachable, using verified cache.", fg="cyan")
                     if verbose: click.echo(f"   {msg}")
                 else:
                     click.secho(f"\n{msg}", fg="red", bold=True)
@@ -307,13 +359,44 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
                 sys.exit(1)
 
     # 1.5. THE RISK CATALOG LOADER (V3 Modular System)
-    # We load all .yaml / .anchor files from the /patterns directory
-    master_rules = []
+    # We load universal rules from the cache FIRST, then merge local patterns/policies
+    rule_dict = {} # Use dict to de-duplicate by ID
+    
     package_root = os.path.dirname(os.path.abspath(__file__))
     patterns_dir = os.path.join(os.path.dirname(package_root), "patterns")
-    
+
+    # A. Load Universal Rules from Joined Cache
+    constitution_path = os.path.join(cache_dir, "constitution.anchor")
+    mitigation_path = os.path.join(cache_dir, "mitigation.anchor")
+
+    if os.path.exists(constitution_path) and os.path.exists(mitigation_path):
+        try:
+            with open(constitution_path, "r", encoding="utf-8") as f:
+                c_data = yaml.safe_load(f) or {}
+                c_rules = {r["id"]: r for r in c_data.get("rules", []) if "id" in r}
+            
+            with open(mitigation_path, "r", encoding="utf-8") as f:
+                m_data = yaml.safe_load(f) or {}
+                m_list = m_data.get("mitigations", [])
+
+            for m in m_list:
+                r_id = m.get("rule_id")
+                if r_id in c_rules:
+                    rule_meta = c_rules[r_id]
+                    exec_rule = rule_meta.copy()
+                    exec_rule["mitigation_id"] = m["id"]
+                    exec_rule["match"] = m["match"]
+                    exec_rule["name"] = f"{rule_meta['name']} ({m['name']})"
+                    if "message" in m:
+                        exec_rule["message"] = m["message"]
+                    rule_dict[r_id] = exec_rule
+            if verbose: click.echo(f"   Loaded {len(rule_dict)} universal rules.")
+        except Exception as e:
+            if verbose: click.secho(f"WARNING: Failed to join universal governance files: {e}", fg="yellow")
+
+    # B. Load and Merge Local Risk Catalogs (patterns/)
     if os.path.exists(patterns_dir):
-        if verbose: click.echo(f"   Loading risk catalogs from {patterns_dir}...")
+        if verbose: click.echo(f"   Merging risk catalogs from {patterns_dir}...")
         for root, _, files in os.walk(patterns_dir):
             for file in files:
                 if file.endswith((".yaml", ".anchor")) and "example" not in file:
@@ -321,41 +404,15 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
                     try:
                         with open(p_path, "r", encoding="utf-8") as f:
                             data = yaml.safe_load(f) or {}
-                            # Handle both 'risks' and 'rules' keys for backward compatibility
                             catalog_rules = data.get("risks") or data.get("rules") or []
-                            master_rules.extend(catalog_rules)
-                            if verbose: click.echo(f"      + {file} ({len(catalog_rules)} rules)")
+                            for r in catalog_rules:
+                                if "id" in r:
+                                    rule_dict[r["id"]] = r # Override or add
+                            if verbose: click.echo(f"      + {file} ({len(catalog_rules)} rules merged)")
                     except Exception as e:
-                        if verbose: click.echo(f"      ! Failed to load {file}: {e}")
+                        if verbose: click.secho(f"      ! Failed to load {file}: {e}")
 
-    # Fallback to legacy joiner if patterns are missing (Backward Compatibility)
-    if not master_rules:
-        constitution_path = os.path.join(cache_dir, "constitution.anchor")
-        mitigation_path = os.path.join(cache_dir, "mitigation.anchor")
-
-        if os.path.exists(constitution_path) and os.path.exists(mitigation_path):
-            try:
-                with open(constitution_path, "r", encoding="utf-8") as f:
-                    c_data = yaml.safe_load(f) or {}
-                    c_rules = {r["id"]: r for r in c_data.get("rules", []) if "id" in r}
-                
-                with open(mitigation_path, "r", encoding="utf-8") as f:
-                    m_data = yaml.safe_load(f) or {}
-                    m_list = m_data.get("mitigations", [])
-
-                for m in m_list:
-                    r_id = m.get("rule_id")
-                    if r_id in c_rules:
-                        rule_meta = c_rules[r_id]
-                        exec_rule = rule_meta.copy()
-                        exec_rule["mitigation_id"] = m["id"]
-                        exec_rule["match"] = m["match"]
-                        exec_rule["name"] = f"{rule_meta['name']} ({m['name']})"
-                        if "message" in m:
-                            exec_rule["message"] = m["message"]
-                        master_rules.append(exec_rule)
-            except Exception as e:
-                click.secho(f"WARNING: Failed to join legacy governance files: {e}", fg="yellow")
+    master_rules = list(rule_dict.values())
 
     # --- B. Project Policy (Local) ---
     # We look for policy.anchor (default) or any .anchor file in .anchor/ or root
@@ -463,14 +520,15 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
 
         if generate_report or server_mode:
             report_path = os.path.join(dot_anchor, "audits", "governance_audit.md")
-            with open(report_path, "w") as f:  # anchor: ignore RI-08
+            with open(report_path, "w") as f:  # anchor: ignore ANC-007
                 f.write(f"# Model Audit Report: {model}\n\nStatus: {result.status.value.upper()}\n")
                 f.write(f"Passed: {result.checks_passed}/{result.checks_total}\n\n")
                 f.write("## Recommendation\n" + result.recommendation + "\n")
             click.secho(f"Report saved: {report_path}", fg="green")
 
     # --- Code Scanning Phase ---
-    click.secho(f"Scanning {len(scan_targets)} target(s) with {len(final_config['rules'])} active laws...", fg="yellow")
+    # We'll print the target/law count, but the file count comes from the engine
+    click.secho(f"Scanning {len(scan_targets)} path(s) with {len(final_config['rules'])} active laws...", fg="yellow")
 
     # --- Diamond Cage activation ---
     active_cage = None
@@ -513,7 +571,7 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
     has_cicd = os.path.isdir(".github") or os.path.isdir(".gitlab-ci")
     write_json = json_report or has_cicd
 
-    if violations or metrics:
+    if violations or suppressed or metrics:
         from datetime import datetime
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         failures = [v for v in violations if v['severity'] in ['critical', 'blocker', 'error']]
@@ -529,8 +587,8 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
         json_path = os.path.join(dot_anchor, "telemetry",  "governance_report.json")
 
         try:
-            # ── 1. Plain-text violation dump (always) ─────────────────────────
-            with open(txt_path, "w", encoding="utf-8") as f:  # anchor: ignore RI-08
+            # -- 1. Plain-text violation dump (always) ------------------------─
+            with open(txt_path, "w", encoding="utf-8") as f:  # anchor: ignore ANC-007
                 f.write("=" * 80 + "\n")
                 f.write("   ANCHOR GOVERNANCE VIOLATIONS\n")
                 f.write("=" * 80 + "\n\n")
@@ -552,11 +610,11 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
                     from anchor.core.healer import suggest_fix, format_suggestion_for_report
                     sev = v['severity'].upper()
                     if sev in ["CRITICAL", "BLOCKER", "ERROR"]:
-                        tag = "[✗]"
+                        tag = "[[X]]"
                     elif sev == "WARNING":
-                        tag = "[⚠]"
+                        tag = "[[!]]"
                     else:
-                        tag = "[✔]"
+                        tag = "[[V]]"
                     f.write(f"{tag} [{v['id']}] {v['name']} ({v['severity'].upper()})\n")
                     f.write(f"    Location: {v['file']}:{v['line']}\n")
                     f.write(f"    Message:  {v['message']}\n")
@@ -580,8 +638,8 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
                         f.write(f"    Authorized: {s.get('author', 'Unknown Author')}\n")
                         f.write("-" * 40 + "\n")
 
-            # ── 2. Markdown documentation report (always) ─────────────────────
-            with open(md_path, "w", encoding="utf-8") as f:  # anchor: ignore RI-08
+            # -- 2. Markdown documentation report (always) --------------------─
+            with open(md_path, "w", encoding="utf-8") as f:  # anchor: ignore ANC-007
                 scan_status = "FAILED" if failures else "PASSED"
                 f.write("# Anchor Governance Audit\n\n")
                 f.write(f"**Status:** {scan_status}  \n")
@@ -612,9 +670,9 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
 
                 f.write("> *Suppressed exceptions are authorized security bypasses — verify authors are correct.*\n")
 
-            # ── 3. JSON (auto if CI/CD detected, or --json-report) ────────────
+            # -- 3. JSON (auto if CI/CD detected, or --json-report) ------------
             if write_json:
-                with open(json_path, "w", encoding="utf-8") as f:  # anchor: ignore RI-08
+                with open(json_path, "w", encoding="utf-8") as f:  # anchor: ignore ANC-007
                     json.dump({
                         "scan_source": os.path.abspath(scan_targets[0]),
                         "timestamp": timestamp,
@@ -627,10 +685,10 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
                 if verbose or has_cicd:
                     click.secho(f"JSON report: {json_path}", fg="green")
 
-            # ── 4. GitHub Step Summary (Ephemeral, CI-only) ───────────────────
+            # -- 4. GitHub Step Summary (Ephemeral, CI-only) ------------------─
             if github_summary:
                 summary_path = "anchor-summary.md"
-                with open(summary_path, "w", encoding="utf-8") as f:  # anchor: ignore RI-08
+                with open(summary_path, "w", encoding="utf-8") as f:  # anchor: ignore ANC-007
                     f.write("## Anchor Security & Governance Summary\n\n")
                     f.write(f"**Status:** {'FAILED' if failures else 'PASSED'}  \n")
                     f.write(f"**Findings:** {len(violations)} Active | {len(suppressed)} Suppressed\n\n")
@@ -655,9 +713,9 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
 
             click.secho(f"\nReports written to {dot_anchor}/", fg="green", bold=True)
             if verbose:
-                click.echo(f"   • Violations: {txt_path}")
-                click.echo(f"   • Audit MD:   {md_path}")
-                if write_json: click.echo(f"   • JSON:       {json_path}")
+                click.echo(f"   * Violations: {txt_path}")
+                click.echo(f"   * Audit MD:   {md_path}")
+                if write_json: click.echo(f"   * JSON:       {json_path}")
 
         except Exception as e:
             click.echo(f"WARNING: Failed to generate reports: {e}")
@@ -711,6 +769,88 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
     else:
         click.secho("\nPASSED: Compliance Verified.", fg="green", bold=True)
         sys.exit(0)
+
+
+@check.command('verify-sync')
+@click.option('--fix', is_flag=True, help='Auto-sync from canonical source (anchor/core/resources/mitigation.anchor.example).')
+@click.option('--verbose', '-v', is_flag=True, help='Show hash details.')
+def check_verify_sync(fix, verbose):
+    """
+    Verify that all three copies of mitigation.anchor are identical.
+
+    Checks:
+      1. anchor/core/resources/mitigation.anchor.example  (canonical source)
+      2. mitigation.anchor                                 (cloud-served root)
+      3. .anchor/cache/mitigation.anchor                  (local engine cache)
+
+    Use --fix to automatically sync all copies from the canonical source.
+    """
+    import hashlib
+    import shutil
+
+    def sha256(path):
+        try:
+            with open(path, "rb") as f:
+                return hashlib.sha256(f.read()).hexdigest()
+        except FileNotFoundError:
+            return None
+
+    # Locate package root for the canonical source
+    package_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    canonical    = os.path.join(package_root, "anchor", "core", "resources", "mitigation.anchor.example")
+    root_copy    = "mitigation.anchor"
+    cache_copy   = os.path.join(".anchor", "cache", "mitigation.anchor")
+
+    files = {
+        "canonical (resources/mitigation.anchor.example)": canonical,
+        "root       (mitigation.anchor)":                   root_copy,
+        "cache      (.anchor/cache/mitigation.anchor)":     cache_copy,
+    }
+
+    hashes = {label: sha256(path) for label, path in files.items()}
+    canon_hash = hashes["canonical (resources/mitigation.anchor.example)"]
+
+    click.secho("\nAnchor Mitigation Sync Check", bold=True)
+    click.echo("=" * 60)
+
+    all_synced = True
+    for label, h in hashes.items():
+        if h is None:
+            click.secho(f"  [MISSING]  {label}", fg="red")
+            all_synced = False
+        elif h == canon_hash:
+            status = click.style("[OK]     ", fg="green")
+            click.echo(f"  {status} {label}")
+            if verbose:
+                click.echo(f"           SHA-256: {h[:16]}...")
+        else:
+            status = click.style("[MISMATCH]", fg="red", bold=True)
+            click.echo(f"  {status} {label}")
+            if verbose:
+                click.echo(f"           Expected: {canon_hash[:16]}...")
+                click.echo(f"           Got:      {h[:16]}...")
+            all_synced = False
+
+    click.echo("=" * 60)
+
+    if all_synced:
+        click.secho("\nPASSED: All copies are in sync.", fg="green", bold=True)
+    else:
+        if fix:
+            click.secho("\nFIXING: Syncing all copies from canonical source...", fg="yellow")
+            for label, path in files.items():
+                if path != canonical:
+                    try:
+                        os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+                        shutil.copy2(canonical, path)
+                        click.secho(f"  Synced: {path}", fg="green")
+                    except Exception as e:
+                        click.secho(f"  Failed to sync {path}: {e}", fg="red")
+            click.secho("\nDone. Run anchor check verify-sync to confirm.", fg="green")
+        else:
+            click.secho("\nFAILED: Copies are out of sync. Run with --fix to auto-sync.", fg="red", bold=True)
+            sys.exit(1)
+
 
 
 @check.command('drift')
@@ -809,8 +949,8 @@ def check_drift(target, repo, limit, only_violations, as_json, verbose, report):
             f"(use --limit to change).", fg='yellow'
         )
         all_symbols = all_symbols[:limit]
-    else:
-        click.secho(f"Found {len(all_symbols)} symbols to analyse.", fg='cyan')
+    # else:
+    #    click.secho(f"Found {len(all_symbols)} symbols to analyse.", fg='cyan')
 
     # --- Run drift analysis on each symbol ---
     history_engine = HistoryEngine(str(repo_path))
@@ -818,13 +958,16 @@ def check_drift(target, repo, limit, only_violations, as_json, verbose, report):
     json_results = []
 
     with click.progressbar(all_symbols, label="Analyzing Security Posture",
-                           fill_char='█', empty_char='░') as bar:
+                           fill_char='#', empty_char='.') as bar:
         for symbol in bar:
             anchor = history_engine.find_anchor(symbol)
             if not anchor:
                 continue
             contexts = extract_usages(str(repo_path), symbol.name)
             result   = analyze_drift(symbol.name, anchor, contexts)
+            # Attach metadata for reporting
+            result.file_path = symbol.file_path
+            result.line_number = symbol.line_number
 
             # Filter if --only-violations
             if only_violations and result.verdict.value == 'aligned':
@@ -866,7 +1009,7 @@ def check_drift(target, repo, limit, only_violations, as_json, verbose, report):
     from datetime import datetime
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    # ── 1. Plain-text dump (always) ───────────────────────────────────────────
+    # -- 1. Plain-text dump (always) ------------------------------------------─
     txt_path = os.path.join(dot_anchor, "violations", "drift_violations.txt")
     md_path  = os.path.join(dot_anchor, "reports", "drift_audit.md")
     json_path = os.path.join(dot_anchor, "telemetry", "drift_report.json")
@@ -875,7 +1018,7 @@ def check_drift(target, repo, limit, only_violations, as_json, verbose, report):
         os.makedirs(os.path.join(dot_anchor, "reports"), exist_ok=True)
         os.makedirs(os.path.join(dot_anchor, "telemetry"), exist_ok=True)
 
-        with open(txt_path, "w", encoding="utf-8") as f:  # anchor: ignore RI-08
+        with open(txt_path, "w", encoding="utf-8") as f:  # anchor: ignore ANC-007
             f.write("=" * 80 + "\n")
             f.write("   ANCHOR DRIFT VIOLATIONS\n")
             f.write("=" * 80 + "\n\n")
@@ -886,20 +1029,21 @@ def check_drift(target, repo, limit, only_violations, as_json, verbose, report):
             for r in results:
                 verdict = r.verdict.value
                 if verdict == 'aligned':
-                    tag = "[✔]"
+                    tag = "[[V]]"
                 elif verdict in ('intent_violation', 'semantic_overload'):
-                    tag = "[✗]"
+                    tag = "[[X]]"
                 else:
-                    tag = "[⚠]"
+                    tag = "[[!]]"
                 f.write(f"{tag} {r.symbol} [{r.verdict.value.upper().replace('_', ' ')}]\n")
+                f.write(f"   Location:  {getattr(r, 'file_path', 'unknown')}:{getattr(r, 'line_number', '0')}\n")
                 f.write(f"   Rationale: {r.rationale}\n")
                 if r.evidence:
                     for e in r.evidence:
                         f.write(f"   · {e}\n")
                 f.write("\n")
 
-        # ── 2. Markdown report (always) ───────────────────────────────────────
-        with open(md_path, "w", encoding="utf-8") as f:  # anchor: ignore RI-08
+        # -- 2. Markdown report (always) --------------------------------------─
+        with open(md_path, "w", encoding="utf-8") as f:  # anchor: ignore ANC-007
             f.write("# Anchor Architectural Drift Audit\n\n")
             f.write(f"**Status:** {'DRIFT DETECTED' if drift_violations else 'NO DRIFT'}  \n")
             f.write(f"**Timestamp:** {timestamp}  \n")
@@ -938,9 +1082,9 @@ def check_drift(target, repo, limit, only_violations, as_json, verbose, report):
 
             f.write("> *This report was generated by Anchor. Use it for code review, release notes, or governance documentation.*\n")
 
-        # ── 3. JSON (auto if CI/CD detected or --json flag) ───────────────────
+        # -- 3. JSON (auto if CI/CD detected or --json flag) ------------------─
         if as_json or has_cicd:
-            with open(json_path, "w", encoding="utf-8") as f:  # anchor: ignore RI-08
+            with open(json_path, "w", encoding="utf-8") as f:  # anchor: ignore ANC-007
                 _json.dump(json_results, f, indent=2)
             if as_json:
                 # Also print to stdout for pipe-ability
@@ -950,14 +1094,14 @@ def check_drift(target, repo, limit, only_violations, as_json, verbose, report):
 
         click.secho(f"\nReports written to {dot_anchor}/", fg="green", bold=True)
         if verbose:
-            click.echo(f"   • Violations: {txt_path}")
-            click.echo(f"   • Audit MD:   {md_path}")
-            if as_json or has_cicd: click.echo(f"   • JSON:       {json_path}")
+            click.echo(f"   * Violations: {txt_path}")
+            click.echo(f"   * Audit MD:   {md_path}")
+            if as_json or has_cicd: click.echo(f"   * JSON:       {json_path}")
 
     except Exception as e:
         click.secho(f"WARNING: Failed to write drift reports: {e}", fg="yellow")
 
-    # ── Terminal summary (always) ──────────────────────────────────────────────
+    # -- Terminal summary (always) ----------------------------------------------
     click.echo("=" * 70)
     click.secho("ANCHOR DRIFT REPORT", bold=True)
     click.echo("=" * 70)
@@ -1014,11 +1158,11 @@ def heal(paths, apply_fixes, verbose):
     txt_path     = os.path.join(dot_anchor, "violations", "governance_violations.txt")
     json_path    = os.path.join(dot_anchor, "telemetry",  "governance_report.json")
 
-    # ── Load violations from the last run ────────────────────────────────────
+    # -- Load violations from the last run ------------------------------------
     violations = []
     if os.path.exists(json_path):
         try:
-            with open(json_path, "r", encoding="utf-8") as f:  # anchor: ignore RI-08
+            with open(json_path, "r", encoding="utf-8") as f:  # anchor: ignore ANC-007
                 data = json.load(f)
                 violations = data.get("violations", [])
         except Exception as e:
@@ -1031,7 +1175,7 @@ def heal(paths, apply_fixes, verbose):
             click.secho("No violations found. Nothing to heal.", fg="green")
         raise SystemExit(0)
 
-    # ── Filter by path if specified ───────────────────────────────────────────
+    # -- Filter by path if specified ------------------------------------------─
     if paths:
         norm = [os.path.normpath(p) for p in paths]
         violations = [
@@ -1042,7 +1186,7 @@ def heal(paths, apply_fixes, verbose):
             click.secho(f"No violations in the specified path(s).", fg="green")
             raise SystemExit(0)
 
-    # ── Build suggestions ─────────────────────────────────────────────────────
+    # -- Build suggestions ----------------------------------------------------─
     suggestions = []
     for v in violations:
         s = suggest_fix(v)
@@ -1058,7 +1202,7 @@ def heal(paths, apply_fixes, verbose):
 
     click.echo()
     click.secho(f"Anchor Heal: {len(suggestions)} suggestion(s) found", bold=True)
-    click.secho(f"   ✓ Auto-fixable: {len(auto_fixable)}   ⚠ Manual: {len(manual_only)}", fg="cyan")
+    click.secho(f"   [V] Auto-fixable: {len(auto_fixable)}   [!] Manual: {len(manual_only)}", fg="cyan")
     click.echo("=" * 70)
 
     applied = 0
@@ -1075,7 +1219,7 @@ def heal(paths, apply_fixes, verbose):
             click.secho(f"  + {s.suggested}", fg="green")
 
         if not s.auto_fixable:
-            click.secho("  ⚠  Manual fix required.", fg="yellow", dim=True)
+            click.secho("  [!]  Manual fix required.", fg="yellow", dim=True)
         elif apply_fixes:
             ok = apply_fix(s)
             if ok:

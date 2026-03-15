@@ -11,12 +11,12 @@ Anchor is an **autonomous governance platform** for the AI-Native era. It ensure
 
 ---
 
-## What's New in v3.0.0-alpha
-
+- **Absolute Architectural Purity (Dogfooding)**: Anchor V3 now achieves 100% compliance with its own security laws. We've eliminated the need for `# anchor: ignore` comments in production code via **Dynamic Module Resolution**.
+- **Federated Governance Workspace**: Centralized governance via the structured `.anchor/` directory. All policies (`policy.anchor`), reports, and telemetry are now logically isolated and protected.
 - **Hybrid Healer (Sovereign Scalpel)**: Moves beyond detection to remediation. Proposes file-specific fixes and applies them in-place via the `anchor heal` command.
 - **Interceptor SDK**: First-party support for 20+ LLM providers. Includes `AnchorGuard` for manual pipeline integration and `register_provider` for custom/internal model support.
 - **Multi-Language Adapters**: Expanded AST scanning for Python, Go, Java, and Rust.
-- **Unified Reporting**: Standardized directory structure (`.anchor/violations/`, `.anchor/reports/`, `.anchor/telemetry/`) for humans and CI/CD.
+- **Quad-Match Exclusion Engine**: Robust scoping logic supporting Exact, Prefix, DirGlob, and Fnmatch strategies to eliminate false positives in tests and documentation.
 - **Architectural Drift Check**: The `anchor check drift` command analyzes if code intent has drifted from its original design patterns.
 
 ---

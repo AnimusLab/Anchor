@@ -9,7 +9,7 @@ long_description = (here / "README.md").read_text(encoding="utf-8")
 
 setup(
     name="anchor-audit",
-    version="3.0.0-alpha",  # V3: Interceptor SDK + Diamond Cage Behavioral Verification
+    version="3.0.0",  # V3 Stable: Full FINOS 23-rule coverage, Diamond Cage, PyPI release
     description="The Federated Governance Engine for AI (Universal Multi-Language)",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -35,6 +35,7 @@ setup(
         "pydantic-settings>=2.0.0",
         "wrapt",           # SDK-level interceptor patches (Layer 1)
         "requests",        # HTTP backstop (Layer 2)
+        "GitPython",       # Drift analysis (Layer 3)
     ],
     extras_require={
         "dev": ["pytest", "black", "mypy"],
@@ -48,7 +49,7 @@ setup(
     },
     python_requires='>=3.8',
     classifiers=[
-        "Development Status :: 4 - Beta",
+        "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
         "Topic :: Software Development :: Quality Assurance",
         "License :: OSI Approved :: MIT License",

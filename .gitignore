@@ -35,6 +35,7 @@ test_dir_unified/
 test_poc.py
 test_unified.py
 ts_probe.py
+docs_framework/
 
 # IDEs
 .vscode/

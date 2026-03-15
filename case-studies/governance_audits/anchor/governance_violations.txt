@@ -1,0 +1,44 @@
+================================================================================
+   ANCHOR GOVERNANCE VIOLATIONS
+================================================================================
+
+Scan Source: D:\Anchor
+Timestamp:   2026-03-13 04:28:16
+
+--- SCAN STATISTICS ---
+Files Scanned: 49
+Files Ignored: 118
+Total Files:   167
+Total Dirs:    27
+
+--- VIOLATION SUMMARY ---
+Total Findings: 5
+Breakdown:      0 Blocker/Error, 0 Warning, 0 Info, 5 Suppressed
+
+--------------------------------------------------------------------------------
+
+
+========================================
+   SUPPRESSED FINDINGS (AUDITED)
+========================================
+
+[SUPPRESSED] [ANC-018] Agent Action Authorization Bypass (Unsandboxed Subprocess in Agent)
+    Location:   .\anchor\adapters\python.py:22
+    Authorized: Tanishq
+----------------------------------------
+[SUPPRESSED] [ANC-018] Agent Action Authorization Bypass (Unsandboxed Subprocess in Agent)
+    Location:   .\anchor\core\engine.py:54
+    Authorized: Tanishq
+----------------------------------------
+[SUPPRESSED] [ANC-018] Agent Action Authorization Bypass (Unsandboxed Subprocess in Agent)
+    Location:   .\anchor\core\engine.py:543
+    Authorized: Tanishq
+----------------------------------------
+[SUPPRESSED] [ANC-018] Agent Action Authorization Bypass (Unsandboxed Subprocess in Agent)
+    Location:   .\anchor\core\sandbox.py:276
+    Authorized: Tanishq
+----------------------------------------
+[SUPPRESSED] [ANC-018] Agent Action Authorization Bypass (Unsandboxed Subprocess in Agent)
+    Location:   .\scripts\inspect_python.py:31
+    Authorized: Not Committed Yet
+----------------------------------------

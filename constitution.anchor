@@ -1,0 +1,260 @@
+# =============================================================================
+# FINOS AI Governance Framework — AI Governance Rules (v3.1.0)
+# =============================================================================
+# ID PREFIX: ANC-XXX (Anchor's Universal Namespace)
+# This file defines the WHAT — the risks that must be governed.
+# Mapped strictly to FINOS AI Governance Framework taxonomy.
+#
+# SEVERITY FLOOR (min_severity):
+#   Defines the minimum severity that local policies cannot go below.
+#   Example: min_severity: "error" means a company can set severity to
+#   "error" or "blocker", but NOT "warning" or "info".
+# =============================================================================
+
+version: "3.1.0"
+
+metadata:
+  framework: "FINOS AI Governance Framework"
+  synthesis: ["Anchor 2025.Q1", "OWASP LLM 2025", "NIST AI 600-1"]
+
+rules:
+  # --- Tier 1: Privacy & Data Security ---
+  - id: "ANC-001"
+    name: "Information Leaked to Hosted Model"
+    category: "privacy"
+    description: "Sensitive data sent to third-party hosted models may be memorized or leaked."
+    references: ["FINOS:RI-01", "OWASP:LLM02"]
+    severity: "blocker"
+    min_severity: "error"
+    min_mitigations: 1
+
+  - id: "ANC-002"
+    name: "Information Leaked to Vector Store"
+    category: "privacy"
+    description: "Embeddings in vector stores can reveal sensitive data via inversion attacks."
+    references: ["FINOS:RI-02", "OWASP:LLM08"]
+    severity: "error"
+    min_severity: "warning"
+    min_mitigations: 1
+
+  # --- Tier 2: Model Stability & Reliability ---
+  - id: "ANC-003"
+    name: "Hallucination and Inaccurate Outputs"
+    category: "accuracy"
+    description: "LLM outputs may be factually incorrect but plausible."
+    references: ["FINOS:RI-04", "OWASP:LLM09"]
+    severity: "error"
+    min_severity: "warning"
+    min_mitigations: 1
+
+  - id: "ANC-004"
+    name: "Foundation Model Versioning"
+    category: "operations"
+    description: "Unpinned model versions cause behavioral drift."
+    references: ["FINOS:RI-05"]
+    severity: "warning"
+    min_severity: "info"
+    min_mitigations: 1
+
+  - id: "ANC-005"
+    name: "Non-Deterministic Behaviour"
+    category: "operations"
+    description: "Varying outputs for same input makes systems unreliable."
+    references: ["FINOS:RI-06"]
+    severity: "warning"
+    min_severity: "info"
+    min_mitigations: 1
+
+  - id: "ANC-006"
+    name: "Availability of Foundational Model"
+    category: "operations"
+    description: "Dependence on external APIs creates single points of failure."
+    references: ["FINOS:RI-07"]
+    severity: "warning"
+    min_severity: "info"
+    min_mitigations: 1
+
+  # --- Tier 3: Security & Integrity ---
+  - id: "ANC-007"
+    name: "Tampering with the Foundational Model"
+    category: "security"
+    description: "Model weights or infrastructure may be compromised via supply chain."
+    references: ["FINOS:RI-08", "OWASP:LLM03"]
+    severity: "blocker"
+    min_severity: "blocker"
+    min_mitigations: 1
+
+  - id: "ANC-008"
+    name: "Data Poisoning"
+    category: "security"
+    description: "Malicious data used during fine-tuning corrupts model behavior."
+    references: ["FINOS:RI-09", "OWASP:LLM04"]
+    severity: "blocker"
+    min_severity: "error"
+    min_mitigations: 1
+
+  - id: "ANC-009"
+    name: "Prompt Injection"
+    category: "security"
+    description: "Malicious inputs manipulate model into unauthorized actions."
+    references: ["FINOS:RI-10", "OWASP:LLM01"]
+    severity: "blocker"
+    min_severity: "error"
+    min_mitigations: 1
+
+  # --- Tier 4: Responsible AI ---
+  - id: "ANC-010"
+    name: "Inadequate System Alignment"
+    category: "safety"
+    description: "Model objectives may not align with organizational values."
+    references: ["FINOS:RI-14"]
+    severity: "error"
+    min_severity: "warning"
+    min_mitigations: 1
+
+  - id: "ANC-011"
+    name: "Bias and Discrimination"
+    category: "fairness"
+    description: "Models may produce biased outcomes in credit/hiring."
+    references: ["FINOS:RI-16"]
+    severity: "error"
+    min_severity: "warning"
+    min_mitigations: 1
+
+  - id: "ANC-012"
+    name: "Lack of Explainability"
+    category: "transparency"
+    description: "Decisions made by black-box models aren't auditable."
+    references: ["FINOS:RI-17"]
+    severity: "error"
+    min_severity: "warning"
+    min_mitigations: 1
+
+  # --- Tier 5: Organizational Risk ---
+  - id: "ANC-013"
+    name: "Model Overreach / Expanded Use"
+    category: "governance"
+    description: "Using models beyond their validated context."
+    references: ["FINOS:RI-18"]
+    severity: "warning"
+    min_severity: "info"
+    min_mitigations: 1
+
+  - id: "ANC-014"
+    name: "Data Quality and Drift"
+    category: "accuracy"
+    description: "Performance degrades as production data drifts from training data."
+    references: ["FINOS:RI-19"]
+    severity: "warning"
+    min_severity: "info"
+    min_mitigations: 1
+
+  - id: "ANC-015"
+    name: "Reputational Risk"
+    category: "governance"
+    description: "Unsafe outputs leading to brand damage."
+    references: ["FINOS:RI-20"]
+    severity: "error"
+    min_severity: "warning"
+    min_mitigations: 1
+
+  - id: "ANC-016"
+    name: "Regulatory Compliance and Oversight"
+    category: "compliance"
+    description: "Failure to meet legal AI requirements (EU AI Act, etc.)."
+    references: ["FINOS:RI-22"]
+    severity: "error"
+    min_severity: "error"
+    min_mitigations: 1
+
+  - id: "ANC-017"
+    name: "Intellectual Property (IP) and Copyright"
+    category: "compliance"
+    description: "Model outputs violating copyright or trade secrets."
+    references: ["FINOS:RI-23"]
+    severity: "warning"
+    min_severity: "info"
+    min_mitigations: 1
+
+  # --- Tier 6: Agentic Systems ---
+  - id: "ANC-018"
+    name: "Agent Action Authorization Bypass"
+    category: "security"
+    description: "Agents executing actions outside their sandbox/permissions."
+    references: ["FINOS:RI-24", "OWASP:LLM06"]
+    severity: "blocker"
+    min_severity: "blocker"
+    min_mitigations: 1
+
+  - id: "ANC-019"
+    name: "Tool Chain Manipulation and Injection"
+    category: "security"
+    description: "Manipulating tools called by agents via input parameters."
+    references: ["FINOS:RI-25"]
+    severity: "blocker"
+    min_severity: "error"
+    min_mitigations: 1
+
+  - id: "ANC-020"
+    name: "MCP Server Supply Chain Compromise"
+    category: "security"
+    description: "Compromised MCP servers poisoning agent reasoning."
+    references: ["FINOS:RI-26"]
+    severity: "blocker"
+    min_severity: "error"
+    min_mitigations: 1
+
+  - id: "ANC-021"
+    name: "Agent State Persistence Poisoning"
+    category: "security"
+    description: "Injecting long-term backdoors into an agent's memory."
+    references: ["FINOS:RI-27"]
+    severity: "error"
+    min_severity: "warning"
+    min_mitigations: 1
+
+  - id: "ANC-022"
+    name: "Multi-Agent Trust Boundary Violations"
+    category: "security"
+    description: "One compromised agent infecting the rest of the swarm."
+    references: ["FINOS:RI-28"]
+    severity: "blocker"
+    min_severity: "blocker"
+    min_mitigations: 1
+
+  - id: "ANC-023"
+    name: "Agent-Mediated Credential Harvesting"
+    category: "security"
+    description: "Agents used to systematically find and steal API keys/secrets."
+    references: ["FINOS:RI-29"]
+    severity: "blocker"
+    min_severity: "error"
+    min_mitigations: 1
+
+  # --- Tier 7: Model Internals (Weights & Embeddings) ---
+  - id: "ANC-024"
+    name: "Super Weight Integrity"
+    category: "robustness"
+    description: "Pruning or corrupting super weights disproportionately destroys model coherence."
+    references: ["ANC:024"]
+    severity: "blocker"
+    min_severity: "error"
+    min_mitigations: 1
+
+  - id: "ANC-025"
+    name: "Static Weight Decay Rigidity"
+    category: "robustness"
+    description: "Fixed weight decay leads to robust overfitting. Use adaptive decay."
+    references: ["ANC:025"]
+    severity: "warning"
+    min_severity: "info"
+    min_mitigations: 1
+
+  - id: "ANC-026"
+    name: "Single-Objective Embedding Optimization"
+    category: "bias"
+    description: "Song/User embeddings optimized for single metrics introduce popularity bias."
+    references: ["ANC:026"]
+    severity: "warning"
+    min_severity: "info"
+    min_mitigations: 1

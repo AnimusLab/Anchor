@@ -273,6 +273,17 @@ class DiamondCage:
         cmd.extend([str(self.python_wasm_path), guest_script_path])
 
         try:
+            # On Windows, suppress the system error dialog box that appears
+            # when wasmedge.exe cannot find its DLL (wasmedge.dll not found).
+            # SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX = 0x01 | 0x02 = 3
+            _old_error_mode = 0
+            if sys.platform == "win32":
+                try:
+                    import ctypes
+                    _old_error_mode = ctypes.windll.kernel32.SetErrorMode(3)
+                except Exception:
+                    pass
+
             result = subprocess.run(  # anchor: ignore ANC-018
                 cmd,
                 capture_output=True,
@@ -280,6 +291,14 @@ class DiamondCage:
                 timeout=timeout,
                 cwd=str(abs_context),
             )
+
+            if sys.platform == "win32" and _old_error_mode is not None:
+                try:
+                    import ctypes
+                    ctypes.windll.kernel32.SetErrorMode(_old_error_mode)
+                except Exception:
+                    pass
+
             if result.returncode == 0:
                 return CageResult(status=CageStatus.SAFE, output=result.stdout, exit_code=0)
             else:

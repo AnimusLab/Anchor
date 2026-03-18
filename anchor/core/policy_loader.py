@@ -129,17 +129,18 @@ class PolicyLoader:
                             f"Constitutional floor is '{floor}'."
                         )
                         # Keep the local rule BUT enforce the floor severity
-                        rule = {**rule, "severity": floor}
-                    else:
-                        if os.environ.get("ANCHOR_VERBOSE"):  # anchor: ignore ANC-023
-                            print(f"FIX: Local Override applied for rule: {r_id}")
+                        rule["severity"] = floor
                 # --------------------------------------------------
 
-                # Preserve min_severity from constitution (cannot be overridden)
-                if "min_severity" in parent_rule:
-                    rule["min_severity"] = parent_rule["min_severity"]
+                # Preserve critical technical fields from parent (cannot be overridden via policy)
+                for field in ["match", "pattern", "namespace", "min_severity", "category"]:
+                    if field in parent_rule and field not in rule:
+                        rule[field] = parent_rule[field]
 
-            rule_map[r_id] = rule
+                # Update the existing entry instead of replacing it entirely
+                rule_map[r_id].update(rule)
+            else:
+                rule_map[r_id] = rule
 
         merged["rules"] = list(rule_map.values())
         return merged

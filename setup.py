@@ -4,6 +4,14 @@ import pathlib
 here = pathlib.Path(__file__).parent.resolve()
 long_description = (here / "README.md").read_text(encoding="utf-8")
 
+domain_files = sorted(str(p) for p in (here / "governance" / "domains").glob("*.anchor"))
+framework_files = sorted(str(p) for p in (here / "governance" / "frameworks").glob("*.anchor"))
+government_files = sorted(str(p) for p in (here / "governance" / "government").glob("*.anchor"))
+example_files = [
+    str(here / "governance" / "examples" / "constitution.anchor.example"),
+    str(here / "governance" / "examples" / "policy.anchor.example"),
+]
+
 setup(
     name="anchor-audit",
     version="4.0.0",
@@ -21,26 +29,10 @@ setup(
         ],
     },
     data_files=[
-        ("governance/domains",    ["governance/domains/security.anchor",
-                                   "governance/domains/ethics.anchor",
-                                   "governance/domains/privacy.anchor",
-                                   "governance/domains/alignment.anchor",
-                                   "governance/domains/legal.anchor",
-                                   "governance/domains/operational.anchor",
-                                   "governance/domains/supply_chain.anchor",
-                                   "governance/domains/agentic.anchor",
-                                   "governance/domains/shared.anchor"]),
-        ("governance/frameworks", ["governance/frameworks/FINOS_Framework.anchor",
-                                   "governance/frameworks/OWASP_LLM.anchor",
-                                   "governance/frameworks/NIST_AI_RMF.anchor",
-                                   "governance/frameworks/RBI_Regulations.anchor",
-                                   "governance/frameworks/EU_AI_Act.anchor",
-                                   "governance/frameworks/SEBI_Regulations.anchor",
-                                   "governance/frameworks/CFPB_Regulations.anchor",
-                                   "governance/frameworks/FCA_Regulations.anchor",
-                                   "governance/frameworks/SEC_Regulations.anchor"]),
-        ("governance/examples",   ["governance/examples/constitution.anchor.example",
-                                   "governance/examples/policy.anchor.example"]),
+        ("governance/domains", domain_files),
+        ("governance/frameworks", framework_files),
+        ("governance/government", government_files),
+        ("governance/examples", example_files),
     ],
     install_requires=[
         "click",

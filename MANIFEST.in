@@ -15,6 +15,7 @@ recursive-include anchor *.py
 
 recursive-include governance/domains *.anchor
 recursive-include governance/frameworks *.anchor
+recursive-include governance/government *.anchor
 recursive-include governance/examples *
 
 # ── Mitigation Catalog ────────────────────────────────────────────────────────

@@ -134,7 +134,8 @@ class PolicyLoader:
 
                 # Preserve critical technical fields from parent (cannot be overridden via policy)
                 for field in ["match", "pattern", "namespace", "min_severity", "category"]:
-                    if field in parent_rule and field not in rule:
+                    if field in parent_rule:
+                        # Always enforce parent's value, even if local rule provided one
                         rule[field] = parent_rule[field]
 
                 # Update the existing entry instead of replacing it entirely

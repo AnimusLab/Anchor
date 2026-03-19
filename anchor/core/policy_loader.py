@@ -31,7 +31,7 @@ class PolicyLoader:
         """
         # 1. Load local
         if self.verbose:
-            print(f" 📄 Loading local policy: {self.local_policy_path}")
+            print(f" DOC: Loading local policy: {self.local_policy_path}")
         local_config = self._read_anchor_file(self.local_policy_path)
 
         # 2. Check for Inheritence
@@ -39,7 +39,7 @@ class PolicyLoader:
         if "extends" in local_config:
             parent_url = local_config["extends"]
             if self.verbose:
-                print(f"🔗 Inheriting from Master Policy: {parent_url}")
+                print(f"LINK: Inheriting from Master Policy: {parent_url}")
             parent_config = self._fetch_remote_policy(parent_url)
 
         # 3. Merge
@@ -50,7 +50,7 @@ class PolicyLoader:
         """Reads a local .anchor file and parses it as YAML."""
         if not os.path.exists(path):
             if self.verbose:
-                print(f"❌ Error: Policy file not found at {path}")
+                print(f"ERR: Error: Policy file not found at {path}")
             return {} # Don't exit here, let caller handle
 
         try:
@@ -59,7 +59,7 @@ class PolicyLoader:
                 return yaml.safe_load(f) or {}
         except Exception as e:
             if self.verbose:
-                print(f"❌ Error parsing {path}: {e}")
+                print(f"ERR: Error parsing {path}: {e}")
             return {}
 
     def _fetch_remote_policy(self, url: str) -> Dict[str, Any]:
@@ -70,7 +70,7 @@ class PolicyLoader:
                 return yaml.safe_load(content) or {}
         except Exception as e:
             if self.verbose:
-                print(f"⚠️   Warning: Could not fetch Master Policy from {url}.")
+                print(f"[!]️   Warning: Could not fetch Master Policy from {url}.")
                 print(f"    Continuing with LOCAL policy only. Error: {e}")
             return {}
 
@@ -112,7 +112,7 @@ class PolicyLoader:
             r_id = rule["id"]
 
             if r_id in rule_map:
-                # ── FLOOR SEVERITY CHECK ──────────────────────────
+                # -- FLOOR SEVERITY CHECK --------------------------
                 parent_rule = rule_map[r_id]
                 floor = parent_rule.get("min_severity")
 
@@ -124,22 +124,24 @@ class PolicyLoader:
                     if local_rank < floor_rank:
                         # REJECTED: Local tried to go below the floor
                         print(
-                            f"🚨 Override REJECTED for {r_id}: "
+                            f"ALRT: Override REJECTED for {r_id}: "
                             f"Cannot downgrade severity to '{local_sev}'. "
                             f"Constitutional floor is '{floor}'."
                         )
                         # Keep the local rule BUT enforce the floor severity
-                        rule = {**rule, "severity": floor}
-                    else:
-                        if os.environ.get("ANCHOR_VERBOSE"):  # anchor: ignore ANC-023
-                            print(f"🔧 Local Override applied for rule: {r_id}")
-                # ──────────────────────────────────────────────────
+                        rule["severity"] = floor
+                # --------------------------------------------------
 
-                # Preserve min_severity from constitution (cannot be overridden)
-                if "min_severity" in parent_rule:
-                    rule["min_severity"] = parent_rule["min_severity"]
+                # Preserve critical technical fields from parent (cannot be overridden via policy)
+                for field in ["match", "pattern", "namespace", "min_severity", "category"]:
+                    if field in parent_rule:
+                        # Always enforce parent's value, even if local rule provided one
+                        rule[field] = parent_rule[field]
 
-            rule_map[r_id] = rule
+                # Update the existing entry instead of replacing it entirely
+                rule_map[r_id].update(rule)
+            else:
+                rule_map[r_id] = rule
 
         merged["rules"] = list(rule_map.values())
         return merged

@@ -1,15 +1,20 @@
 from setuptools import setup, find_packages
 import pathlib
 
-# The directory containing this file
 here = pathlib.Path(__file__).parent.resolve()
-
-# Get the long description from the README file
 long_description = (here / "README.md").read_text(encoding="utf-8")
+
+domain_files = sorted(str(p) for p in (here / "governance" / "domains").glob("*.anchor"))
+framework_files = sorted(str(p) for p in (here / "governance" / "frameworks").glob("*.anchor"))
+government_files = sorted(str(p) for p in (here / "governance" / "government").glob("*.anchor"))
+example_files = [
+    str(here / "governance" / "examples" / "constitution.anchor.example"),
+    str(here / "governance" / "examples" / "policy.anchor.example"),
+]
 
 setup(
     name="anchor-audit",
-    version="3.0.0-alpha",  # V3: Interceptor SDK + Diamond Cage Behavioral Verification
+    version="4.0.0",
     description="The Federated Governance Engine for AI (Universal Multi-Language)",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -23,6 +28,12 @@ setup(
             "core/resources/*.png",
         ],
     },
+    data_files=[
+        ("governance/domains", domain_files),
+        ("governance/frameworks", framework_files),
+        ("governance/government", government_files),
+        ("governance/examples", example_files),
+    ],
     install_requires=[
         "click",
         "pyyaml",
@@ -33,8 +44,9 @@ setup(
         "tree-sitter-java",
         "tree-sitter-rust",
         "pydantic-settings>=2.0.0",
-        "wrapt",           # SDK-level interceptor patches (Layer 1)
-        "requests",        # HTTP backstop (Layer 2)
+        "wrapt",
+        "requests",
+        "GitPython",
     ],
     extras_require={
         "dev": ["pytest", "black", "mypy"],

@@ -1,18 +1,31 @@
 # =============================================================================
 # MANIFEST.in — Controls what goes into the source distribution (sdist)
 # =============================================================================
-# The universal constitution and mitigation catalog live in the repo for 
-# GitHub Raw serving, but are EXCLUDED from PyPI packages. 
-# Only the .example references ship.
-# =============================================================================
 
 include README.md
 include USAGE.md
 include LICENSE
+include constitution.anchor
+
 recursive-include anchor *.py
+
+# ── V4 Governance Files ───────────────────────────────────────────────────────
+# Domain files, framework files, and example templates ship with the package.
+# These are the federated governance files that anchor init copies into .anchor/
+
+recursive-include governance/domains *.anchor
+recursive-include governance/frameworks *.anchor
+recursive-include governance/government *.anchor
+recursive-include governance/examples *
+
+# ── Mitigation Catalog ────────────────────────────────────────────────────────
+include governance/mitigation.anchor
+
+# ── Legacy Resources (V3 compatibility) ──────────────────────────────────────
 recursive-include anchor/core/resources *
 
-# Exclude the universal files from the sdist
-# (they are served from GitHub Raw, not bundled with the package)
-exclude constitution.anchor
-exclude mitigation.anchor
+# ── Exclude local/generated files ────────────────────────────────────────────
+exclude .anchor
+recursive-exclude .anchor *
+recursive-exclude __pycache__ *
+recursive-exclude *.egg-info *

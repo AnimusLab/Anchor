@@ -273,13 +273,33 @@ class DiamondCage:
         cmd.extend([str(self.python_wasm_path), guest_script_path])
 
         try:
-            result = subprocess.run(  # anchor: ignore ANC-018
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-                cwd=str(abs_context),
-            )
+            # On Windows, suppress the system error dialog box that appears
+            # when wasmedge.exe cannot find its DLL (wasmedge.dll not found).
+            # SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX = 0x01 | 0x02 = 3
+            _old_error_mode = None
+            if sys.platform == "win32":
+                try:
+                    import ctypes
+                    _old_error_mode = ctypes.windll.kernel32.SetErrorMode(3)
+                except Exception:
+                    _old_error_mode = None
+
+            try:
+                result = subprocess.run(  # anchor: ignore ANC-018
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    timeout=timeout,
+                    cwd=str(abs_context),
+                )
+            finally:
+                if sys.platform == "win32" and _old_error_mode is not None:
+                    try:
+                        import ctypes
+                        ctypes.windll.kernel32.SetErrorMode(_old_error_mode)
+                    except Exception:
+                        pass
+
             if result.returncode == 0:
                 return CageResult(status=CageStatus.SAFE, output=result.stdout, exit_code=0)
             else:
@@ -376,14 +396,14 @@ class DiamondCage:
         Prove that a security patch is safe via differential behavioral verification.
 
         Algorithm (from V3 roadmap §4.1):
-          1. Run original_script → capture BehaviorSnapshot (baseline).
-          2. Run patched_script  → capture BehaviorSnapshot (candidate).
+          1. Run original_script -> capture BehaviorSnapshot (baseline).
+          2. Run patched_script  -> capture BehaviorSnapshot (candidate).
           3. Compare:
              a. If the patched run has NEW stderr lines not in baseline
                 AND those lines look like suspicious file/network accesses
-                → MALICIOUS_HALLUCINATION
-             b. If stdout or exit_code differ → BEHAVIOUR_CHANGED
-             c. If both snapshots match       → PROVED_SAFE
+                -> MALICIOUS_HALLUCINATION
+             b. If stdout or exit_code differ -> BEHAVIOUR_CHANGED
+             c. If both snapshots match       -> PROVED_SAFE
 
         Args:
             original_script: Path to the original (possibly-violating) script.
@@ -406,7 +426,7 @@ class DiamondCage:
 
         # --- Step 1: Capture baseline ---
         if self.verbose:
-            print("💎 Cage: capturing baseline behavior of original script...")
+            print("CAGE: Cage: capturing baseline behavior of original script...")
         original_snap = self.capture_behavior(original_script, context_dir, timeout)
 
         if original_snap.timed_out:
@@ -421,7 +441,7 @@ class DiamondCage:
 
         # --- Step 2: Capture patched ---
         if self.verbose:
-            print("💎 Cage: capturing behavior of patched script...")
+            print("CAGE: Cage: capturing behavior of patched script...")
         patched_snap = self.capture_behavior(patched_script, context_dir, timeout)
 
         if patched_snap.timed_out:
@@ -478,7 +498,7 @@ class DiamondCage:
             diff_reason = []
             if original_snap.exit_code != patched_snap.exit_code:
                 diff_reason.append(
-                    f"exit code {original_snap.exit_code} → {patched_snap.exit_code}"
+                    f"exit code {original_snap.exit_code} -> {patched_snap.exit_code}"
                 )
             if original_snap.stdout.strip() != patched_snap.stdout.strip():
                 diff_reason.append("stdout content differs")
@@ -604,20 +624,20 @@ def install_diamond_cage(force: bool = False, verbose: bool = False) -> bool:
 
     if cage.is_installed() and not force:
         if verbose:
-            print("💎 Diamond Cage already installed.")
+            print("CAGE: Diamond Cage already installed.")
         return True
 
     cage.bin_dir.mkdir(parents=True, exist_ok=True)
 
     if verbose:
-        print("💎 Installing Diamond Cage (WasmEdge Runtime)...")
+        print("CAGE: Installing Diamond Cage (WasmEdge Runtime)...")
         print(f"   Platform: {cage.os_name}/{cage.arch}")
         print(f"   Location: {cage.bin_dir}")
 
     platform_key = cage.get_platform_key()
     if platform_key not in cage.WASMEDGE_RELEASES:
         if verbose:
-            print(f"❌ Unsupported platform: {platform_key}")
+            print(f"ERR: Unsupported platform: {platform_key}")
             print("   Supported: linux_x86_64, darwin_x86_64, darwin_arm64, windows_x86_64")
         return False
 
@@ -626,7 +646,7 @@ def install_diamond_cage(force: bool = False, verbose: bool = False) -> bool:
     # --- Download WasmEdge ---
     try:
         if verbose:
-            print(f"⬇️  Downloading WasmEdge {cage.WASMEDGE_VERSION}...")
+            print(f"v  Downloading WasmEdge {cage.WASMEDGE_VERSION}...")
         archive_path = cage.bin_dir / "wasmedge_download"
 
         with urllib.request.urlopen(wasmedge_url, timeout=60) as response:
@@ -634,7 +654,7 @@ def install_diamond_cage(force: bool = False, verbose: bool = False) -> bool:
                 f.write(response.read())
 
         if verbose:
-            print("📦 Extracting WasmEdge...")
+            print("PKP: Extracting WasmEdge...")
         if cage.os_name == "windows":
             with zipfile.ZipFile(archive_path, "r") as zf:
                 zf.extractall(cage.bin_dir)
@@ -644,42 +664,68 @@ def install_diamond_cage(force: bool = False, verbose: bool = False) -> bool:
 
         archive_path.unlink()
 
+        # Find the bin directory inside the extracted archive
+        # WasmEdge archives usually contain a nested structure like WasmEdge-0.13.5-windows/bin/
+        extracted_bin = None
         for item in cage.bin_dir.rglob(cage.runtime_name):
             if item != cage.runtime_path:
-                shutil.move(str(item), str(cage.runtime_path))
+                extracted_bin = item.parent
                 break
+        
+        if extracted_bin:
+            if verbose:
+                print(f"   Moving binaries from {extracted_bin} to {cage.bin_dir}...")
+            # Move all files from the extracted bin (including DLLs) to the destination bin_dir
+            for f in extracted_bin.iterdir():
+                dest = cage.bin_dir / f.name
+                if dest.exists():
+                    if dest.is_dir(): shutil.rmtree(dest)
+                    else: dest.unlink()
+                shutil.move(str(f), str(dest))
+            
+            # Cleanup the empty extracted directory structure
+            # (Starting from the parent of the extracted bin)
+            try:
+                # Find the root of the extracted folder (e.g., WasmEdge-0.13.5-windows)
+                top_level = extracted_bin
+                while top_level.parent != cage.bin_dir and top_level.parent != top_level:
+                    top_level = top_level.parent
+                if top_level != cage.bin_dir:
+                    shutil.rmtree(top_level)
+            except Exception:
+                pass
 
         if cage.os_name != "windows":
             cage.runtime_path.chmod(0o755)
 
         if verbose:
-            print("✅ WasmEdge installed.")
+            print("[V] WasmEdge installed.")
 
     except Exception as e:
         if verbose:
-            print(f"❌ Failed to install WasmEdge: {e}")
+            print(f"ERR: Failed to install WasmEdge: {e}")
         return False
 
     # --- Download Python WASM ---
     try:
         if verbose:
-            print(f"⬇️  Downloading Python {cage.PYTHON_WASM_VERSION} WASM...")
+            print(f"v  Downloading Python {cage.PYTHON_WASM_VERSION} WASM...")
 
         with urllib.request.urlopen(cage.PYTHON_WASM_URL, timeout=120) as response:
             with open(cage.python_wasm_path, "wb") as f:
                 f.write(response.read())
 
         if verbose:
-            print("✅ Python WASM installed.")
+            print("[V] Python WASM installed.")
 
     except Exception as e:
         if verbose:
-            print(f"❌ Failed to install Python WASM: {e}")
+            print(f"ERR: Failed to install Python WASM: {e}")
         return False
 
     if verbose:
         print()
-        print("💎 Diamond Cage Ready!")
+        print("CAGE: Diamond Cage Ready!")
         print(f"   Runtime: {cage.runtime_path}")
         print(f"   Python:  {cage.python_wasm_path}")
 

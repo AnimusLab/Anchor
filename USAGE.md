@@ -1,6 +1,6 @@
 # Anchor CLI Command Reference
 
-Anchor v3.0.0-alpha provides a unified interface for security auditing, architectural drift analysis, autonomous remediation, and runtime governance.
+Anchor v4.0.0 provides a unified interface for security auditing, architectural drift analysis, autonomous remediation, and runtime governance.
 
 ---
 
@@ -16,6 +16,10 @@ anchor init [OPTIONS]
 
 | Flag                 | Description                                                          |
 | -------------------- | -------------------------------------------------------------------- |
+| `--domains`          | Comma-separated domains (all core domains load by default: SEC, ETH, SHR, ALN, AGT, PRV, LEG, OPS, SUP) |
+| `--frameworks`       | Comma-separated frameworks (finos, owasp, nist, all)                 |
+| `--regulators`       | Comma-separated regulators (rbi, eu, sebi, cfpb, fca, sec, all)      |
+| `--all`              | Install all available domains, frameworks, and regulators            |
 | `--sandbox`          | Installs the **Diamond Cage** (WASM sandbox) for secure model audits |
 | `--policy-name TEXT` | Name for your local policy file. Default: `policy.anchor`            |
 
@@ -25,9 +29,10 @@ anchor init [OPTIONS]
    - `violations/`: For detailed text results (`governance_violations.txt`, `drift_violations.txt`).
    - `reports/`: For markdown documentation (`governance_audit.md`, `drift_audit.md`).
    - `telemetry/`: For CI/CD JSON exports (`governance_report.json`, `drift_report.json`).
-2. Deploys reference copies of the Constitution and Mitigation Catalog.
+2. Deploys reference copies of the Constitution and Mitigation Catalog; installs all core domains by default (SEC, ETH, SHR, ALN, AGT, PRV, LEG, OPS, SUP).
 3. Generates a boilerplate local `policy.anchor` for project-specific overrides.
-4. installs a Git Pre-Commit Hook to prevent violations from being committed.
+4. Installs a Git pre-commit hook to prevent violations from being committed.
+5. Fetches `GOVERNANCE.lock` unless `--no-sign` is passed; `anchor sync --restore` verifies integrity later in CI.
 
 ---
 
@@ -41,7 +46,7 @@ anchor init [OPTIONS]
 
 ### Reporting
 
-Anchor V3 automatically generates human-readable reports and machine-readable telemetry in the `.anchor/` folder.
+Anchor V4 automatically generates human-readable reports and machine-readable telemetry in the `.anchor/` folder, including severity breakdowns (blocker/error/warning/info) in terminal output.
 
 | Flag                | Description                                        |
 | ------------------- | -------------------------------------------------- |

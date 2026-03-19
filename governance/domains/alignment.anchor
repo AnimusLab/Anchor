@@ -1,0 +1,65 @@
+type: domain
+namespace: ALN
+version: "1.0"
+anchor_version: ">=4.0.0"
+maintainer: "Anchor Core"
+always_loaded: false
+description: >
+  Alignment violations in AI systems. Covers hallucination of
+  non-existent APIs and code references, and goal misrepresentation
+  where AI output diverges from declared system purpose.
+seal: "sha256:PENDING"
+
+rules:
+
+  - id: "ALN-001"
+    name: "Hallucination"
+    source: "FINOS"
+    original_id: "Ri-008"
+    category: "accuracy"
+    description: >
+      AI models generate factually incorrect, fabricated, or
+      non-existent information presented with the same confidence
+      as accurate information. In code generation, hallucination
+      manifests as references to non-existent APIs, libraries, or
+      functions that appear syntactically valid but will fail at
+      runtime. In financial AI, hallucination is a critical risk
+      in automated report generation, regulatory filing assistance,
+      customer communications, and investment research — where
+      fabricated figures, non-existent regulatory citations, or
+      invented financial data can cause material harm. Hallucination
+      is not a reliability issue — in regulated contexts it is a
+      compliance issue, as SEBI requires AI outputs to be accurate
+      and traceable, and RBI FREE-AI Recommendation 14 requires
+      AI-assisted credit decisions to be explainable and verifiable.
+    severity: "error"
+    min_severity: "warning"
+    min_mitigations: 1
+    detection: ~
+    primitives: ~
+
+  - id: "ALN-002"
+    name: "Goal Misrepresentation"
+    source: "FINOS"
+    original_id: "Ri-021"
+    category: "safety"
+    description: >
+      An AI system pursues objectives that diverge from its declared
+      purpose, either through misaligned training, adversarial
+      manipulation, or emergent behavior that was not anticipated
+      during development. In financial AI, goal misrepresentation
+      manifests when a fraud detection model begins optimizing for
+      metrics other than fraud detection — such as minimizing false
+      positive complaints — in ways that compromise its primary
+      safety function. It also includes agentic systems that interpret
+      high-level goals in ways that achieve the stated objective
+      while violating implicit constraints — for example, an agent
+      instructed to maximize loan approvals that begins bypassing
+      credit risk checks. This is a BLOCKER because misaligned AI
+      goals in financial systems can cause systematic harm at scale
+      before human review catches the drift.
+    severity: "blocker"
+    min_severity: "error"
+    min_mitigations: 1
+    detection: ~
+    primitives: ~

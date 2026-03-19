@@ -134,6 +134,8 @@ def verify_remote_lockfile(anchor_dir: Path, offline_attr: str = "warn") -> bool
                             f"Run: anchor sync --restore to restore the authoritative version."
                         )
 
+    return True
+
 
 # ── MANIFEST LOADER ───────────────────────────────────────────
 

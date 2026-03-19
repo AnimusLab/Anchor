@@ -276,28 +276,29 @@ class DiamondCage:
             # On Windows, suppress the system error dialog box that appears
             # when wasmedge.exe cannot find its DLL (wasmedge.dll not found).
             # SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX = 0x01 | 0x02 = 3
-            _old_error_mode = 0
+            _old_error_mode = None
             if sys.platform == "win32":
                 try:
                     import ctypes
                     _old_error_mode = ctypes.windll.kernel32.SetErrorMode(3)
                 except Exception:
-                    pass
+                    _old_error_mode = None
 
-            result = subprocess.run(  # anchor: ignore ANC-018
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-                cwd=str(abs_context),
-            )
-
-            if sys.platform == "win32" and _old_error_mode is not None:
-                try:
-                    import ctypes
-                    ctypes.windll.kernel32.SetErrorMode(_old_error_mode)
-                except Exception:
-                    pass
+            try:
+                result = subprocess.run(  # anchor: ignore ANC-018
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    timeout=timeout,
+                    cwd=str(abs_context),
+                )
+            finally:
+                if sys.platform == "win32" and _old_error_mode is not None:
+                    try:
+                        import ctypes
+                        ctypes.windll.kernel32.SetErrorMode(_old_error_mode)
+                    except Exception:
+                        pass
 
             if result.returncode == 0:
                 return CageResult(status=CageStatus.SAFE, output=result.stdout, exit_code=0)

@@ -332,7 +332,7 @@ custom_rules:
     # ── Update .gitignore ─────────────────────────────────────
     # V4 Decision: .anchor/ should be committed, excluding cache and temp
     gitignore_path = ".gitignore"
-    gitignore_entries = [".anchor/cache/", ".anchor/logs/*.tmp"]
+    gitignore_entries = [".anchor/cache/", ".anchor/logs/*.tmp", f".anchor/{policy_name}"]
     try:
         content = ""
         if os.path.exists(gitignore_path):

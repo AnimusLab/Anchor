@@ -28,7 +28,7 @@ import subprocess
 import os
 
 def run_shell(cmd):
-    subprocess.run(cmd, shell=True)          # dangerous: shell=True
+    subprocess.run(cmd, shell=True)          # dangerous: shell=True  # anchor: ignore ANC-018
     result = eval(input(">>> "))             # dangerous: eval(input)
     os.system("rm -rf /tmp/data")           # dangerous: os.system
 

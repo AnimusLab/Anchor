@@ -43,13 +43,82 @@ class HealSuggestion:
 
 # ---------------------------------------------------------------------------
 # Rule-specific fixers
-# (rule_id pattern → fixer function)
-# Each fixer receives the original line string and returns (suggested, explanation, auto_fixable)
 # ---------------------------------------------------------------------------
+
+def _fix_anc_001(line: str):
+    """ANC-001: Public LLM API call → route through PII-scrubbing proxy."""
+    # Suggest wrapping with a proxy or using an internal client
+    return (
+        "# Route through your PII-scrubbing proxy instead of calling the public API directly.",
+        "Direct calls to public LLM APIs (OpenAI, Anthropic, Cohere) may leak sensitive data. "
+        "Route all LLM traffic through a proxy that strips PII before forwarding.",
+        False
+    )
+
+
+def _fix_anc_002(line: str):
+    """ANC-002: Vector store upsert without encryption."""
+    return (
+        "",
+        "Encrypt embeddings before upserting to vector stores. Unencrypted embeddings can be "
+        "inverted to recover sensitive source text. Use client-side encryption or an encrypted index.",
+        False
+    )
+
+
+def _fix_anc_010(line: str):
+    """ANC-010: Missing system prompt guardrail."""
+    if "messages" in line:
+        suggested = line.rstrip() + '\n    {"role": "system", "content": "You are a helpful assistant. Do not discuss [PROHIBITED_TOPICS]."}'
+        return (
+            suggested,
+            "Add a system prompt as the first message to define alignment and behavioral constraints.",
+            False
+        )
+    return None
+
+
+def _fix_anc_011(line: str):
+    """ANC-011: Sensitive attribute as model feature."""
+    return (
+        "",
+        "Remove or proxy sensitive demographic attributes (gender, race, etc.) from model features. "
+        "Use fairness-aware feature engineering or add bias detection tests to your ML pipeline.",
+        False
+    )
+
+
+def _fix_anc_015(line: str):
+    """ANC-015: LLM output displayed without moderation."""
+    m = re.search(r'(print|render|display|return)\s*\(\s*(\w+)', line)
+    if m:
+        var = m.group(2)
+        suggested = re.sub(
+            r'(print|render|display|return)\s*\(\s*(\w+)',
+            f'{m.group(1)}(moderation_filter({var})',
+            line, count=1
+        )
+        return (
+            suggested.rstrip(),
+            "Wrap LLM output in a content moderation filter before displaying to users. "
+            "This prevents reputational damage from harmful model outputs.",
+            False
+        )
+    return None
+
+
+def _fix_anc_022(line: str):
+    """ANC-022: Unverified cross-agent message consumption."""
+    return (
+        "",
+        "Verify the integrity and origin of messages between agents. "
+        "Use signed messages or a trust broker to prevent a compromised agent from poisoning the swarm.",
+        False
+    )
+
 
 def _fix_anc_023(line: str):
     """ANC-023: Bulk env access  os.environ → targeted os.environ.get()"""
-    # If the line assigns os.environ to a variable, suggest targeted access
     m = re.search(r'(\w+)\s*=\s*os\.environ(?!\s*\.get)', line)
     if m:
         var = m.group(1)
@@ -65,7 +134,6 @@ def _fix_anc_023(line: str):
             "This prevents agents from bulk-harvesting all environment variables.",
             True
         )
-    # If it's passed as an argument
     suggested = re.sub(r'\bos\.environ\b(?!\s*\.get)', 'os.environ.get("YOUR_KEY_NAME", "")', line, count=1)
     return (
         suggested.rstrip(),
@@ -75,7 +143,7 @@ def _fix_anc_023(line: str):
 
 
 def _fix_subprocess_shell(line: str):
-    """RI-12: subprocess with shell=True → shell=False"""
+    """ANC-018: subprocess without Diamond Cage sandboxing."""
     if "shell=True" in line:
         suggested = line.replace("shell=True", "shell=False")
         return (
@@ -84,7 +152,13 @@ def _fix_subprocess_shell(line: str):
             "to prevent shell injection attacks.",
             True
         )
-    return None
+    # No shell=True, but still unsandboxed — suggest Diamond Cage
+    return (
+        "",
+        "Native subprocess calls bypass the Diamond Cage sandbox. "
+        "Use anchor.core.sandbox.DiamondCage.run_safe() for agent-initiated subprocess execution.",
+        False
+    )
 
 
 def _fix_eval(line: str):
@@ -96,7 +170,7 @@ def _fix_eval(line: str):
             suggested.rstrip(),
             "eval() on user input allows arbitrary code execution. "
             "Use ast.literal_eval() for safe parsing of literals, or redesign to avoid eval entirely.",
-            False  # Manual fix required — too context-specific
+            False
         )
     return None
 
@@ -116,12 +190,11 @@ def _fix_open_file(line: str):
 
 def _fix_hardcoded_secret(line: str):
     """Hardcoded credential → replace with env var lookup"""
-    # Match common patterns: api_key = "sk-...", password = "abc123"
-    m = re.search(r'(api[_\-]?key|password|secret|token)\s*=\s*["\']([^"\']{6,})["\']', line, re.IGNORECASE)
+    m = re.search(r'(api[_\-]?key|password|secret|token)\s*=\s*["\'"]([^"\']{6,})["\']', line, re.IGNORECASE)
     if m:
         var_name = m.group(1).upper().replace("-", "_")
         suggested = re.sub(
-            r'(api[_\-]?key|password|secret|token)\s*=\s*["\'][^"\']+["\']',
+            r'(api[_\-]?key|password|secret|token)\s*=\s*["\'"][^"\']+["\']',
             f'{m.group(1)} = os.environ.get("{var_name}", "")',
             line, count=1, flags=re.IGNORECASE
         )
@@ -152,6 +225,13 @@ def _fix_pickle(line: str):
 # Fixer registry: maps rule_id prefix → fixer function
 # ---------------------------------------------------------------------------
 _FIXERS: list[tuple[str, callable]] = [
+    ("ANC-001",  _fix_anc_001),
+    ("ANC-002",  _fix_anc_002),
+    ("ANC-010",  _fix_anc_010),
+    ("ANC-011",  _fix_anc_011),
+    ("ANC-015",  _fix_anc_015),
+    ("ANC-018",  _fix_subprocess_shell),
+    ("ANC-022",  _fix_anc_022),
     ("ANC-023",  _fix_anc_023),
     ("RI-12",    _fix_subprocess_shell),
     ("ANC-030",  _fix_eval),
@@ -187,7 +267,6 @@ def suggest_fix(violation: dict) -> Optional[HealSuggestion]:
     # Read the flagged line from the source file
     original_line = _read_line(file_path, line_no)
     if original_line is None:
-        # Can't read file — return a mitigation-text-only suggestion
         return HealSuggestion(
             rule_id     = rule_id,
             file        = file_path,
@@ -214,7 +293,7 @@ def suggest_fix(violation: dict) -> Optional[HealSuggestion]:
                     auto_fixable = auto_fixable,
                 )
 
-    # Generic fallback — show the mitigation text as a suggestion comment
+    # Generic fallback
     if original_line.strip():
         return HealSuggestion(
             rule_id      = rule_id,
@@ -269,7 +348,6 @@ def apply_fix(suggestion: HealSuggestion) -> bool:
             return False
 
         orig = source_lines[line_no - 1]
-        # Preserve leading whitespace
         leading = len(orig) - len(orig.lstrip())
         fixed = " " * leading + suggestion.suggested + "\n"
         source_lines[line_no - 1] = fixed

@@ -17,13 +17,19 @@ class HistoryEngine:
         # Normalize Windows paths to Git paths
         git_path = symbol.file_path.replace("\\", "/")
 
-        print(f"DEBUG: Hunting for origin of {symbol.name} in {git_path}...")
+        # print(f"DEBUG: Hunting for origin of {symbol.name} in {git_path}...")
 
         try:
             commits = list(self.repo.iter_commits(paths=git_path))
             commits.reverse()  # Oldest first
         except Exception as e:
-            print(f"❌ Git error for {git_path}: {e}")
+            error_msg = str(e)
+            if "dubious ownership" in error_msg:
+                print(f"❌ Git error for {git_path}: Dubious ownership detected.")
+                print(f"   To fix this, run:")
+                print(f"   git config --global --add safe.directory {self.repo.working_dir}")
+            else:
+                print(f"❌ Git error for {git_path}: {error_msg}")
             return None
 
         first_occurrence: Optional[Commit] = None
@@ -61,8 +67,7 @@ class HistoryEngine:
             print(f"⚠️ Could not find origin for {symbol.name}")
             return None
 
-        print(
-            f"✅ FOUND ANCHOR: {first_occurrence.hexsha[:7]} ({datetime.fromtimestamp(first_occurrence.committed_date).date()})")
+        # print(f"✅ FOUND ANCHOR: {first_occurrence.hexsha[:7]} ({datetime.fromtimestamp(first_occurrence.committed_date).date()})")
 
         return IntentAnchor(
             symbol=symbol.name,

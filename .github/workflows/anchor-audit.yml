@@ -32,7 +32,7 @@ jobs:
 
       - name: Run Governance Check
         run: |
-          python -m anchor check . --exclude tests --exclude scripts --exclude docs --exclude demo
+          python -m anchor check --exclude tests --exclude scripts --exclude docs --exclude demo .
         env:
           ANCHOR_STRICT: "true"
 

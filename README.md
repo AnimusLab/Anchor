@@ -2,21 +2,21 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-gray.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![Status: Alpha](https://img.shields.io/badge/Status-Alpha-orange.svg)]()
-[![Version: 3.0.0-alpha](https://img.shields.io/badge/Version-3.0.0--alpha-blue.svg)]()
+[![Status: GA](https://img.shields.io/badge/Status-GA-green.svg)]()
+[![Version: 4.0.0](https://img.shields.io/badge/Version-4.0.0-blue.svg)]()
 
 > "Code drifts. Intent shouldn't. Governance must scale."
 
-Anchor is an **autonomous governance platform** for the AI-Native era. It ensures that your **Codebase**, **AI Models**, and **Agent Pipelines** comply with universal standards and local company policies — enforced deterministically via AST analysis and runtime interceptors.
+Anchor is an **autonomous governance platform** for the AI-Native era. It ensures that your **Codebase**, **AI Models**, and **Agent Pipelines** comply with universal standards and local company policies — enforced deterministically via AST analysis, runtime interceptors, and behavioral verification (Diamond Cage).
 
 ---
 
-## What's New in v3.0.0-alpha
-
+- **Diamond Cage (Behavioral Verification)**: WASM-based sandbox (WasmEdge) validating AI-adjacent behavior alongside static findings. Reported as `Diamond Cage: ACTIVE`.
+- **Federated Governance Workspace**: Structured `.anchor/` directory with mandatory core domains (SEC, ETH, SHR, ALN, AGT, PRV, LEG, OPS, SUP) and opt-in frameworks/regulators declared in `constitution.anchor`.
 - **Hybrid Healer (Sovereign Scalpel)**: Moves beyond detection to remediation. Proposes file-specific fixes and applies them in-place via the `anchor heal` command.
 - **Interceptor SDK**: First-party support for 20+ LLM providers. Includes `AnchorGuard` for manual pipeline integration and `register_provider` for custom/internal model support.
-- **Multi-Language Adapters**: Expanded AST scanning for Python, Go, Java, and Rust.
-- **Unified Reporting**: Standardized directory structure (`.anchor/violations/`, `.anchor/reports/`, `.anchor/telemetry/`) for humans and CI/CD.
+- **Multi-Language Adapters**: Expanded AST scanning for Python, Go, Java, Rust, and more.
+- **Quad-Match Exclusion Engine**: Robust scoping logic supporting Exact, Prefix, DirGlob, and Fnmatch strategies to eliminate false positives in tests and documentation.
 - **Architectural Drift Check**: The `anchor check drift` command analyzes if code intent has drifted from its original design patterns.
 
 ---
@@ -27,7 +27,7 @@ Anchor operates on a three-layer architecture inspired by Constitutional Law:
 
 | Layer                  | File                  | Purpose                                                                                       |
 | ---------------------- | --------------------- | --------------------------------------------------------------------------------------------- |
-| **Constitution**       | `constitution.anchor` | Defines **WHAT** risks exist (23 FINOS risks -> `ANC-XXX` IDs). Cloud-synced, SHA-256 sealed. |
+| **Constitution**       | `constitution.anchor` | Defines **WHAT** risks exist (domains + frameworks + regulators). Manifest sealed via remote `GOVERNANCE.lock`. |
 | **Mitigation Catalog** | `mitigation.anchor`   | Defines **HOW** to detect each risk (regex + AST patterns). Cloud-synced, SHA-256 sealed.     |
 | **State Law**          | `policy.anchor`       | **Your** local overrides. Change severity, add company-specific rules. Fully editable.        |
 
@@ -142,7 +142,11 @@ os.environ.get("SECRET_KEY")  # anchor: ignore-all
 ### Example Report Output
 
 ```
-TOTAL FINDINGS: 2 active violations.
+TOTAL FINDINGS: 2
+  BLOCKER : 0
+  ERROR   : 0
+  WARNING : 2
+  INFO    : 0
 6 suppressed findings (See report for audit trail)
 ```
 
@@ -186,7 +190,7 @@ Anchor/
 ├── constitution.anchor         # Universal Constitution (23 FINOS risks)
 ├── mitigation.anchor           # Mitigation Catalog (detection patterns)
 ├── .env.example                # Environment variable reference
-├── setup.py                    # Package configuration (v2.8.1)
+├── setup.py                    # Package configuration
 ├── case-studies/               # Real-world audit case studies
 ├── docs/                       # Documentation
 └── V3_TECHNICAL_ROADMAP.md     # v3 "Sovereign Scalpel" roadmap
@@ -254,7 +258,7 @@ We welcome contributions! Whether it's new detection patterns, bug fixes, or doc
 
 ## Risk Coverage Summary
 
-Anchor v2.8.1 covers the complete FINOS AI Risk Taxonomy:
+Anchor v4.0.0 covers the complete federated risk taxonomy across core domains and opt-in frameworks/regulators:
 
 | Tier                            | Risks                                                                    | Coverage                      |
 | ------------------------------- | ------------------------------------------------------------------------ | ----------------------------- |
@@ -262,7 +266,7 @@ Anchor v2.8.1 covers the complete FINOS AI Risk Taxonomy:
 | **Tier 2** — Model Audit        | Model Leakage, Weight Corruption, Versioning Drift                       | Diamond Cage inspection       |
 | **Tier 3** — Mitigation Absence | Hallucination, Bias, Explainability, Availability                        | "Missing safeguard" detection |
 
-Full risk mapping: `ANC-001` through `ANC-023` in [`constitution.anchor`](constitution.anchor).
+Full risk mapping: core domains (SEC, ETH, SHR, ALN, AGT, PRV, LEG, OPS, SUP) plus frameworks/regulators in [`constitution.anchor`](constitution.anchor).
 
 ---
 
@@ -272,4 +276,4 @@ MIT License. Built for the era of AI-Assisted Engineering and Automated Governan
 
 ---
 
-_Anchor v3.0.0-alpha — Deterministic Governance for the AI-Native Stack._
+_Anchor v4.0.0 — Deterministic Governance for the AI-Native Stack._

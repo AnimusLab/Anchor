@@ -278,7 +278,7 @@ def init(domains, frameworks, regulators, sandbox, all_items, force, no_sign, po
             shutil.copy2(src, dst)
 
     # ── Copy branding ─────────────────────────────────────────
-    logo_src = os.path.join(examples_dir, "branding", "logo.png")
+    logo_src = os.path.join(examples_dir, "logo.png")
     logo_dst = os.path.join(dot_anchor, "branding", "logo.png")
     if os.path.exists(logo_src) and (not os.path.exists(logo_dst) or force):
         shutil.copy2(logo_src, logo_dst)

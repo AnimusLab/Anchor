@@ -335,12 +335,14 @@ custom_rules:
     gitignore_entries = [".anchor/cache/", ".anchor/logs/*.tmp", f".anchor/{policy_name}"]
     try:
         content = ""
+        lines = []
         if os.path.exists(gitignore_path):
             with open(gitignore_path, "r") as f:
-                content = f.read()
-        
-        # Remove legacy .anchor/ ignore if present
-        content = content.replace(".anchor/\n", "").replace(".anchor/", "")
+                lines = f.readlines()
+
+        # Remove legacy .anchor/ ignore line if present, but keep more specific entries
+        filtered_lines = [line for line in lines if line.strip() != ".anchor/"]
+        content = "".join(filtered_lines)
 
         updated = False
         to_add = []

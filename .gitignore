@@ -20,6 +20,7 @@ ENV/
 # Anchor Specific
 .anchor/
 *.anchor.example
+!governance/examples/*.anchor.example
 
 # Research / Internal docs
 Risks of LLM Models & Weights.pdf

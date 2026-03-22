@@ -35,6 +35,8 @@ jobs:
           python -m anchor check --exclude tests --exclude scripts --exclude docs --exclude demo .
         env:
           ANCHOR_STRICT: "true"
+          ANCHOR_CONSTITUTION_URL: "file://${{ github.workspace }}/anchor/governance/constitution.anchor"
+          ANCHOR_MITIGATION_URL: "file://${{ github.workspace }}/anchor/governance/mitigation.anchor"
 
       - name: Generate Step Summary
         if: always()

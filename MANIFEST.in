@@ -5,7 +5,7 @@
 include README.md
 include USAGE.md
 include LICENSE
-include constitution.anchor
+include anchor/governance/constitution.anchor
 
 recursive-include anchor *.py
 
@@ -13,13 +13,13 @@ recursive-include anchor *.py
 # Domain files, framework files, and example templates ship with the package.
 # These are the federated governance files that anchor init copies into .anchor/
 
-recursive-include governance/domains *.anchor
-recursive-include governance/frameworks *.anchor
-recursive-include governance/government *.anchor
-recursive-include governance/examples *
+recursive-include anchor/governance/domains *.anchor
+recursive-include anchor/governance/frameworks *.anchor
+recursive-include anchor/governance/government *.anchor
+recursive-include anchor/governance/examples *
 
 # ── Mitigation Catalog ────────────────────────────────────────────────────────
-include governance/mitigation.anchor
+include anchor/governance/mitigation.anchor
 
 # ── Legacy Resources (V3 compatibility) ──────────────────────────────────────
 recursive-include anchor/core/resources *

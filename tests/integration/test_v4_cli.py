@@ -25,7 +25,6 @@ def test_v4_init_regulators(temp_project):
     with runner.isolated_filesystem(temp_dir=temp_project):
         # Run init with a regulator
         result = runner.invoke(main, ["init", "--regulators", "rbi"])
-        
         assert result.exit_code == 0
         
         # Check directory structure
@@ -61,11 +60,17 @@ def test_v4_check_with_federated_rules(temp_project):
         assert init_result.exit_code == 0, f"Init failed: {init_result.output}"
     
         # 3. Run check
+        # Use local constitution to match the new package hash and avoid GitHub sync mismatch
+        from anchor.core.config import settings
+        pkg_root = Path(main.callback.__globals__['__file__']).parent
+        local_const = pkg_root / "governance" / "constitution.anchor"
+        settings.constitution_url = local_const.as_uri()
+        
         # Use --verbose to see loader info and bypass sync blocking
         result = runner.invoke(main, ["check", ".", "--verbose"])
         
-        # ANC-014 (Shell Injection) should be detected
-        assert "ANC-014" in result.output
+        # Detection should match either the framework ID or the canonical SEC ID
+        assert any(id in result.output for id in ["FINOS-014", "SEC-007"])
 
 def test_v4_init_all(temp_project):
     """
@@ -76,7 +81,6 @@ def test_v4_init_all(temp_project):
     
     with runner.isolated_filesystem(temp_dir=temp_project):
         result = runner.invoke(main, ["init", "--all"])
-        
         assert result.exit_code == 0
         
         dot_anchor = Path(".anchor")

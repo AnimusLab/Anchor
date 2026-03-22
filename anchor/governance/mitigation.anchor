@@ -50,6 +50,17 @@ mitigations:
     message: "LLM API call detected. Ensure output is validated before use (e.g., schema check, grounding)."
     severity: "error"
 
+  # --- ANC-014: Shell Injection ---
+  - id: "MIT-014-A"
+    rule_id: "ANC-014"
+    name: "Shell Command Execution"
+    match:
+      type: "regex"
+      pattern: >-
+        ^(?:[^"\'#]|(["\'])(?:(?!\1).|\\\1)*\1)*\bos\.(system|popen|spawn)\s*\(
+    message: "Potential shell injection via os.system detects. Use subprocess with list arguments instead."
+    severity: "blocker"
+
   # --- ANC-018: Agent Auth Bypass ---
   - id: "MIT-018-A"
     rule_id: "ANC-018"

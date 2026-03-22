@@ -95,7 +95,8 @@ class PolicyEngine:
                 prune_list = [
                     "build", "dist", "__pycache__", ".git", "node_modules", 
                     "target", "venv", ".venv", ".cache", "docs", "artifacts", 
-                    ".anchor", "tests", "benchmarks"
+                    ".anchor", "tests", "benchmarks", ".yarn", ".next", ".turbo",
+                    "bower_components", "coverage", ".nyc_output", "storybook-static", "out"
                 ]
                 
                 if self.verbose: 
@@ -540,7 +541,7 @@ class PolicyEngine:
             # -L <start>,<end> : only blame the specified line
             # --porcelain      : machine-readable format
             cmd = ["git", "blame", "-L", f"{line_num},{line_num}", "--porcelain", abs_path]
-            result = subprocess.run(cmd, capture_output=True, text=True, check=True)  # anchor: ignore ANC-018
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=2)  # anchor: ignore ANC-018
             
             # 3. Parse author from porcelain output
             for line in result.stdout.splitlines():

@@ -4,17 +4,9 @@ import pathlib
 here = pathlib.Path(__file__).parent.resolve()
 long_description = (here / "README.md").read_text(encoding="utf-8")
 
-domain_files = sorted(str(p) for p in (here / "governance" / "domains").glob("*.anchor"))
-framework_files = sorted(str(p) for p in (here / "governance" / "frameworks").glob("*.anchor"))
-government_files = sorted(str(p) for p in (here / "governance" / "government").glob("*.anchor"))
-example_files = [
-    str(here / "governance" / "examples" / "constitution.anchor.example"),
-    str(here / "governance" / "examples" / "policy.anchor.example"),
-]
-
 setup(
     name="anchor-audit",
-    version="4.0.0",
+    version="4.1.1",
     description="The Federated Governance Engine for AI (Universal Multi-Language)",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -22,18 +14,17 @@ setup(
     author="Tanishq",
     author_email="tanishqdasari2004@gmail.com",
     packages=find_packages(),
+    include_package_data=True,
     package_data={
         "anchor": [
             "core/resources/*.example",
             "core/resources/*.png",
+            "governance/**/*.anchor",
+            "governance/examples/*",
+            "governance/mitigation.anchor",
+            "governance/constitution.anchor",
         ],
     },
-    data_files=[
-        ("governance/domains", domain_files),
-        ("governance/frameworks", framework_files),
-        ("governance/government", government_files),
-        ("governance/examples", example_files),
-    ],
     install_requires=[
         "click",
         "pyyaml",

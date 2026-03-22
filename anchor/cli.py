@@ -17,7 +17,10 @@ from anchor.core.constitution import (
 from anchor.core.config import settings
 
 
+from anchor import __version__
+
 @click.group()
+@click.version_option(version=__version__)
 def cli():
     """
     Anchor: The Federated Governance Engine for AI.
@@ -79,7 +82,8 @@ def init(domains, frameworks, regulators, sandbox, all_items, force, no_sign, po
     # ── Package paths ─────────────────────────────────────────
     package_root = os.path.dirname(os.path.abspath(__file__))
     anchor_pkg_root = os.path.dirname(package_root)
-    governance_root = os.path.join(anchor_pkg_root, "governance")
+    # The governance files are now bundled inside the anchor package
+    governance_root = os.path.join(package_root, "governance")
 
     AVAILABLE_DOMAINS = {
         "security":     "domains/security.anchor",
@@ -260,7 +264,7 @@ def init(domains, frameworks, regulators, sandbox, all_items, force, no_sign, po
     # ── Deploy manifest and example files ─────────────────────
     examples_dir = os.path.join(governance_root, "examples")
     # Copy master manifest as the project manifest
-    master_manifest = os.path.join(anchor_pkg_root, "constitution.anchor")
+    master_manifest = os.path.join(governance_root, "constitution.anchor")
     dot_anchor_manifest = os.path.join(dot_anchor, "constitution.anchor")
     if os.path.exists(master_manifest) and (not os.path.exists(dot_anchor_manifest) or force):
         shutil.copy2(master_manifest, dot_anchor_manifest)
@@ -632,8 +636,7 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
     rule_dict = {}
 
     package_root = os.path.dirname(os.path.abspath(__file__))
-    anchor_pkg_root = os.path.dirname(package_root)
-    governance_root_path = os.path.join(anchor_pkg_root, "governance")
+    governance_root_path = os.path.join(package_root, "governance")
 
     # A. Load rule metadata from V4 federated domain files
     loaded = None

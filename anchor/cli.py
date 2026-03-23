@@ -276,6 +276,33 @@ def init(domains, frameworks, regulators, sandbox, all_items, force, no_sign, po
     if os.path.exists(master_mitigation) and (not os.path.exists(dot_anchor_mitigation) or force):
         shutil.copy2(master_mitigation, dot_anchor_mitigation)
 
+    # Update manifest active status based on requests
+    if os.path.exists(dot_anchor_manifest):
+        try:
+            with open(dot_anchor_manifest, "r", encoding="utf-8") as f:
+                manifest_data = yaml.safe_load(f)
+            
+            updated = False
+            # Update frameworks
+            for fw in manifest_data.get("frameworks", []):
+                if fw["namespace"].lower() in requested_frameworks:
+                    if not fw.get("active"):
+                        fw["active"] = True
+                        updated = True
+            
+            # Update regulators
+            for reg in manifest_data.get("regulators", []):
+                if reg["namespace"].lower() in requested_regulators:
+                    if not reg.get("active"):
+                        reg["active"] = True
+                        updated = True
+            
+            if updated:
+                with open(dot_anchor_manifest, "w", encoding="utf-8") as f:
+                    yaml.dump(manifest_data, f, default_flow_style=False, sort_keys=False)
+        except Exception as e:
+            click.secho(f"  WARNING: Could not update manifest active status: {e}", fg="yellow")
+
     for example in ["constitution.anchor.example", "policy.anchor.example"]:
         src = os.path.join(examples_dir, example)
         dst = os.path.join(dot_anchor, example)

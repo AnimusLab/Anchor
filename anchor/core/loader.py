@@ -29,7 +29,7 @@ class Rule:
     min_severity: str
     description: str
     category: str
-    maps_to: Optional[str] = None
+    maps_to: Optional[str | list[str]] = None
     obligation_type: Optional[str] = None
     anchor_mechanism: Optional[str] = None
     source_file: Optional[str] = None
@@ -389,8 +389,13 @@ def load_constitution(
 
     # ── STEP 2: Load active frameworks ───────────────────────
     for fw in manifest.frameworks:
-        if not fw.get("active", False):
+        # Auto-activate if local file exists
+        local_path = anchor_dir / fw["path"] if anchor_dir else None
+        is_local = local_path and local_path.exists()
+        
+        if not fw.get("active", False) and not is_local:
             continue
+            
         path = resolve_path(fw["path"])
         namespace = fw["namespace"]
         try:
@@ -401,8 +406,13 @@ def load_constitution(
 
     # ── STEP 4: Load active regulators ───────────────────────
     for reg in manifest.regulators:
-        if not reg.get("active", False):
+        # Auto-activate if local file exists
+        local_path = anchor_dir / reg["path"] if anchor_dir else None
+        is_local = local_path and local_path.exists()
+
+        if not reg.get("active", False) and not is_local:
             continue
+            
         path = resolve_path(reg["path"])
         namespace = reg["namespace"]
         try:

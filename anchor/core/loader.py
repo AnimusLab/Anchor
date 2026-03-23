@@ -91,7 +91,9 @@ def verify_remote_lockfile(anchor_dir: Path, offline_attr: str = "warn") -> bool
     import urllib.request
     import urllib.error
     
-    GOVERNANCE_LOCK_URL = "https://raw.githubusercontent.com/Tanishq1030/anchor/main/GOVERNANCE.lock"
+    from anchor.core.config import settings
+    
+    GOVERNANCE_LOCK_URL = settings.governance_lock_url
     local_lock_path = anchor_dir / ".anchor.lock"
     
     lock_data = None
@@ -342,11 +344,17 @@ def load_constitution(
 
     # Locate constitution.anchor
     if constitution_path is None:
-        constitution_path = governance_root / "constitution.anchor"
-        if not constitution_path.exists():
-            # Fall back to package root
-            constitution_path = Path(__file__).parent.parent.parent \
-                / "constitution.anchor"
+        if anchor_dir:
+            local_manifest = anchor_dir / "constitution.anchor"
+            if local_manifest.exists():
+                constitution_path = local_manifest
+
+        if constitution_path is None:
+            constitution_path = governance_root / "constitution.anchor"
+            if not constitution_path.exists():
+                # Fall back to package root
+                constitution_path = Path(__file__).parent.parent.parent \
+                    / "constitution.anchor"
 
     manifest = load_manifest(constitution_path)
     seal_check = manifest.engine.get("seal_check", "strict")
@@ -373,8 +381,15 @@ def load_constitution(
         p = governance_root / rel_path
         return p
 
-    # ── STEP 1: Load core domains ─────────────────────────────
+    # ── STEP 1: Load active domains ───────────────────────────
     for domain in manifest.core_domains:
+        # Auto-activate if local file exists
+        local_path = anchor_dir / domain["path"] if anchor_dir else None
+        is_local = local_path and local_path.exists()
+
+        if not domain.get("active", False) and not is_local:
+            continue
+            
         path = resolve_path(domain["path"])
         namespace = domain["namespace"]
         try:
@@ -444,11 +459,17 @@ def load_constitution(
     
     # Also include maps_to relations from frameworks/regulators in the alias chain
     for rid, rule in constitution.rules.items():
-        if rule.maps_to and rule.maps_to in constitution.rules:
-            # If a rule maps to another (e.g. FINOS-014 -> SEC-007)
-            # we treat it as an alias for reporting purposes
-            if rid not in constitution.alias_chain:
-                constitution.alias_chain[rid] = rule.maps_to
+        if rule.maps_to:
+            # Handle both single string and list of strings for multi-ID support
+            mappings = rule.maps_to if isinstance(rule.maps_to, list) else [rule.maps_to]
+            for m_id in mappings:
+                if m_id in constitution.rules:
+                    # If a rule maps to another (e.g. FINOS-014 -> SEC-007)
+                    # we treat it as an alias for reporting purposes.
+                    # For many-to-many, we link to the first valid mapping in the alias chain.
+                    if rid not in constitution.alias_chain:
+                        constitution.alias_chain[rid] = m_id
+                        break
 
     # ── STEP 6: Load policy.anchor ────────────────────────────
     if anchor_dir:

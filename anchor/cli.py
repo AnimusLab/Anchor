@@ -15,10 +15,11 @@ from anchor.core.constitution import (
     verify_integrity,
 )
 from anchor.core.config import settings
+from anchor.utils.output import ANCHOR_ICON, CHECK, CROSS, WARN, BAR, ARROW
 
 
 from anchor import __version__
-__version__ = "4.1.4"
+__version__ = "4.3.1"
 
 @click.group()
 @click.version_option(version=__version__)
@@ -173,7 +174,7 @@ def init(domains, frameworks, regulators, sandbox, all_items, force, no_sign, po
             for d in domain_list:
                 if d not in AVAILABLE_DOMAINS:
                     click.secho(
-                        f"  ✗ Unknown domain: '{d}'. "
+                        f"  {CROSS} Unknown domain: '{d}'. "
                         f"Available: {', '.join(AVAILABLE_DOMAINS.keys())}",
                         fg="red"
                     )
@@ -190,7 +191,7 @@ def init(domains, frameworks, regulators, sandbox, all_items, force, no_sign, po
             for fw in fw_list:
                 if fw not in AVAILABLE_FRAMEWORKS:
                     click.secho(
-                        f"  ✗ Unknown framework: '{fw}'. "
+                        f"  {CROSS} Unknown framework: '{fw}'. "
                         f"Available: {', '.join(AVAILABLE_FRAMEWORKS.keys())}",
                         fg="red"
                     )
@@ -207,7 +208,7 @@ def init(domains, frameworks, regulators, sandbox, all_items, force, no_sign, po
             for reg in reg_list:
                 if reg not in AVAILABLE_REGULATORS:
                     click.secho(
-                        f"  ✗ Unknown regulator: '{reg}'. "
+                        f"  {CROSS} Unknown regulator: '{reg}'. "
                         f"Available: {', '.join(AVAILABLE_REGULATORS.keys())}",
                         fg="red"
                     )
@@ -240,7 +241,7 @@ def init(domains, frameworks, regulators, sandbox, all_items, force, no_sign, po
             click.secho(f"  [SKIP] Already exists: {label}", fg="yellow")
             return True
         shutil.copy2(src, dst)
-        click.secho(f"  [OK] {label}", fg="green")
+        click.secho(f"  [{CHECK}] {label}", fg="green")
         return True
 
     # ── Copy domain files ─────────────────────────────────────
@@ -283,6 +284,16 @@ def init(domains, frameworks, regulators, sandbox, all_items, force, no_sign, po
                 manifest_data = yaml.safe_load(f)
             
             updated = False
+            # Update domains
+            for domain in manifest_data.get("core_domains", []):
+                # Robust matching: check if filename (minus extension) matches requested domain
+                d_path = domain.get("path", "")
+                d_name = os.path.basename(d_path).replace(".anchor", "").lower()
+                if d_name in requested_domains:
+                    if not domain.get("active"):
+                        domain["active"] = True
+                        updated = True
+
             # Update frameworks
             for fw in manifest_data.get("frameworks", []):
                 if fw["namespace"].lower() in requested_frameworks:
@@ -298,6 +309,8 @@ def init(domains, frameworks, regulators, sandbox, all_items, force, no_sign, po
                         updated = True
             
             if updated:
+                print("DEBUG: Final updated manifest_data:")
+                print(yaml.dump(manifest_data, default_flow_style=False, sort_keys=False))
                 with open(dot_anchor_manifest, "w", encoding="utf-8") as f:
                     yaml.dump(manifest_data, f, default_flow_style=False, sort_keys=False)
         except Exception as e:
@@ -414,29 +427,34 @@ fi
                 os.chmod(pre_commit_path, 0o755)
             except Exception:
                 pass
-            click.secho("  [OK] Git pre-commit hook installed", fg="green")
+            click.secho(f"  [{CHECK}] Git pre-commit hook installed", fg="green")
         except Exception as e:
             click.secho(f"  WARNING: Could not install git hook: {e}", fg="yellow")
 
     # ── Verify Remote Integrity ───────────────────────────────
     click.echo("")
     if no_sign:
-        click.secho("  ~ Remote integrity fetch skipped (--no-sign)", fg="yellow")
+        click.secho(f"  {WARN} Remote integrity fetch skipped (--no-sign)", fg="yellow")
     else:
-        import urllib.request
-        import urllib.error
-        try:
-            req = urllib.request.Request("https://raw.githubusercontent.com/Tanishq1030/anchor/main/GOVERNANCE.lock")
-            with urllib.request.urlopen(req, timeout=5) as response:
-                remote_lock = response.read().decode('utf-8')
-            lock_path = os.path.join(dot_anchor, ".anchor.lock")
-            with open(lock_path, "w", encoding="utf-8") as f:
-                f.write(remote_lock)
-            click.secho("  [OK] Fetched GOVERNANCE.lock from remote", fg="green")
-        except urllib.error.URLError as e:
-            click.secho(f"  WARNING: Could not fetch GOVERNANCE.lock remotely: {e.reason}", fg="yellow")
-        except Exception as e:
-            click.secho(f"  WARNING: Failed to fetch remote lockfile: {e}", fg="yellow")
+        lock_path = os.path.join(dot_anchor, ".anchor.lock")
+        if os.path.exists(lock_path) and not force:
+            click.echo(f"\n  {WARN} WARNING: .anchor.lock already exists.")
+            click.echo("  Remote fetch will overwrite your local hashes.")
+            click.echo("  Use --force to confirm, or --no-sign to skip verification.\n")
+        else:
+            import urllib.request
+            import urllib.error
+            try:
+                req = urllib.request.Request(settings.governance_lock_url)
+                with urllib.request.urlopen(req, timeout=5) as response:
+                    remote_lock = response.read().decode('utf-8')
+                with open(lock_path, "w", encoding="utf-8") as f:
+                    f.write(remote_lock)
+                click.secho(f"  [{CHECK}] Fetched GOVERNANCE.lock from remote", fg="green")
+            except urllib.error.URLError as e:
+                click.secho(f"  {WARN} WARNING: Could not fetch GOVERNANCE.lock remotely: {e.reason}", fg="yellow")
+            except Exception as e:
+                click.secho(f"  {WARN} WARNING: Failed to fetch remote lockfile: {e}", fg="yellow")
 
     # ── Optionally install Diamond Cage ───────────────────────
     if sandbox:
@@ -665,7 +683,7 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
             governance_root=Path(governance_root_path),
             anchor_dir=Path(dot_anchor) if os.path.exists(dot_anchor) else None,
         )
-
+        
         # Convert Rule dataclass objects to dicts the engine understands
         for rule_id, rule in loaded.rules.items():
             rule_dict[rule_id] = {
@@ -682,30 +700,36 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
                 "mitigation":  None,
             }
 
-        if verbose:
-            click.echo(f"   Loaded {len(rule_dict)} rules from V4 federated domains.")
+        if verbose or not rule_dict:
             if loaded.errors:
                 for err in loaded.errors:
-                    click.secho(f"   [!] Loader warning: {err}", fg="yellow")
+                    click.secho(f"   [!] Loader error: {err}", fg="red")
+            if verbose:
+                click.echo(f"   Loaded {len(rule_dict)} rules from V4 federated domains.")
 
     except Exception as e:
-        if verbose:
-            click.secho(f"   [!] V4 loader failed, falling back to cache: {e}", fg="yellow")
+        error_msg = str(e)
+        if "INTEGRITY VIOLATION" in error_msg or "integrity" in error_msg.lower():
+            # ALWAYS show — never hide governance integrity errors
+            click.echo(f"\n{BAR*80}", err=True)
+            click.secho("  ANCHOR INTEGRITY VIOLATION", fg="red", bold=True, err=True)
+            click.secho(f"  {error_msg}", fg="red", err=True)
+            click.echo(f"  Run: python -m anchor sync --restore", err=True)
+            click.echo(f"{BAR*80}\n", err=True)
+            sys.exit(2)
 
-        # Fallback: load from V3 cache if V4 loader fails
-        constitution_path = os.path.join(cache_dir, "constitution.anchor")
-        if os.path.exists(constitution_path):
-            try:
-                with open(constitution_path, "r", encoding="utf-8") as f:
-                    c_data = yaml.safe_load(f) or {}
-                    for r in c_data.get("rules", []):
-                        if "id" in r:
-                            rule_dict[r["id"]] = r
-                if verbose:
-                    click.echo(f"   Fallback: loaded {len(rule_dict)} rules from V3 cache.")
-            except Exception as fallback_err:
-                if verbose:
-                    click.secho(f"   [!] Fallback also failed: {fallback_err}", fg="red")
+        # In tests or local dev, we want to know IF the loader failed
+        click.secho(f"CRITICAL: Governance loader failed: {error_msg}", fg="red")
+        import traceback
+        click.echo(traceback.format_exc())
+        sys.exit(2)
+
+    # FAIL LOUD — never pass with zero laws
+    if not rule_dict:
+        click.echo(f"\n  {CROSS} ERROR: 0 active laws loaded and no cache available.", err=True)
+        click.echo("  This means governance loading failed or no domains are active.", err=True)
+        click.echo(f"  Run: python -m anchor init --all --force\n", err=True)
+        sys.exit(2)
 
     # B. Load detection patterns from mitigation.anchor and join with rule metadata
     # Prioritize project-local mitigation catalog
@@ -730,14 +754,21 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
 
                 if resolved_id in rule_dict:
                     # Merge detection pattern into the rule metadata
-                    rule_dict[resolved_id]["match"]      = m.get("match")
-                    rule_dict[resolved_id]["pattern"]    = m.get("pattern")
+                    match_data = m.get("match")
+                    if match_data:
+                        rule_dict[resolved_id]["match"] = match_data
+                        # If the match block has a top-level pattern (V3 style) or internal
+                        if "pattern" in match_data:
+                            rule_dict[resolved_id]["pattern"] = match_data["pattern"]
+
+                    # Explicit top-level pattern support
+                    if m.get("pattern"):
+                        rule_dict[resolved_id]["pattern"] = m.get("pattern")
+
                     rule_dict[resolved_id]["message"]    = m.get("message", rule_dict[resolved_id].get("name"))
                     rule_dict[resolved_id]["mitigation"] = m.get("fix", m.get("mitigation"))
-                    rule_dict[resolved_id]["name"]       = (
-                        f"{rule_dict[resolved_id]['name']} ({m['name']})"
-                        if m.get("name") else rule_dict[resolved_id]["name"]
-                    )
+                    if m.get("name"):
+                        rule_dict[resolved_id]["name"] = f"{rule_dict[resolved_id]['name']} ({m['name']})"
 
             if verbose:
                 active = sum(1 for r in rule_dict.values() if r.get("match") or r.get("pattern"))
@@ -1142,7 +1173,7 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
         click.secho(f"  INFO    : {severity_buckets['info']}", fg="white")
         if suppressed:
             click.secho(f"{len(suppressed)} suppressed findings (See report for audit trail).", fg="cyan", dim=True)
-        click.echo("-" * 80)
+        click.echo(BAR * 80)
         
         # Only show the first 5 violations in terminal to avoid clutter
         display_limit = 5
@@ -1157,11 +1188,11 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
             click.echo(f"   Location: {v['file']}:{v['line']}")
             if v.get('mitigation'):
                 click.secho(f"   Fix:      {v['mitigation']}", fg="cyan", dim=True)
-            click.echo("-" * 80)
+            click.echo(BAR * 80)
         
         if len(violations) > display_limit:
             click.secho(f"... and {len(violations)-display_limit} more findings in the report.", fg="white", dim=True)
-            click.echo("-" * 80)
+            click.echo(BAR * 80)
         
         # 5. CLEANUP (If ephemeral)
         if ephemeral_sandbox and not no_sandbox:
@@ -1255,12 +1286,12 @@ def check_verify_sync(fix, verbose):
             click.secho(f"  [MISSING]  {label}", fg="red")
             all_synced = False
         elif h == canon_hash:
-            status = click.style("[OK]     ", fg="green")
+            status = click.style(f"[{CHECK}]     ", fg="green")
             click.echo(f"  {status} {label}")
             if verbose:
                 click.echo(f"           SHA-256: {h[:16]}...")
         else:
-            status = click.style("[MISMATCH]", fg="red", bold=True)
+            status = click.style(f"[{CROSS}]     ", fg="red", bold=True)
             click.echo(f"  {status} {label}")
             if verbose:
                 click.echo(f"           Expected: {canon_hash[:16]}...")
@@ -1635,7 +1666,7 @@ def heal(paths, apply_fixes, verbose):
 
     click.echo()
     click.secho(f"Anchor Heal: {len(suggestions)} suggestion(s) found", bold=True)
-    click.secho(f"   [V] Auto-fixable: {len(auto_fixable)}   [!] Manual: {len(manual_only)}", fg="cyan")
+    click.secho(f"   [{CHECK}] Auto-fixable: {len(auto_fixable)}   [{WARN}] Manual: {len(manual_only)}", fg="cyan")
     click.echo("=" * 70)
 
     applied = 0

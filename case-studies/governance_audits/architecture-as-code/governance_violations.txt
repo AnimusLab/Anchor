@@ -1,0 +1,151 @@
+================================================================================
+   ANCHOR GOVERNANCE VIOLATIONS
+================================================================================
+
+Scan Source: D:\architecture-as-code
+Timestamp:   2026-03-23 04:56:20
+
+--- SCAN STATISTICS ---
+Files Scanned: 684
+Files Ignored: 865
+Total Files:   1549
+Total Dirs:    415
+
+--- VIOLATION SUMMARY ---
+Total Findings: 11
+Breakdown:      11 Blocker/Error, 0 Warning, 0 Info, 0 Suppressed
+
+--------------------------------------------------------------------------------
+
+[[X]] [FINOS-002, OWASP-003, SEC-002] Data Poisoning (Unencrypted Vector Store Upsert) (BLOCKER)
+    Location: .\calm-hub\src\main\java\org\finos\calm\store\mongo\MongoAdrStore.java:86
+    Message:  Vector store write detected without encryption. Embeddings can leak sensitive data via inversion attacks.
+    Details:  Malicious or corrupted data is introduced into the training, fine-tuning, or retrieval pipeline, causing the model to learn incorrect behaviors, biased outputs, or backdoor triggers that activate under specific conditions. In financial AI, poisoned training data can cause credit models to systematically favor or disadvantage specific demographic groups, or cause fraud detection models to miss specific attack patterns. The attack is particularly dangerous because poisoned behavior is baked into the model weights and survives redeployment.
+
+    Fix:      None
+    --- Suggested Fix -----------------------------------------
+    Manual review required. See mitigation guidance in the Anchor catalog.
+    [✗] new UpdateOptions().upsert(true));
+    Manual review required — apply with care.
+    -----------------------------------------------------------
+------------------------------------------------------------
+[[X]] [FINOS-002, OWASP-003, SEC-002] Data Poisoning (Unencrypted Vector Store Upsert) (BLOCKER)
+    Location: .\calm-hub\src\main\java\org\finos\calm\store\mongo\MongoAdrStore.java:231
+    Message:  Vector store write detected without encryption. Embeddings can leak sensitive data via inversion attacks.
+    Details:  Malicious or corrupted data is introduced into the training, fine-tuning, or retrieval pipeline, causing the model to learn incorrect behaviors, biased outputs, or backdoor triggers that activate under specific conditions. In financial AI, poisoned training data can cause credit models to systematically favor or disadvantage specific demographic groups, or cause fraud detection models to miss specific attack patterns. The attack is particularly dangerous because poisoned behavior is baked into the model weights and survives redeployment.
+
+    Fix:      None
+    --- Suggested Fix -----------------------------------------
+    Manual review required. See mitigation guidance in the Anchor catalog.
+    [✗] adrCollection.updateOne(filter, update, new UpdateOptions().upsert(true));
+    Manual review required — apply with care.
+    -----------------------------------------------------------
+------------------------------------------------------------
+[[X]] [FINOS-002, OWASP-003, SEC-002] Data Poisoning (Unencrypted Vector Store Upsert) (BLOCKER)
+    Location: .\calm-hub\src\main\java\org\finos\calm\store\mongo\MongoArchitectureStore.java:80
+    Message:  Vector store write detected without encryption. Embeddings can leak sensitive data via inversion attacks.
+    Details:  Malicious or corrupted data is introduced into the training, fine-tuning, or retrieval pipeline, causing the model to learn incorrect behaviors, biased outputs, or backdoor triggers that activate under specific conditions. In financial AI, poisoned training data can cause credit models to systematically favor or disadvantage specific demographic groups, or cause fraud detection models to miss specific attack patterns. The attack is particularly dangerous because poisoned behavior is baked into the model weights and survives redeployment.
+
+    Fix:      None
+    --- Suggested Fix -----------------------------------------
+    Manual review required. See mitigation guidance in the Anchor catalog.
+    [✗] new UpdateOptions().upsert(true));
+    Manual review required — apply with care.
+    -----------------------------------------------------------
+------------------------------------------------------------
+[[X]] [FINOS-002, OWASP-003, SEC-002] Data Poisoning (Unencrypted Vector Store Upsert) (BLOCKER)
+    Location: .\calm-hub\src\main\java\org\finos\calm\store\mongo\MongoArchitectureStore.java:191
+    Message:  Vector store write detected without encryption. Embeddings can leak sensitive data via inversion attacks.
+    Details:  Malicious or corrupted data is introduced into the training, fine-tuning, or retrieval pipeline, causing the model to learn incorrect behaviors, biased outputs, or backdoor triggers that activate under specific conditions. In financial AI, poisoned training data can cause credit models to systematically favor or disadvantage specific demographic groups, or cause fraud detection models to miss specific attack patterns. The attack is particularly dangerous because poisoned behavior is baked into the model weights and survives redeployment.
+
+    Fix:      None
+    --- Suggested Fix -----------------------------------------
+    Manual review required. See mitigation guidance in the Anchor catalog.
+    [✗] architectureCollection.updateOne(filter, update, new UpdateOptions().upsert(true));
+    Manual review required — apply with care.
+    -----------------------------------------------------------
+------------------------------------------------------------
+[[X]] [FINOS-002, OWASP-003, SEC-002] Data Poisoning (Unencrypted Vector Store Upsert) (BLOCKER)
+    Location: .\calm-hub\src\main\java\org\finos\calm\store\mongo\MongoCounterStore.java:49
+    Message:  Vector store write detected without encryption. Embeddings can leak sensitive data via inversion attacks.
+    Details:  Malicious or corrupted data is introduced into the training, fine-tuning, or retrieval pipeline, causing the model to learn incorrect behaviors, biased outputs, or backdoor triggers that activate under specific conditions. In financial AI, poisoned training data can cause credit models to systematically favor or disadvantage specific demographic groups, or cause fraud detection models to miss specific attack patterns. The attack is particularly dangerous because poisoned behavior is baked into the model weights and survives redeployment.
+
+    Fix:      None
+    --- Suggested Fix -----------------------------------------
+    Manual review required. See mitigation guidance in the Anchor catalog.
+    [✗] FindOneAndUpdateOptions options = new FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER).upsert(true);
+    Manual review required — apply with care.
+    -----------------------------------------------------------
+------------------------------------------------------------
+[[X]] [FINOS-002, OWASP-003, SEC-002] Data Poisoning (Unencrypted Vector Store Upsert) (BLOCKER)
+    Location: .\calm-hub\src\main\java\org\finos\calm\store\mongo\MongoFlowStore.java:77
+    Message:  Vector store write detected without encryption. Embeddings can leak sensitive data via inversion attacks.
+    Details:  Malicious or corrupted data is introduced into the training, fine-tuning, or retrieval pipeline, causing the model to learn incorrect behaviors, biased outputs, or backdoor triggers that activate under specific conditions. In financial AI, poisoned training data can cause credit models to systematically favor or disadvantage specific demographic groups, or cause fraud detection models to miss specific attack patterns. The attack is particularly dangerous because poisoned behavior is baked into the model weights and survives redeployment.
+
+    Fix:      None
+    --- Suggested Fix -----------------------------------------
+    Manual review required. See mitigation guidance in the Anchor catalog.
+    [✗] new UpdateOptions().upsert(true));
+    Manual review required — apply with care.
+    -----------------------------------------------------------
+------------------------------------------------------------
+[[X]] [FINOS-002, OWASP-003, SEC-002] Data Poisoning (Unencrypted Vector Store Upsert) (BLOCKER)
+    Location: .\calm-hub\src\main\java\org\finos\calm\store\mongo\MongoFlowStore.java:185
+    Message:  Vector store write detected without encryption. Embeddings can leak sensitive data via inversion attacks.
+    Details:  Malicious or corrupted data is introduced into the training, fine-tuning, or retrieval pipeline, causing the model to learn incorrect behaviors, biased outputs, or backdoor triggers that activate under specific conditions. In financial AI, poisoned training data can cause credit models to systematically favor or disadvantage specific demographic groups, or cause fraud detection models to miss specific attack patterns. The attack is particularly dangerous because poisoned behavior is baked into the model weights and survives redeployment.
+
+    Fix:      None
+    --- Suggested Fix -----------------------------------------
+    Manual review required. See mitigation guidance in the Anchor catalog.
+    [✗] flowCollection.updateOne(filter, update, new UpdateOptions().upsert(true));
+    Manual review required — apply with care.
+    -----------------------------------------------------------
+------------------------------------------------------------
+[[X]] [FINOS-002, OWASP-003, SEC-002] Data Poisoning (Unencrypted Vector Store Upsert) (BLOCKER)
+    Location: .\calm-hub\src\main\java\org\finos\calm\store\mongo\MongoPatternStore.java:77
+    Message:  Vector store write detected without encryption. Embeddings can leak sensitive data via inversion attacks.
+    Details:  Malicious or corrupted data is introduced into the training, fine-tuning, or retrieval pipeline, causing the model to learn incorrect behaviors, biased outputs, or backdoor triggers that activate under specific conditions. In financial AI, poisoned training data can cause credit models to systematically favor or disadvantage specific demographic groups, or cause fraud detection models to miss specific attack patterns. The attack is particularly dangerous because poisoned behavior is baked into the model weights and survives redeployment.
+
+    Fix:      None
+    --- Suggested Fix -----------------------------------------
+    Manual review required. See mitigation guidance in the Anchor catalog.
+    [✗] new UpdateOptions().upsert(true));
+    Manual review required — apply with care.
+    -----------------------------------------------------------
+------------------------------------------------------------
+[[X]] [FINOS-002, OWASP-003, SEC-002] Data Poisoning (Unencrypted Vector Store Upsert) (BLOCKER)
+    Location: .\calm-hub\src\main\java\org\finos\calm\store\mongo\MongoPatternStore.java:185
+    Message:  Vector store write detected without encryption. Embeddings can leak sensitive data via inversion attacks.
+    Details:  Malicious or corrupted data is introduced into the training, fine-tuning, or retrieval pipeline, causing the model to learn incorrect behaviors, biased outputs, or backdoor triggers that activate under specific conditions. In financial AI, poisoned training data can cause credit models to systematically favor or disadvantage specific demographic groups, or cause fraud detection models to miss specific attack patterns. The attack is particularly dangerous because poisoned behavior is baked into the model weights and survives redeployment.
+
+    Fix:      None
+    --- Suggested Fix -----------------------------------------
+    Manual review required. See mitigation guidance in the Anchor catalog.
+    [✗] patternCollection.updateOne(filter, update, new UpdateOptions().upsert(true));
+    Manual review required — apply with care.
+    -----------------------------------------------------------
+------------------------------------------------------------
+[[X]] [FINOS-002, OWASP-003, SEC-002] Data Poisoning (Unencrypted Vector Store Upsert) (BLOCKER)
+    Location: .\calm-hub\src\main\java\org\finos\calm\store\mongo\MongoStandardStore.java:83
+    Message:  Vector store write detected without encryption. Embeddings can leak sensitive data via inversion attacks.
+    Details:  Malicious or corrupted data is introduced into the training, fine-tuning, or retrieval pipeline, causing the model to learn incorrect behaviors, biased outputs, or backdoor triggers that activate under specific conditions. In financial AI, poisoned training data can cause credit models to systematically favor or disadvantage specific demographic groups, or cause fraud detection models to miss specific attack patterns. The attack is particularly dangerous because poisoned behavior is baked into the model weights and survives redeployment.
+
+    Fix:      None
+    --- Suggested Fix -----------------------------------------
+    Manual review required. See mitigation guidance in the Anchor catalog.
+    [✗] new UpdateOptions().upsert(true));
+    Manual review required — apply with care.
+    -----------------------------------------------------------
+------------------------------------------------------------
+[[X]] [FINOS-002, OWASP-003, SEC-002] Data Poisoning (Unencrypted Vector Store Upsert) (BLOCKER)
+    Location: .\calm-hub\src\main\java\org\finos\calm\store\mongo\MongoStandardStore.java:177
+    Message:  Vector store write detected without encryption. Embeddings can leak sensitive data via inversion attacks.
+    Details:  Malicious or corrupted data is introduced into the training, fine-tuning, or retrieval pipeline, causing the model to learn incorrect behaviors, biased outputs, or backdoor triggers that activate under specific conditions. In financial AI, poisoned training data can cause credit models to systematically favor or disadvantage specific demographic groups, or cause fraud detection models to miss specific attack patterns. The attack is particularly dangerous because poisoned behavior is baked into the model weights and survives redeployment.
+
+    Fix:      None
+    --- Suggested Fix -----------------------------------------
+    Manual review required. See mitigation guidance in the Anchor catalog.
+    [✗] standardCollection.updateOne(filter, update, new UpdateOptions().upsert(true));
+    Manual review required — apply with care.
+    -----------------------------------------------------------
+------------------------------------------------------------

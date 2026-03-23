@@ -1,0 +1,163 @@
+================================================================================
+   ANCHOR GOVERNANCE VIOLATIONS
+================================================================================
+
+Scan Source: D:\huggingface_hub
+Timestamp:   2026-03-23 04:09:49
+
+--- SCAN STATISTICS ---
+Files Scanned: 164
+Files Ignored: 54
+Total Files:   218
+Total Dirs:    22
+
+--- VIOLATION SUMMARY ---
+Total Findings: 12
+Breakdown:      12 Blocker/Error, 0 Warning, 0 Info, 0 Suppressed
+
+--------------------------------------------------------------------------------
+
+[[X]] [FINOS-014, OWASP-002, RBI-018, SEC-007] Shell Injection (Shell Command Execution) (Unsandboxed Subprocess in Agent) (BLOCKER)
+    Location: .\src\huggingface_hub\cli\lfs.py:54
+    Message:  Native subprocess execution detected. Use Diamond Cage (WASM) sandboxing for agent tools.
+    Details:  AI-generated code or agentic tool calls invoke shell commands, subprocesses, or system calls that are constructed from untrusted input or operate outside a sandboxed execution environment. Models generating code frequently produce subprocess calls as part of automation tasks â€” these calls become injection vectors when they incorporate model outputs or user inputs without validation. In AI pipelines, shell injection risk is compounded by the fact that models may generate plausible-looking but malicious commands as part of multi-step agentic workflows, bypassing human review.
+
+    Fix:      None
+    --- Suggested Fix -----------------------------------------
+    Manual review required. See mitigation guidance in the Anchor catalog.
+    [✗] subprocess.run(
+    Manual review required — apply with care.
+    -----------------------------------------------------------
+------------------------------------------------------------
+[[X]] [FINOS-014, OWASP-002, RBI-018, SEC-007] Shell Injection (Shell Command Execution) (Unsandboxed Subprocess in Agent) (BLOCKER)
+    Location: .\src\huggingface_hub\cli\lfs.py:59
+    Message:  Native subprocess execution detected. Use Diamond Cage (WASM) sandboxing for agent tools.
+    Details:  AI-generated code or agentic tool calls invoke shell commands, subprocesses, or system calls that are constructed from untrusted input or operate outside a sandboxed execution environment. Models generating code frequently produce subprocess calls as part of automation tasks â€” these calls become injection vectors when they incorporate model outputs or user inputs without validation. In AI pipelines, shell injection risk is compounded by the fact that models may generate plausible-looking but malicious commands as part of multi-step agentic workflows, bypassing human review.
+
+    Fix:      None
+    --- Suggested Fix -----------------------------------------
+    Manual review required. See mitigation guidance in the Anchor catalog.
+    [✗] subprocess.run(
+    Manual review required — apply with care.
+    -----------------------------------------------------------
+------------------------------------------------------------
+[[X]] [ALN-001, FINOS-008, OWASP-009] Hallucination (LLM Output Without Validation) (ERROR)
+    Location: .\src\huggingface_hub\inference\_client.py:700
+    Message:  LLM API call detected. Ensure output is validated before use (e.g., schema check, grounding).
+    Details:  AI models generate factually incorrect, fabricated, or non-existent information presented with the same confidence as accurate information. In code generation, hallucination manifests as references to non-existent APIs, libraries, or functions that appear syntactically valid but will fail at runtime. In financial AI, hallucination is a critical risk in automated report generation, regulatory filing assistance, customer communications, and investment research â€” where fabricated figures, non-existent regulatory citations, or invented financial data can cause material harm. Hallucination is not a reliability issue â€” in regulated contexts it is a compliance issue, as SEBI requires AI outputs to be accurate and traceable, and RBI FREE-AI Recommendation 14 requires AI-assisted credit decisions to be explainable and verifiable.
+
+    Fix:      None
+    --- Suggested Fix -----------------------------------------
+    Manual review required. See mitigation guidance in the Anchor catalog.
+    [✗] output = client.chat.completions.create(
+    Manual review required — apply with care.
+    -----------------------------------------------------------
+------------------------------------------------------------
+[[X]] [ALN-001, FINOS-008, OWASP-009] Hallucination (LLM Output Without Validation) (ERROR)
+    Location: .\src\huggingface_hub\inference\_client.py:754
+    Message:  LLM API call detected. Ensure output is validated before use (e.g., schema check, grounding).
+    Details:  AI models generate factually incorrect, fabricated, or non-existent information presented with the same confidence as accurate information. In code generation, hallucination manifests as references to non-existent APIs, libraries, or functions that appear syntactically valid but will fail at runtime. In financial AI, hallucination is a critical risk in automated report generation, regulatory filing assistance, customer communications, and investment research â€” where fabricated figures, non-existent regulatory citations, or invented financial data can cause material harm. Hallucination is not a reliability issue â€” in regulated contexts it is a compliance issue, as SEBI requires AI outputs to be accurate and traceable, and RBI FREE-AI Recommendation 14 requires AI-assisted credit decisions to be explainable and verifiable.
+
+    Fix:      None
+    --- Suggested Fix -----------------------------------------
+    Manual review required. See mitigation guidance in the Anchor catalog.
+    [✗] >>> output = client.chat.completions.create(
+    Manual review required — apply with care.
+    -----------------------------------------------------------
+------------------------------------------------------------
+[[X]] [ALN-001, FINOS-008, OWASP-009] Hallucination (LLM Output Without Validation) (ERROR)
+    Location: .\src\huggingface_hub\inference\_generated\_async_client.py:723
+    Message:  LLM API call detected. Ensure output is validated before use (e.g., schema check, grounding).
+    Details:  AI models generate factually incorrect, fabricated, or non-existent information presented with the same confidence as accurate information. In code generation, hallucination manifests as references to non-existent APIs, libraries, or functions that appear syntactically valid but will fail at runtime. In financial AI, hallucination is a critical risk in automated report generation, regulatory filing assistance, customer communications, and investment research â€” where fabricated figures, non-existent regulatory citations, or invented financial data can cause material harm. Hallucination is not a reliability issue â€” in regulated contexts it is a compliance issue, as SEBI requires AI outputs to be accurate and traceable, and RBI FREE-AI Recommendation 14 requires AI-assisted credit decisions to be explainable and verifiable.
+
+    Fix:      None
+    --- Suggested Fix -----------------------------------------
+    Manual review required. See mitigation guidance in the Anchor catalog.
+    [✗] output = await client.chat.completions.create(
+    Manual review required — apply with care.
+    -----------------------------------------------------------
+------------------------------------------------------------
+[[X]] [ALN-001, FINOS-008, OWASP-009] Hallucination (LLM Output Without Validation) (ERROR)
+    Location: .\src\huggingface_hub\inference\_generated\_async_client.py:778
+    Message:  LLM API call detected. Ensure output is validated before use (e.g., schema check, grounding).
+    Details:  AI models generate factually incorrect, fabricated, or non-existent information presented with the same confidence as accurate information. In code generation, hallucination manifests as references to non-existent APIs, libraries, or functions that appear syntactically valid but will fail at runtime. In financial AI, hallucination is a critical risk in automated report generation, regulatory filing assistance, customer communications, and investment research â€” where fabricated figures, non-existent regulatory citations, or invented financial data can cause material harm. Hallucination is not a reliability issue â€” in regulated contexts it is a compliance issue, as SEBI requires AI outputs to be accurate and traceable, and RBI FREE-AI Recommendation 14 requires AI-assisted credit decisions to be explainable and verifiable.
+
+    Fix:      None
+    --- Suggested Fix -----------------------------------------
+    Manual review required. See mitigation guidance in the Anchor catalog.
+    [✗] >>> output = await client.chat.completions.create(
+    Manual review required — apply with care.
+    -----------------------------------------------------------
+------------------------------------------------------------
+[[X]] [ALN-001, FINOS-008, OWASP-009] Hallucination (LLM Output Without Validation) (ERROR)
+    Location: .\src\huggingface_hub\inference\_mcp\mcp_client.py:273
+    Message:  LLM API call detected. Ensure output is validated before use (e.g., schema check, grounding).
+    Details:  AI models generate factually incorrect, fabricated, or non-existent information presented with the same confidence as accurate information. In code generation, hallucination manifests as references to non-existent APIs, libraries, or functions that appear syntactically valid but will fail at runtime. In financial AI, hallucination is a critical risk in automated report generation, regulatory filing assistance, customer communications, and investment research â€” where fabricated figures, non-existent regulatory citations, or invented financial data can cause material harm. Hallucination is not a reliability issue â€” in regulated contexts it is a compliance issue, as SEBI requires AI outputs to be accurate and traceable, and RBI FREE-AI Recommendation 14 requires AI-assisted credit decisions to be explainable and verifiable.
+
+    Fix:      None
+    --- Suggested Fix -----------------------------------------
+    Manual review required. See mitigation guidance in the Anchor catalog.
+    [✗] response = await self.client.chat.completions.create(
+    Manual review required — apply with care.
+    -----------------------------------------------------------
+------------------------------------------------------------
+[[X]] [FCA-004, FINOS-013, SEC-006] Raw Network Access (Public LLM Endpoint Detection) (ERROR)
+    Location: .\src\huggingface_hub\inference\_providers\openai.py:9
+    Message:  Direct call to public LLM API detected. Route through a PII-scrubbing proxy.
+    Details:  AI components or model integration code make direct calls to external LLM API endpoints, data sources, or third-party services without routing through a governed proxy or backstop layer. Raw network access bypasses governance controls, telemetry, rate limiting, and audit logging. In regulated financial environments, unproxied API calls to public LLM providers mean that sensitive financial data and customer information may be transmitted to external services without adequate data governance, violating RBI Digital Lending Directions and EU AI Act data requirements.
+
+    Fix:      None
+    --- Suggested Fix -----------------------------------------
+    Manual review required. See mitigation guidance in the Anchor catalog.
+    [✗] super().__init__(provider="openai", base_url="https://api.openai.com")
+    Manual review required — apply with care.
+    -----------------------------------------------------------
+------------------------------------------------------------
+[[X]] [FINOS-014, OWASP-002, RBI-018, SEC-007] Shell Injection (Shell Command Execution) (Unsandboxed Subprocess in Agent) (BLOCKER)
+    Location: .\src\huggingface_hub\utils\_subprocess.py:85
+    Message:  Native subprocess execution detected. Use Diamond Cage (WASM) sandboxing for agent tools.
+    Details:  AI-generated code or agentic tool calls invoke shell commands, subprocesses, or system calls that are constructed from untrusted input or operate outside a sandboxed execution environment. Models generating code frequently produce subprocess calls as part of automation tasks â€” these calls become injection vectors when they incorporate model outputs or user inputs without validation. In AI pipelines, shell injection risk is compounded by the fact that models may generate plausible-looking but malicious commands as part of multi-step agentic workflows, bypassing human review.
+
+    Fix:      None
+    --- Suggested Fix -----------------------------------------
+    Manual review required. See mitigation guidance in the Anchor catalog.
+    [✗] return subprocess.run(
+    Manual review required — apply with care.
+    -----------------------------------------------------------
+------------------------------------------------------------
+[[X]] [FINOS-014, OWASP-002, RBI-018, SEC-007] Shell Injection (Shell Command Execution) (Unsandboxed Subprocess in Agent) (BLOCKER)
+    Location: .\src\huggingface_hub\utils\_subprocess.py:132
+    Message:  Native subprocess execution detected. Use Diamond Cage (WASM) sandboxing for agent tools.
+    Details:  AI-generated code or agentic tool calls invoke shell commands, subprocesses, or system calls that are constructed from untrusted input or operate outside a sandboxed execution environment. Models generating code frequently produce subprocess calls as part of automation tasks â€” these calls become injection vectors when they incorporate model outputs or user inputs without validation. In AI pipelines, shell injection risk is compounded by the fact that models may generate plausible-looking but malicious commands as part of multi-step agentic workflows, bypassing human review.
+
+    Fix:      None
+    --- Suggested Fix -----------------------------------------
+    Manual review required. See mitigation guidance in the Anchor catalog.
+    [✗] with subprocess.Popen(
+    Manual review required — apply with care.
+    -----------------------------------------------------------
+------------------------------------------------------------
+[[X]] [FINOS-014, OWASP-002, RBI-018, SEC-007] Shell Injection (Shell Command Execution) (Unsandboxed Subprocess in Agent) (BLOCKER)
+    Location: .\utils\helpers.py:46
+    Message:  Native subprocess execution detected. Use Diamond Cage (WASM) sandboxing for agent tools.
+    Details:  AI-generated code or agentic tool calls invoke shell commands, subprocesses, or system calls that are constructed from untrusted input or operate outside a sandboxed execution environment. Models generating code frequently produce subprocess calls as part of automation tasks â€” these calls become injection vectors when they incorporate model outputs or user inputs without validation. In AI pipelines, shell injection risk is compounded by the fact that models may generate plausible-looking but malicious commands as part of multi-step agentic workflows, bypassing human review.
+
+    Fix:      None
+    --- Suggested Fix -----------------------------------------
+    Manual review required. See mitigation guidance in the Anchor catalog.
+    [✗] subprocess.run([ruff_bin, "check", str(filepath), "--fix", "--quiet"], check=True)
+    Manual review required — apply with care.
+    -----------------------------------------------------------
+------------------------------------------------------------
+[[X]] [FINOS-014, OWASP-002, RBI-018, SEC-007] Shell Injection (Shell Command Execution) (Unsandboxed Subprocess in Agent) (BLOCKER)
+    Location: .\utils\helpers.py:47
+    Message:  Native subprocess execution detected. Use Diamond Cage (WASM) sandboxing for agent tools.
+    Details:  AI-generated code or agentic tool calls invoke shell commands, subprocesses, or system calls that are constructed from untrusted input or operate outside a sandboxed execution environment. Models generating code frequently produce subprocess calls as part of automation tasks â€” these calls become injection vectors when they incorporate model outputs or user inputs without validation. In AI pipelines, shell injection risk is compounded by the fact that models may generate plausible-looking but malicious commands as part of multi-step agentic workflows, bypassing human review.
+
+    Fix:      None
+    --- Suggested Fix -----------------------------------------
+    Manual review required. See mitigation guidance in the Anchor catalog.
+    [✗] subprocess.run([ruff_bin, "format", str(filepath), "--quiet"], check=True)
+    Manual review required — apply with care.
+    -----------------------------------------------------------
+------------------------------------------------------------

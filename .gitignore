@@ -44,10 +44,18 @@ docs_framework/
 *.swp
 *.swo
 
-# Anchor Security & Governance (Local Settings)
-/.anchor/
-
-# Anchor governance cache/logs
+# Anchor Security & Governance
+# We commit the manifest and policies, but ignore cache and local logs
 .anchor/cache/
-.anchor/logs/*.tmp
-.anchor/policy.anchor
+.anchor/telemetry/
+.anchor/reports/
+.anchor/violations/
+.anchor/logs/
+.anchor/branding/
+! .anchor/constitution.anchor
+! .anchor/mitigation.anchor
+! .anchor/policy.anchor
+! .anchor/domains/*.anchor
+! .anchor/frameworks/*.anchor
+! .anchor/government/*.anchor
+! .anchor/.anchor.lock

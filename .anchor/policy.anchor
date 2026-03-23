@@ -1,0 +1,26 @@
+# =============================================================================
+# POLICY — Project Policy
+# =============================================================================
+# This file is for YOUR project-specific rules.
+# Automatically ignored by git to protect company policies.
+#
+# RULES:
+#   1. Can only RAISE severity (ERROR -> BLOCKER is allowed)
+#   2. Cannot LOWER severity — the floor is absolute
+#   3. Cannot suppress constitutional rules
+  # Example: raise SEC-006 from error to blocker
+  # - id: SEC-006
+  #   severity: blocker
+  #   reason: >
+  #     Our PCI-DSS scope requires blocking all direct LLM API calls.
+
+custom_rules:
+  # Example: add a company-specific rule
+  # - id: INTERNAL-001
+  #   name: Internal vault access pattern
+  #   severity: blocker
+  #   detection:
+  #     method: regex
+  #     pattern: 'vault\.read\((?!approved_keys)'
+  #   description: >
+  #     Vault read operations must only access approved_keys namespace.

@@ -1,0 +1,127 @@
+anchor_version: '>=4.0.0'
+core_domains:
+- namespace: SEC
+  path: domains/security.anchor
+  required: true
+  active: true
+- namespace: ETH
+  path: domains/ethics.anchor
+  required: true
+  active: true
+- namespace: SHR
+  path: domains/shared.anchor
+  required: true
+  active: true
+- namespace: ALN
+  path: domains/alignment.anchor
+  required: true
+  active: true
+- namespace: AGT
+  path: domains/agentic.anchor
+  required: true
+  active: true
+- namespace: PRV
+  path: domains/privacy.anchor
+  required: true
+  active: true
+- namespace: LEG
+  path: domains/legal.anchor
+  required: true
+  active: true
+- namespace: OPS
+  path: domains/operational.anchor
+  required: true
+  active: true
+- namespace: SUP
+  path: domains/supply_chain.anchor
+  required: true
+  active: true
+engine:
+  fail_on:
+  - BLOCKER
+  - ERROR
+  info_on:
+  - INFO
+  seal_check: warn
+  suppress_requires_reason: true
+  suppress_tracking: true
+  unknown_namespace: reject
+  warn_on:
+  - WARNING
+frameworks:
+- active: true
+  namespace: FINOS
+  path: frameworks/FINOS_Framework.anchor
+  source: FINOS AI Governance Framework
+- active: true
+  namespace: OWASP
+  path: frameworks/OWASP_LLM.anchor
+  source: OWASP LLM Top 10 2025
+- active: true
+  namespace: NIST
+  path: frameworks/NIST_AI_RMF.anchor
+  source: NIST AI RMF 1.0
+legacy_aliases:
+  ANC-001: FINOS-001
+  ANC-002: FINOS-002
+  ANC-003: FINOS-003
+  ANC-004: FINOS-004
+  ANC-005: FINOS-005
+  ANC-006: FINOS-006
+  ANC-007: FINOS-007
+  ANC-008: FINOS-008
+  ANC-009: FINOS-009
+  ANC-010: FINOS-010
+  ANC-011: FINOS-011
+  ANC-012: FINOS-012
+  ANC-013: FINOS-013
+  ANC-014: FINOS-014
+  ANC-015: FINOS-015
+  ANC-016: FINOS-016
+  ANC-017: FINOS-017
+  ANC-018: FINOS-018
+  ANC-019: FINOS-019
+  ANC-020: FINOS-020
+  ANC-021: FINOS-021
+  ANC-022: FINOS-022
+  ANC-023: FINOS-023
+name: Anchor Constitutional Root
+output:
+  formats:
+  - json
+  - markdown
+  include_git_blame: true
+  report_path: .anchor/reports/
+  telemetry_path: .anchor/telemetry/
+policy:
+  allow_custom_rules: true
+  custom_rule_prefix: INTERNAL
+  enforce_raise_only: true
+  path: policy.anchor
+regulators:
+- active: true
+  namespace: RBI
+  path: government/RBI_Regulations.anchor
+  source: RBI FREE-AI Report August 2025
+- active: true
+  namespace: EU
+  path: government/EU_AI_Act.anchor
+  source: EU AI Act 2024/1689
+- active: true
+  namespace: SEBI
+  path: government/SEBI_Regulations.anchor
+  source: SEBI AI/ML Consultation 2024-2025
+- active: true
+  namespace: CFPB
+  path: government/CFPB_Regulations.anchor
+  source: CFPB Regulation B + 2024 Guidance
+- active: true
+  namespace: FCA
+  path: government/FCA_Regulations.anchor
+  source: FCA AI Governance Guidance 2024
+- active: false
+  namespace: USSEC
+  path: government/SEC_Regulations.anchor
+  source: SEC 2026 Examination Priorities
+type: manifest
+version: '4.1'

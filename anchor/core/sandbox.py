@@ -285,7 +285,7 @@ class DiamondCage:
                     _old_error_mode = None
 
             try:
-                result = subprocess.run(  # anchor: ignore ANC-018
+                result = subprocess.run(  # anchor: ignore SEC-007
                     cmd,
                     capture_output=True,
                     text=True,

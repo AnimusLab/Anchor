@@ -81,7 +81,7 @@ def verify_seal(file_path: Path, seal: str) -> bool:
     """Verify SHA-256 seal on a .anchor file."""
     if seal == "sha256:PENDING":
         return True  # not yet sealed — development mode
-    content = file_path.read_bytes()
+    content = file_path.read_bytes().replace(b"\r\n", b"\n")
     computed = "sha256:" + hashlib.sha256(content).hexdigest()
     return hmac.compare_digest(computed, seal)
 
@@ -126,7 +126,8 @@ def verify_remote_lockfile(anchor_dir: Path, offline_attr: str = "warn") -> bool
             for f in folder.rglob("*.anchor"):
                 rel_path = f"{prefix}/{f.relative_to(folder)}".replace("\\", "/")
                 if rel_path in remote_files:
-                    local_hash = hashlib.sha256(f.read_bytes()).hexdigest()
+                    content = f.read_bytes().replace(b"\r\n", b"\n")
+                    local_hash = hashlib.sha256(content).hexdigest()
                     if local_hash != remote_files[rel_path]:
                         raise RuntimeError(
                             f"\nANCHOR INTEGRITY VIOLATION\n"

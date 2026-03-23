@@ -56,9 +56,8 @@ mitigations:
     name: "Shell Command Execution"
     match:
       type: "regex"
-      # Simplified to match os.system/popen anywhere in the line, ignoring preceding code
       pattern: >-
-        \bos\.(system|popen|spawn)\s*\(
+        ^(?:[^"\'#]|(["\'])(?:(?!\1).|\\\1)*\1)*\bos\.(system|popen|spawn)\s*\(
     message: "Potential shell injection via os.system detects. Use subprocess with list arguments instead."
     severity: "blocker"
 

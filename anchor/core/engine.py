@@ -262,7 +262,9 @@ class PolicyEngine:
                     elif rule_type == "regex":
                         # Nested regex support inside 'match' block
                         pattern = match_config.get("pattern")
-                        found = self._check_regex(content.decode('utf-8', errors='ignore'), pattern, rule_id=rule.get("id"))
+                        decoded_content = content.decode('utf-8', errors='ignore')
+                        found = self._check_regex(decoded_content, pattern, rule_id=rule.get("id"))
+                        
                         for line_num, match_text in found:
                             is_suppressed = False
                             # Aggregate IDs (Canonical + active Frameworks/Regulators)

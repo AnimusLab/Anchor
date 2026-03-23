@@ -46,3 +46,8 @@ docs_framework/
 
 # Anchor Security & Governance (Local Settings)
 /.anchor/
+
+# Anchor governance cache/logs
+.anchor/cache/
+.anchor/logs/*.tmp
+.anchor/policy.anchor

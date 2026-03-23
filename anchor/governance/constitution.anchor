@@ -49,7 +49,7 @@ frameworks:
   - path: frameworks/FINOS_Framework.anchor
     namespace: FINOS
     source: "FINOS AI Governance Framework"
-    active: true
+    active: false
 
   - path: frameworks/OWASP_LLM.anchor
     namespace: OWASP

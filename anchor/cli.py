@@ -20,7 +20,7 @@ from anchor.utils.output import ANCHOR_ICON, CHECK, CROSS, WARN, BAR, ARROW
 
 
 from anchor import __version__
-__version__ = "4.3.2"
+__version__ = "4.3.3"
 
 @click.group()
 @click.version_option(version=__version__)
@@ -511,7 +511,7 @@ def sync(restore):
             
         remote_files = lock_data.get("files", {})
         
-        BASE_REPO_URL = "https://raw.githubusercontent.com/Tanishq1030/anchor/main/governance/"
+        BASE_REPO_URL = "https://raw.githubusercontent.com/Tanishq1030/anchor/main/anchor/governance/"
         
         restored_count = 0
         for rel_path, expected_hash in remote_files.items():

@@ -6,7 +6,7 @@ long_description = (here / "README.md").read_text(encoding="utf-8")
 
 setup(
     name="anchor-audit",
-    version="4.3.2",
+    version="4.3.3",
     description="The Federated Governance Engine for AI (Universal Multi-Language)",
     long_description=long_description,
     long_description_content_type="text/markdown",

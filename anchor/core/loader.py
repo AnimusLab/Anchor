@@ -412,14 +412,10 @@ def load_constitution(
             constitution.errors.append(str(e))
 
     # ── STEP 5: Build alias chain ─────────────────────────────
+    # Maps ANC-009 -> FINOS-009 -> SEC-001
     for alias_id, target_id in manifest.legacy_aliases.items():
-        # Walk the chain to find the canonical rule and max severity
         current_id = alias_id
         visited = {alias_id}
-        max_severity = "info"
-        canonical_id = None
-        
-        # We start with the target defined in legacy_aliases
         next_id = target_id
         
         while next_id:
@@ -428,45 +424,21 @@ def load_constitution(
             visited.add(next_id)
             
             if next_id in constitution.rules:
-                rule = constitution.rules[next_id]
-                # Update max severity
-                if severity_gte(rule.severity, max_severity):
-                    max_severity = rule.severity
-                
-                # Treat this rule as our canonical alias target 
-                canonical_id = next_id
-                break # End of chain
+                # Target rule found!
+                constitution.alias_chain[alias_id] = next_id
+                break
             elif next_id in manifest.legacy_aliases:
                 next_id = manifest.legacy_aliases[next_id]
             else:
-                # Target not found in rules or aliases
                 break
-
-        if canonical_id and canonical_id in constitution.rules:
-            constitution.alias_chain[alias_id] = canonical_id
-            
-            # Create virtual rule
-            target = constitution.rules[canonical_id]
-            alias_rule = Rule(
-                id=alias_id,
-                name=target.name,
-                namespace=target.namespace,
-                severity=max_severity, # Use inherited max severity
-                min_severity=target.min_severity,
-                description=target.description,
-                category=target.category,
-                maps_to=canonical_id,
-                obligation_type=target.obligation_type,
-                anchor_mechanism=target.anchor_mechanism,
-                source_file=target.source_file,
-                original_id=target.original_id,
-                v3_id=target.v3_id,
-            )
-            constitution.rules[alias_id] = alias_rule
-        else:
-            constitution.errors.append(
-                f"Could not resolve alias chain: {alias_id} → {target_id}"
-            )
+    
+    # Also include maps_to relations from frameworks/regulators in the alias chain
+    for rid, rule in constitution.rules.items():
+        if rule.maps_to and rule.maps_to in constitution.rules:
+            # If a rule maps to another (e.g. FINOS-014 -> SEC-007)
+            # we treat it as an alias for reporting purposes
+            if rid not in constitution.alias_chain:
+                constitution.alias_chain[rid] = rule.maps_to
 
     # ── STEP 6: Load policy.anchor ────────────────────────────
     if anchor_dir:

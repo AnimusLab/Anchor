@@ -51,7 +51,7 @@ class PolicyEngine:
             # Normalize path for git on Windows
             norm_path = file_path.replace("\\", "/")
             cmd = ["git", "blame", "-L", f"{line_num},{line_num}", "--porcelain", norm_path]
-            result = subprocess.run(cmd, capture_output=True, text=True, check=False)  # anchor: ignore ANC-018
+            result = subprocess.run(cmd, capture_output=True, text=True, check=False)  # anchor: ignore SEC-007
             if result.returncode == 0:
                 for line in result.stdout.splitlines():
                     if line.startswith("author "):
@@ -264,16 +264,23 @@ class PolicyEngine:
                         found = self._check_regex(content.decode('utf-8', errors='ignore'), pattern, rule_id=rule.get("id"))
                         for line_num, match_text in found:
                             is_suppressed = False
+                            # Aggregate IDs (Canonical + active Frameworks/Regulators)
+                            matching_ids = [rule['id']]
+                            if hasattr(self, 'rules'):
+                                for other in self.rules:
+                                    if other.get('maps_to') == rule['id']: matching_ids.append(other['id'])
+                            v_id = ", ".join(sorted(list(set(matching_ids))))
+
                             if self.allow_suppressions:
-                                if f"# anchor: ignore {rule.get('id')}" in match_text or "# anchor: ignore-all" in match_text:
+                                if any(f"# anchor: ignore {rid}" in match_text for rid in matching_ids) or "# anchor: ignore-all" in match_text:
                                     author = self._get_suppression_author(file_path, line_num)
                                     suppressed.append({
-                                        "id": rule["id"], "name": rule.get("name"), "file": file_path, "line": line_num, "author": author, "severity": rule.get("severity", "error")
+                                        "id": v_id, "name": rule.get("name"), "file": file_path, "line": line_num, "author": author, "severity": rule.get("severity", "error")
                                     })
                                     is_suppressed = True
                             if not is_suppressed:
                                 violations.append({
-                                    "id": rule["id"], "name": rule.get("name"), "description": rule.get("description"), "message": rule.get("message"), "mitigation": rule.get("mitigation"), "file": file_path, "line": line_num, "severity": rule.get("severity", "error")
+                                    "id": v_id, "name": rule.get("name"), "description": rule.get("description"), "message": rule.get("message"), "mitigation": rule.get("mitigation"), "file": file_path, "line": line_num, "severity": rule.get("severity", "error")
                                 })
                         continue # Regex handled, skip AST logic
                     else:
@@ -370,8 +377,15 @@ class PolicyEngine:
                             if is_suppressed:
                                 continue
 
+                            # Aggregate IDs (Canonical + Frameworks)
+                            matching_ids = [rule['id']]
+                            if hasattr(self, 'rules'):
+                                for other in self.rules:
+                                    if other.get('maps_to') == rule['id']: matching_ids.append(other['id'])
+                            v_id = ", ".join(sorted(list(set(matching_ids))))
+
                             violations.append({
-                                "id": rule["id"],
+                                "id": v_id,
                                 "name": rule.get("name", "Unnamed Rule"),
                                 "description": rule.get("description", "No description provided."),
                                 "message": rule.get("message", "Policy Violation"),
@@ -541,7 +555,7 @@ class PolicyEngine:
             # -L <start>,<end> : only blame the specified line
             # --porcelain      : machine-readable format
             cmd = ["git", "blame", "-L", f"{line_num},{line_num}", "--porcelain", abs_path]
-            result = subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=2)  # anchor: ignore ANC-018
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=2)  # anchor: ignore SEC-007
             
             # 3. Parse author from porcelain output
             for line in result.stdout.splitlines():

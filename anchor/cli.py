@@ -20,7 +20,7 @@ from anchor.utils.output import ANCHOR_ICON, CHECK, CROSS, WARN, BAR, ARROW
 
 
 from anchor import __version__
-__version__ = "4.3.4"
+__version__ = "4.3.5"
 
 @click.group()
 @click.version_option(version=__version__)

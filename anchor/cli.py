@@ -18,6 +18,7 @@ from anchor.core.config import settings
 
 
 from anchor import __version__
+__version__ = "4.1.4"
 
 @click.group()
 @click.version_option(version=__version__)
@@ -154,7 +155,7 @@ def init(domains, frameworks, regulators, sandbox, all_items, force, no_sign, po
     dot_anchor = ".anchor"
 
     click.echo("")
-    click.secho("⚓ Anchor V4 — init", fg="cyan", bold=True)
+    click.secho("Anchor V4 - init", fg="cyan", bold=True)
     click.echo("")
 
     if all_items:
@@ -233,13 +234,13 @@ def init(domains, frameworks, regulators, sandbox, all_items, force, no_sign, po
         dst = os.path.join(dot_anchor, relative_path)
         os.makedirs(os.path.dirname(dst), exist_ok=True)
         if not os.path.exists(src):
-            click.secho(f"  ✗ Not found in package: {relative_path}", fg="red")
+            click.secho(f"  [FAIL] Not found in package: {relative_path}", fg="red")
             return False
         if os.path.exists(dst) and not force:
-            click.secho(f"  ~ Already exists: {label}", fg="yellow")
+            click.secho(f"  [SKIP] Already exists: {label}", fg="yellow")
             return True
         shutil.copy2(src, dst)
-        click.secho(f"  ✓ {label}", fg="green")
+        click.secho(f"  [OK] {label}", fg="green")
         return True
 
     # ── Copy domain files ─────────────────────────────────────
@@ -300,17 +301,6 @@ def init(domains, frameworks, regulators, sandbox, all_items, force, no_sign, po
 #   1. Can only RAISE severity (ERROR -> BLOCKER is allowed)
 #   2. Cannot LOWER severity — the floor is absolute
 #   3. Cannot suppress constitutional rules
-#   4. Can add INTERNAL-* prefixed custom rules
-#
-# Reference: .anchor/constitution.anchor.example
-# =============================================================================
-
-version: "4.0"
-
-metadata:
-  project: "{os.path.basename(os.getcwd())}"
-
-overrides:
   # Example: raise SEC-006 from error to blocker
   # - id: SEC-006
   #   severity: blocker
@@ -331,7 +321,7 @@ custom_rules:
         with open(policy_path, "w", encoding="utf-8") as f:
             f.write(policy_template)
         click.echo("")
-        click.secho(f"  ✓ Created {policy_path}", fg="green")
+        click.secho(f"  [OK] Created {policy_path}", fg="green")
 
     # ── Update .gitignore ─────────────────────────────────────
     # V4 Decision: .anchor/ should be committed, excluding cache and temp
@@ -397,7 +387,7 @@ fi
                 os.chmod(pre_commit_path, 0o755)
             except Exception:
                 pass
-            click.secho("  ✓ Git pre-commit hook installed", fg="green")
+            click.secho("  [OK] Git pre-commit hook installed", fg="green")
         except Exception as e:
             click.secho(f"  WARNING: Could not install git hook: {e}", fg="yellow")
 
@@ -415,7 +405,7 @@ fi
             lock_path = os.path.join(dot_anchor, ".anchor.lock")
             with open(lock_path, "w", encoding="utf-8") as f:
                 f.write(remote_lock)
-            click.secho("  ✓ Fetched GOVERNANCE.lock from remote", fg="green")
+            click.secho("  [OK] Fetched GOVERNANCE.lock from remote", fg="green")
         except urllib.error.URLError as e:
             click.secho(f"  WARNING: Could not fetch GOVERNANCE.lock remotely: {e.reason}", fg="yellow")
         except Exception as e:
@@ -430,7 +420,7 @@ fi
 
     # ── Summary ───────────────────────────────────────────────
     click.echo("")
-    click.secho("  " + "─" * 40, fg="bright_black")
+    click.secho("  " + "-" * 40, fg="bright_black")
     click.secho(f"  {len(requested_domains)} domain(s) loaded", fg="white")
     if requested_frameworks:
         click.secho(f"  {len(requested_frameworks)} framework(s) loaded", fg="white")
@@ -503,10 +493,10 @@ def sync(restore):
                     os.makedirs(os.path.dirname(local_path), exist_ok=True)
                     with open(local_path, "wb") as bf:
                         bf.write(content)
-                    click.secho(f"  ✓ Restored {rel_path}", fg="green")
+                    click.secho(f"  [OK] Restored {rel_path}", fg="green")
                     restored_count += 1
                 except Exception as e:
-                    click.secho(f"  ✗ Failed to fetch {rel_path}: {e}", fg="red")
+                    click.secho(f"  [FAIL] Failed to fetch {rel_path}: {e}", fg="red")
                     
         click.secho(f"\nSync complete. Restored {restored_count} files to authoritative state.", fg="cyan", bold=True)
         
@@ -657,6 +647,7 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
                 "severity":    rule.severity,
                 "description": rule.description,
                 "category":    rule.category,
+                "maps_to":     rule.maps_to,
                 # detection fields populated below from mitigation.anchor
                 "match":       None,
                 "pattern":     None,
@@ -729,21 +720,7 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
             if verbose:
                 click.secho(f"   [!] Failed to load mitigation patterns: {e}", fg="yellow")
 
-    # B.2. Register virtual aliases for legacy IDs (ANC-NNN) after patterns are merged
-    if loaded and loaded.alias_chain:
-        for alias_id, canonical_id in loaded.alias_chain.items():
-            if canonical_id in rule_dict:
-                if alias_id not in rule_dict:
-                    # Create virtual copy
-                    alias_entry = rule_dict[canonical_id].copy()
-                    alias_entry["id"] = alias_id
-                    rule_dict[alias_id] = alias_entry
-                else:
-                    # Sync pattern from canonical to existing alias if needed
-                    can_rule = rule_dict[canonical_id]
-                    for field in ["match", "pattern", "message", "mitigation"]:
-                        if can_rule.get(field) and not rule_dict[alias_id].get(field):
-                            rule_dict[alias_id][field] = can_rule[field]
+    # B.2 (Removed: Aliases are now handled by the engine's ID aggregation)
 
     # C. Load and merge local risk catalogs from patterns/ (unchanged from V3)
     patterns_dir = os.path.join(os.getcwd(), "patterns")
@@ -774,11 +751,8 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
                         if verbose:
                             click.secho(f"      ! Failed to load {file}: {e}", fg="yellow")
 
-    # Remove rules with no detection capability — engine can't enforce them yet
-    master_rules = [
-        r for r in rule_dict.values()
-        if r.get("match") or r.get("pattern")
-    ]
+    # Retain all rules (even those without patterns) so the engine can resolve Multi-ID associations
+    master_rules = list(rule_dict.values())
 
     if verbose:
         click.echo(f"   {len(master_rules)} enforceable rules ready.")
@@ -1022,7 +996,9 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
                     f.write(f"{tag} [{v['id']}] {v['name']} ({v['severity'].upper()})\n")
                     f.write(f"    Location: {v['file']}:{v['line']}\n")
                     f.write(f"    Message:  {v['message']}\n")
-                    f.write(f"    Details:  {v.get('description', 'No further details.')}\n")
+                    # Use the rule's specific internal description or fallback
+                    description = v.get('description', 'No further details.')
+                    f.write(f"    Details:  {description}\n")
                     f.write(f"    Fix:      {v.get('mitigation', 'N/A')}\n")
                     try:
                         suggestion = suggest_fix(v)
@@ -1148,7 +1124,9 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
         
         for v in sorted_violations[:display_limit]:
             severity_color = "red" if v['severity'] in ['critical', 'blocker', 'error'] else "yellow"
-            click.secho(f"[{v['id']}] {v['name']} ({v['severity'].upper()})", fg=severity_color, bold=True)
+            id_display = v['id']
+            
+            click.secho(f"[{id_display}] {v['name']} ({v['severity'].upper()})", fg=severity_color, bold=True)
             click.echo(f"   Location: {v['file']}:{v['line']}")
             if v.get('mitigation'):
                 click.secho(f"   Fix:      {v['mitigation']}", fg="cyan", dim=True)

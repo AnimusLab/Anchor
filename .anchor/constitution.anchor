@@ -4,7 +4,7 @@
 # ─────────────────────────────────────────────────────────────
 
 type: manifest
-version: "4.0"
+version: "4.1"
 anchor_version: ">=4.0.0"
 name: "Anchor Constitutional Root"
 
@@ -104,29 +104,30 @@ policy:
 # FINOS_Framework.anchor is the Rosetta Stone.
 
 legacy_aliases:
-  ANC-001: FINOS-001    # → SEC-006  Raw Network Access
-  ANC-002: FINOS-002    # → PRV-002  Vector Inversion
-  ANC-003: FINOS-003    # → ALN-001  Hallucination
-  ANC-004: FINOS-004    # → SUP-003  Versioning Drift
-  ANC-005: FINOS-005    # → ALN-001  Non-Deterministic Behaviour
-  ANC-006: FINOS-006    # → OPS-001  Availability
-  ANC-007: FINOS-007    # → SEC-003  Model Tampering
-  ANC-008: FINOS-008    # → SEC-002  Data Poisoning
-  ANC-009: FINOS-009    # → SEC-001  Prompt Injection
-  ANC-010: FINOS-010    # → ALN-002  Goal Misrepresentation
-  ANC-011: FINOS-011    # → ETH-001  Bias
-  ANC-012: FINOS-012    # → ETH-002  Explainability Absence
-  ANC-013: FINOS-013    # → SHR-001  Model Overreach
-  ANC-014: FINOS-014    # → SHR-002  Data Quality and Drift
-  ANC-015: FINOS-015    # → SHR-003  Reputational Risk
-  ANC-016: FINOS-016    # → LEG-002  Regulatory Non-Compliance
-  ANC-017: FINOS-017    # → LEG-001  IP Infringement
-  ANC-018: FINOS-018    # → AGT-001  Agent Authorization Bypass
-  ANC-019: FINOS-019    # → AGT-002  Tool Chain Manipulation
-  ANC-020: FINOS-020    # → AGT-003  MCP Compromise
-  ANC-021: FINOS-021    # → AGT-004  State Persistence Poisoning
-  ANC-022: FINOS-022    # → AGT-005  Multi-Agent Trust Violations
-  ANC-023: FINOS-023    # → SEC-004  Credential Harvesting
+  ANC-001: FINOS-001
+  ANC-002: FINOS-002
+  ANC-003: FINOS-003
+  ANC-004: FINOS-004
+  ANC-005: FINOS-005
+  ANC-006: FINOS-006
+  ANC-007: FINOS-007
+  ANC-008: FINOS-008
+  ANC-009: FINOS-009
+  ANC-010: FINOS-010
+  ANC-011: FINOS-011
+  ANC-012: FINOS-012
+  ANC-013: FINOS-013
+  ANC-014: FINOS-014
+  ANC-015: FINOS-015
+  ANC-016: FINOS-016
+  ANC-017: FINOS-017
+  ANC-018: FINOS-018
+  ANC-019: FINOS-019
+  ANC-020: FINOS-020
+  ANC-021: FINOS-021
+  ANC-022: FINOS-022
+  ANC-023: FINOS-023
+
 
 engine:
   fail_on: [BLOCKER, ERROR]

@@ -1,0 +1,62 @@
+type: domain
+namespace: LEG
+version: "1.0"
+anchor_version: ">=4.0.0"
+maintainer: "Anchor Core"
+always_loaded: false
+description: >
+  Legal violations in AI systems. Covers intellectual property
+  infringement in training data and outputs, and regulatory
+  non-compliance with applicable AI governance frameworks.
+seal: "sha256:PENDING"
+
+rules:
+
+  - id: "LEG-001"
+    name: "IP Infringement"
+    source: "FINOS"
+    original_id: "Ri-018"
+    category: "compliance"
+    description: >
+      AI models trained on or generating content that reproduces
+      copyrighted material, trade secrets, or proprietary code
+      without authorization creates intellectual property liability
+      for the deploying organization. In financial AI, this includes
+      models trained on proprietary financial data sets, models that
+      reproduce licensed analytical frameworks in generated reports,
+      and code generation models that reproduce GPL-licensed code in
+      commercial products. IP infringement risk is elevated in RAG
+      systems where copyrighted documents are chunked and retrieved
+      verbatim into model outputs. Several ongoing lawsuits establish
+      that organizations deploying models on proprietary data bear
+      liability for IP violations in those models' outputs.
+    severity: "warning"
+    min_severity: "info"
+    min_mitigations: 1
+    detection: ~
+    primitives: ~
+
+  - id: "LEG-002"
+    name: "Regulatory Non-Compliance"
+    source: "FINOS"
+    original_id: "Ri-019"
+    category: "compliance"
+    description: >
+      AI systems deployed in regulated financial contexts operate
+      without documented compliance with applicable regulatory
+      frameworks — EU AI Act, RBI FREE-AI, SEBI AI/ML requirements,
+      CFPB Regulation B, FCA guidance, or equivalent jurisdiction-
+      specific requirements. Non-compliance is not merely a legal
+      risk — it is an operational risk. Regulatory action can suspend
+      AI-powered products, freeze lending operations, or trigger
+      mandatory audits. EU AI Act enforcement begins August 2026 with
+      fines up to 6% of global annual revenue for high-risk AI
+      violations. RBI has no fine ceiling for FREE-AI non-compliance.
+      CFPB's $45M Goldman Sachs action in 2024 establishes the
+      enforcement precedent. Documenting compliance is not optional
+      — it is the first requirement of every applicable framework.
+    severity: "error"
+    min_severity: "error"
+    min_mitigations: 1
+    detection: ~
+    primitives: ~

@@ -1,0 +1,67 @@
+================================================================================
+   ANCHOR GOVERNANCE VIOLATIONS
+================================================================================
+
+Scan Source: D:\open_spiel
+Timestamp:   2026-03-23 06:08:47
+
+--- SCAN STATISTICS ---
+Files Scanned: 602
+Files Ignored: 1019
+Total Files:   1621
+Total Dirs:    193
+
+--- VIOLATION SUMMARY ---
+Total Findings: 4
+Breakdown:      4 Blocker/Error, 0 Warning, 0 Info, 0 Suppressed
+
+--------------------------------------------------------------------------------
+
+[[X]] [FINOS-014, OWASP-002, RBI-018, SEC-007] Shell Injection (Shell Command Execution) (Unsandboxed Subprocess in Agent) (BLOCKER)
+    Location: .\open_spiel\python\algorithms\matrix_nash.py:82
+    Message:  Native subprocess execution detected. Use Diamond Cage (WASM) sandboxing for agent tools.
+    Details:  AI-generated code or agentic tool calls invoke shell commands, subprocesses, or system calls that are constructed from untrusted input or operate outside a sandboxed execution environment. Models generating code frequently produce subprocess calls as part of automation tasks â€” these calls become injection vectors when they incorporate model outputs or user inputs without validation. In AI pipelines, shell injection risk is compounded by the fact that models may generate plausible-looking but malicious commands as part of multi-step agentic workflows, bypassing human review.
+
+    Fix:      None
+    --- Suggested Fix -----------------------------------------
+    Manual review required. See mitigation guidance in the Anchor catalog.
+    [✗] lrs = subprocess.Popen([lrsnash_path or "lrsnash", "-s", game_file_path],
+    Manual review required — apply with care.
+    -----------------------------------------------------------
+------------------------------------------------------------
+[[X]] [FINOS-014, OWASP-002, RBI-018, SEC-007] Shell Injection (Shell Command Execution) (Unsandboxed Subprocess in Agent) (BLOCKER)
+    Location: .\open_spiel\python\bots\gtp.py:49
+    Message:  Native subprocess execution detected. Use Diamond Cage (WASM) sandboxing for agent tools.
+    Details:  AI-generated code or agentic tool calls invoke shell commands, subprocesses, or system calls that are constructed from untrusted input or operate outside a sandboxed execution environment. Models generating code frequently produce subprocess calls as part of automation tasks â€” these calls become injection vectors when they incorporate model outputs or user inputs without validation. In AI pipelines, shell injection risk is compounded by the fact that models may generate plausible-looking but malicious commands as part of multi-step agentic workflows, bypassing human review.
+
+    Fix:      None
+    --- Suggested Fix -----------------------------------------
+    Manual review required. See mitigation guidance in the Anchor catalog.
+    [✗] self._process = subprocess.Popen(
+    Manual review required — apply with care.
+    -----------------------------------------------------------
+------------------------------------------------------------
+[[X]] [FINOS-014, OWASP-002, RBI-018, SEC-007] Shell Injection (Shell Command Execution) (Unsandboxed Subprocess in Agent) (BLOCKER)
+    Location: .\open_spiel\python\examples\bridge_uncontested_bidding_bluechip.py:99
+    Message:  Native subprocess execution detected. Use Diamond Cage (WASM) sandboxing for agent tools.
+    Details:  AI-generated code or agentic tool calls invoke shell commands, subprocesses, or system calls that are constructed from untrusted input or operate outside a sandboxed execution environment. Models generating code frequently produce subprocess calls as part of automation tasks â€” these calls become injection vectors when they incorporate model outputs or user inputs without validation. In AI pipelines, shell injection risk is compounded by the fact that models may generate plausible-looking but malicious commands as part of multi-step agentic workflows, bypassing human review.
+
+    Fix:      None
+    --- Suggested Fix -----------------------------------------
+    Manual review required. See mitigation guidance in the Anchor catalog.
+    [✗] self.process = subprocess.Popen(self.command.split(" "))
+    Manual review required — apply with care.
+    -----------------------------------------------------------
+------------------------------------------------------------
+[[X]] [FINOS-014, OWASP-002, RBI-018, SEC-007] Shell Injection (Shell Command Execution) (Unsandboxed Subprocess in Agent) (BLOCKER)
+    Location: .\open_spiel\python\examples\bridge_wb5.py:158
+    Message:  Native subprocess execution detected. Use Diamond Cage (WASM) sandboxing for agent tools.
+    Details:  AI-generated code or agentic tool calls invoke shell commands, subprocesses, or system calls that are constructed from untrusted input or operate outside a sandboxed execution environment. Models generating code frequently produce subprocess calls as part of automation tasks â€” these calls become injection vectors when they incorporate model outputs or user inputs without validation. In AI pipelines, shell injection risk is compounded by the fact that models may generate plausible-looking but malicious commands as part of multi-step agentic workflows, bypassing human review.
+
+    Fix:      None
+    --- Suggested Fix -----------------------------------------
+    Manual review required. See mitigation guidance in the Anchor catalog.
+    [✗] self.process = subprocess.Popen(self.command.split(" "))
+    Manual review required — apply with care.
+    -----------------------------------------------------------
+------------------------------------------------------------

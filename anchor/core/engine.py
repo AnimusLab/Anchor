@@ -9,6 +9,7 @@ class PolicyEngine:
         self.verbose = verbose
         # Flatten rules from all loaded policies
         self.rules = config.get("rules", []) if config else []
+        self.all_rules = self.rules  # Preserve for ID aggregation lookup
         self.allow_suppressions = self.config.get("allow_suppressions", True)
 
     def _is_path_excluded(self, rel_path: str, combined_excludes: set) -> bool:
@@ -265,11 +266,18 @@ class PolicyEngine:
                         for line_num, match_text in found:
                             is_suppressed = False
                             # Aggregate IDs (Canonical + active Frameworks/Regulators)
-                            matching_ids = [rule['id']]
-                            if hasattr(self, 'rules'):
+                            matching_ids = {rule['id']}
+                            if hasattr(self, 'all_rules'): # In V4, all_rules is the source of truth
+                                for other in self.all_rules:
+                                    m_to = other.get('maps_to')
+                                    if m_to == rule['id'] or (isinstance(m_to, list) and rule['id'] in m_to):
+                                        matching_ids.add(other['id'])
+                            elif hasattr(self, 'rules'):
                                 for other in self.rules:
-                                    if other.get('maps_to') == rule['id']: matching_ids.append(other['id'])
-                            v_id = ", ".join(sorted(list(set(matching_ids))))
+                                    m_to = other.get('maps_to')
+                                    if m_to == rule['id'] or (isinstance(m_to, list) and rule['id'] in m_to):
+                                        matching_ids.add(other['id'])
+                            v_id = ", ".join(sorted(list(matching_ids)))
 
                             if self.allow_suppressions:
                                 if any(f"# anchor: ignore {rid}" in match_text for rid in matching_ids) or "# anchor: ignore-all" in match_text:
@@ -378,11 +386,18 @@ class PolicyEngine:
                                 continue
 
                             # Aggregate IDs (Canonical + Frameworks)
-                            matching_ids = [rule['id']]
-                            if hasattr(self, 'rules'):
+                            matching_ids = {rule['id']}
+                            if hasattr(self, 'all_rules'):
+                                for other in self.all_rules:
+                                    m_to = other.get('maps_to')
+                                    if m_to == rule['id'] or (isinstance(m_to, list) and rule['id'] in m_to):
+                                        matching_ids.add(other['id'])
+                            elif hasattr(self, 'rules'):
                                 for other in self.rules:
-                                    if other.get('maps_to') == rule['id']: matching_ids.append(other['id'])
-                            v_id = ", ".join(sorted(list(set(matching_ids))))
+                                    m_to = other.get('maps_to')
+                                    if m_to == rule['id'] or (isinstance(m_to, list) and rule['id'] in m_to):
+                                        matching_ids.add(other['id'])
+                            v_id = ", ".join(sorted(list(matching_ids)))
 
                             violations.append({
                                 "id": v_id,

@@ -45,15 +45,4 @@ docs_framework/
 *.swo
 
 # Anchor Security & Governance (Local Settings)
-/.anchor/policy.anchor
-/.anchor/cache/
-/.anchor/violation_report.txt
-/.anchor/branding/
-
-# Anchor Security & Governance (Local Settings)
-/.anchor/violations/
-/.anchor/telemetry/
-/.anchor/reports/
-
-# Anchor governance cache/logs
-.anchor/logs/*.tmp
+/.anchor/

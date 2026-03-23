@@ -35,6 +35,11 @@ class AnchorSettings(BaseSettings):
         description="URL to fetch the Mitigation Catalog from.",
     )
 
+    governance_lock_url: str = Field(
+        default="https://raw.githubusercontent.com/Tanishq1030/anchor/main/GOVERNANCE.lock",
+        description="URL to fetch the GOVERNANCE.lock integrity file from.",
+    )
+
     # ── Runtime Behaviour ─────────────────────────────────────────
     verbose: bool = Field(
         default=False,

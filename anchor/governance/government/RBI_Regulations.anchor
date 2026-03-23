@@ -175,7 +175,7 @@ rules:
   - id: "RBI-018"
     name: "Cybersecurity Augmentation — AI-Specific Threats"
     original_id: "Recommendation 18"
-    maps_to: "SEC-001"
+    maps_to: ["SEC-001", "SEC-007"]
     obligation_type: detection
     anchor_mechanism: >
       SEC-001 prompt injection, SEC-002 data poisoning, SEC-003

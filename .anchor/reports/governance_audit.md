@@ -1,25 +1,24 @@
 # Anchor Governance Audit
 
-**Status:** FAILED  
-**Timestamp:** 2026-03-22 19:59:07  
+**Status:** PASSED  
+**Timestamp:** 2026-03-22 19:59:34  
 **Source:** `D:\Anchor\anchor\__init__.py`  
 
 ## Summary
 
 | Category | Count |
 |---|---|
-| Blockers / Errors | 3 |
+| Blockers / Errors | 0 |
 | Warnings | 0 |
 | Info | 0 |
-| Suppressed | 0 |
-| Files Scanned | 7 |
+| Suppressed | 2 |
+| Files Scanned | 6 |
 
-## Active Violations
+## Suppressed Exceptions (Audited)
 
-| ID | Severity | File | Message |
-|---|---|---|---|
-| `FINOS-014, SEC-007` | **BLOCKER** | `anchor/core/engine.py:54` | Native subprocess execution detected. Use Diamond Cage (WASM) sandboxing for agent tools. |
-| `FINOS-014, SEC-007` | **BLOCKER** | `anchor/core/engine.py:558` | Native subprocess execution detected. Use Diamond Cage (WASM) sandboxing for agent tools. |
-| `FINOS-014, SEC-007` | **BLOCKER** | `test_vuln.py:2` | Native subprocess execution detected. Use Diamond Cage (WASM) sandboxing for agent tools. |
+| ID | File | Authorized By |
+|---|---|---|
+| `FINOS-014, SEC-007` | `anchor/core/engine.py:54` | **Not Committed Yet** |
+| `FINOS-014, SEC-007` | `anchor/core/engine.py:558` | **Not Committed Yet** |
 
 > *Suppressed exceptions are authorized security bypasses — verify authors are correct.*

@@ -5,6 +5,7 @@ import sys
 import yaml
 import json
 import urllib.request
+import hashlib
 from anchor.core.policy_loader import PolicyLoader
 from anchor.core.engine import PolicyEngine
 from anchor.core.constitution import (
@@ -19,7 +20,7 @@ from anchor.utils.output import ANCHOR_ICON, CHECK, CROSS, WARN, BAR, ARROW
 
 
 from anchor import __version__
-__version__ = "4.3.1"
+__version__ = "4.3.2"
 
 @click.group()
 @click.version_option(version=__version__)
@@ -79,7 +80,6 @@ def init(domains, frameworks, regulators, sandbox, all_items, force, no_sign, po
         anchor init --all
     """
     import shutil
-    import hashlib
 
     # ── Package paths ─────────────────────────────────────────
     package_root = os.path.dirname(os.path.abspath(__file__))
@@ -309,8 +309,6 @@ def init(domains, frameworks, regulators, sandbox, all_items, force, no_sign, po
                         updated = True
             
             if updated:
-                print("DEBUG: Final updated manifest_data:")
-                print(yaml.dump(manifest_data, default_flow_style=False, sort_keys=False))
                 with open(dot_anchor_manifest, "w", encoding="utf-8") as f:
                     yaml.dump(manifest_data, f, default_flow_style=False, sort_keys=False)
         except Exception as e:

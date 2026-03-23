@@ -53,6 +53,7 @@ docs_framework/
 # Anchor Security & Governance (Local Settings)
 /.anchor/violations/
 /.anchor/telemetry/
+/.anchor/reports/
 
 # Anchor governance cache/logs
 .anchor/logs/*.tmp

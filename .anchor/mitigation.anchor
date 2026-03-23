@@ -14,9 +14,9 @@
 version: "3.1.0"
 
 mitigations:
-  # --- ANC-001: Hosted Model Leakage ---
+  # --- SEC-006: Raw Network Access ---
   - id: "MIT-001-A"
-    rule_id: "ANC-001"
+    rule_id: "SEC-006"
     name: "Public LLM Endpoint Detection"
     match:
       type: "regex"
@@ -24,11 +24,11 @@ mitigations:
       pattern: >-
         ^(?:[^"\'#]|(["\'])(?:(?!\1).|\\\1)*\1)*\b(=\s*["']https?://api\.(openai|anthropic|cohere)\.(com|ai)|openai\.Client|anthropic\.Anthropic\(|cohere\.Client)
     message: "Direct call to public LLM API detected. Route through a PII-scrubbing proxy."
-    severity: "blocker"
+    severity: "error"
 
-  # --- ANC-002: Vector Store Leakage ---
+  # --- SEC-002: Data Poisoning ---
   - id: "MIT-002-A"
-    rule_id: "ANC-002"
+    rule_id: "SEC-002"
     name: "Unencrypted Vector Store Upsert"
     match:
       type: "regex"
@@ -39,9 +39,9 @@ mitigations:
     message: "Vector store write detected without encryption. Embeddings can leak sensitive data via inversion attacks."
     severity: "error"
 
-  # --- ANC-003: Hallucination ---
+  # --- ALN-001: Hallucination ---
   - id: "MIT-003-A"
-    rule_id: "ANC-003"
+    rule_id: "ALN-001"
     name: "LLM Output Without Validation"
     match:
       type: "regex"
@@ -50,9 +50,9 @@ mitigations:
     message: "LLM API call detected. Ensure output is validated before use (e.g., schema check, grounding)."
     severity: "error"
 
-  # --- ANC-014: Shell Injection ---
+  # --- SEC-007: Shell Injection (os-level) ---
   - id: "MIT-014-A"
-    rule_id: "ANC-014"
+    rule_id: "SEC-007"
     name: "Shell Command Execution"
     match:
       type: "regex"
@@ -61,9 +61,9 @@ mitigations:
     message: "Potential shell injection via os.system detects. Use subprocess with list arguments instead."
     severity: "blocker"
 
-  # --- ANC-018: Agent Auth Bypass ---
-  - id: "MIT-018-A"
-    rule_id: "ANC-018"
+  # --- SEC-007: Shell Injection (subprocess-level) ---
+  - id: "MIT-014-B"
+    rule_id: "SEC-007"
     name: "Unsandboxed Subprocess in Agent"
     match:
       type: "regex"
@@ -73,14 +73,14 @@ mitigations:
     message: "Native subprocess execution detected. Use Diamond Cage (WASM) sandboxing for agent tools."
     severity: "blocker"
 
-  # --- ANC-023: Credential Harvesting ---
-  - id: "MIT-023-A"
-    rule_id: "ANC-023"
+  # --- SEC-004: Credential Harvesting ---
+  - id: "MIT-004-A"
+    rule_id: "SEC-004"
     name: "Bulk Env Variable Access"
     match:
       type: "regex"
-      # Excludes string literals, comments, and .get() calls
+      # Only fire on bulk access or sensitive key names
       pattern: >-
-        ^(?:[^"\'#]|(["\'])(?:(?!\1).|\\\1)*\1)*\bos\.environ\b(?!\s*\.get|["'])
+        ^(?:[^"\'#]|(["\'])(?:(?!\1).|\\\1)*\1)*\bos\.(environ\.(copy|items)\(\)|\benviron\b\s*\[.*(?i)(TOKEN|KEY|SECRET|PASSWORD|CREDENTIAL|API).*\]|\{\*\*os\.environ)
     message: "Broad environment variable access detected. Agents may harvest secrets from env."
     severity: "error"

@@ -1,72 +1,75 @@
-# Anchor — The Federated Governance Engine for AI
+# Anchor — Governance Engine for AI
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-gray.svg)](https://opensource.org/licenses/MIT)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![Status: GA](https://img.shields.io/badge/Status-GA-green.svg)]()
-[![Version: 4.0.0](https://img.shields.io/badge/Version-4.0.0-blue.svg)]()
+[![PyPI](https://img.shields.io/badge/PyPI-anchor--audit-gold.svg)](https://pypi.org/project/anchor-audit/)
+[![Version: 4.3.5](https://img.shields.io/badge/Version-4.3.5-green.svg)]()
 
-> "Code drifts. Intent shouldn't. Governance must scale."
+> "Governance without enforcement is documentation."
 
-Anchor is an **autonomous governance platform** for the AI-Native era. It ensures that your **Codebase**, **AI Models**, and **Agent Pipelines** comply with universal standards and local company policies — enforced deterministically via AST analysis, runtime interceptors, and behavioral verification (Diamond Cage).
+Anchor is the **surveillance and enforcement layer for AI**. It audits AI-adjacent code against a cryptographically sealed constitutional rule set, mapping every violation to the exact statute it breaches — enforced deterministically via AST analysis, runtime interceptors, and behavioral verification (Diamond Cage).
+
+🌐 **[anchorgovernance.tech](https://anchorgovernance.tech)**
 
 ---
 
-- **Diamond Cage (Behavioral Verification)**: WASM-based sandbox (WasmEdge) validating AI-adjacent behavior alongside static findings. Reported as `Diamond Cage: ACTIVE`.
-- **Federated Governance Workspace**: Structured `.anchor/` directory with mandatory core domains (SEC, ETH, SHR, ALN, AGT, PRV, LEG, OPS, SUP) and opt-in frameworks/regulators declared in `constitution.anchor`.
-- **Hybrid Healer (Sovereign Scalpel)**: Moves beyond detection to remediation. Proposes file-specific fixes and applies them in-place via the `anchor heal` command.
-- **Interceptor SDK**: First-party support for 20+ LLM providers. Includes `AnchorGuard` for manual pipeline integration and `register_provider` for custom/internal model support.
-- **Multi-Language Adapters**: Expanded AST scanning for Python, Go, Java, Rust, and more.
-- **Quad-Match Exclusion Engine**: Robust scoping logic supporting Exact, Prefix, DirGlob, and Fnmatch strategies to eliminate false positives in tests and documentation.
-- **Architectural Drift Check**: The `anchor check drift` command analyzes if code intent has drifted from its original design patterns.
+## Why Anchor Exists
+
+| Event | Date | Amount |
+|---|---|---|
+| Goldman Sachs CFPB enforcement — AI explainability failure | Oct 2024 | **$45M** |
+| EU AI Act full enforcement begins — credit scoring, AML, fraud | Aug 2026 | Mandatory |
+| SEC AI Governance — named #1 examination priority, above crypto | 2026 | Mandatory |
+| RBI FREE-AI — 26 mandatory recommendations, per-decision audit trails | Aug 2025 | Mandatory |
+
+The regulators have started counting. Anchor enforces.
+
+---
+
+## What Anchor Does
+
+- **Static Code Analysis (Layer 01)** — Tree-sitter AST scanning against a cryptographically sealed constitutional rule set. Every violation gets a `violation_id` mapped to the exact regulation it breaches.
+- **Diamond Cage (Layer 02)** — WASM-based behavioral verification sandbox. Proves security invariants at scan time, not just static pattern matching. Reports as `Diamond Cage: ACTIVE`.
+- **Hybrid Healer (Sovereign Scalpel)** — Goes beyond detection to remediation. Proposes file-specific AST patches, applied via `anchor heal --apply`.
+- **Interceptor SDK** — First-party support for 20+ LLM providers. Secure prompts and responses mid-flight with `AnchorGuard`.
+- **Federated Governance Workspace** — Structured `.anchor/` directory with mandatory core domains and opt-in frameworks/regulators declared in `constitution.anchor`.
 
 ---
 
 ## The Federated Model
 
-Anchor operates on a three-layer architecture inspired by Constitutional Law:
+Anchor operates on a three-layer constitutional architecture:
 
-| Layer                  | File                  | Purpose                                                                                       |
-| ---------------------- | --------------------- | --------------------------------------------------------------------------------------------- |
-| **Constitution**       | `constitution.anchor` | Defines **WHAT** risks exist (domains + frameworks + regulators). Manifest sealed via remote `GOVERNANCE.lock`. |
-| **Mitigation Catalog** | `mitigation.anchor`   | Defines **HOW** to detect each risk (regex + AST patterns). Cloud-synced, SHA-256 sealed.     |
-| **State Law**          | `policy.anchor`       | **Your** local overrides. Change severity, add company-specific rules. Fully editable.        |
+| Layer | File | Purpose |
+|---|---|---|
+| **Constitution** | `constitution.anchor` | Defines **WHAT** risks exist. Domain + framework + regulator manifest. SHA-256 sealed via remote `GOVERNANCE.lock`. |
+| **Mitigation Catalog** | `mitigation.anchor` | Defines **HOW** to detect each risk. Regex + AST patterns. Cloud-synced. |
+| **State Law** | `policy.anchor` | **Your** local overrides. Change severity, add company-specific rules. |
 
-**Merge Strategy**: State Law overrides Constitution by rule ID, **but only within the constitutional floor**. Each rule has a `min_severity` — the absolute minimum that no local policy can go below. Critical security rules (e.g., `ANC-007`, `ANC-022`) are locked at `blocker`. Companies can add entirely new rules or make existing rules stricter.
+**Merge Strategy**: State Law overrides Constitution by rule ID, but only within the constitutional floor. Critical security rules (e.g., `ANC-007`) are locked at `blocker`. Local policy can make rules stricter, never weaker.
 
 ---
 
-## Key Capabilities
+## Coverage — V4.3.5
 
-### 1. Multi-Language Enforcement
-
-Turns governance taxonomies into executable CI/CD blockers using high-speed AST analysis (`tree-sitter`).
-
-- **Cross-Language**: Support for Python, Go, Java, and Rust.
-- **23+ Risk Catalog**: Mapped to industry standards like FINOS and OWASP LLM Top 10.
-- **Bridge Mode**: Parses Markdown Threat Models and activates relevant rules dynamically.
-
-### 2. Hybrid Healer
-
-Deterministic AST patching replaces dangerous code with secure alternatives.
-
-- **Automated Suggestions**: Fixes proposed directly in the violation report.
-- **Interactive Remediation**: Review and apply fixes via `anchor heal --apply`.
-
-### 3. Interceptor SDK
-
-Secure your AI pipeline mid-flight.
-
-- **AnchorGuard**: Explicitly scan prompts and responses in your own application code.
-- **Global Interceptors**: Auto-patch common SDKs (OpenAI, Anthropic, LangChain) to enforce policy at the network boundary.
-- **Provider Agnostic**: Unified detection patterns regardless of the underlying model.
-
-### 4. Model Auditing (Diamond Cage)
+| Tier | Content | Count |
+|---|---|---|
+| **Domain Rules** | SEC, ETH, PRV, ALN, AGT, LEG, OPS, SUP, SHR | 43 rules |
+| **Standards Bodies** | FINOS AI Governance, OWASP LLM Top 10 · 2025, NIST AI RMF 1.0 | 3 frameworks |
+| **Government Regulators** | RBI FREE-AI 2025, EU AI Act 2024/1689, SEBI AI/ML 2025, CFPB Reg B, FCA 2024, SEC 2026 | 6 regulators |
+| **Total Regulatory Mappings** | | **170 mappings** |
 
 ---
 
 ## Quick Start
 
-### 1. Install
+### Install from PyPI
+
+```bash
+pip install anchor-audit
+```
+
+### Or install from source
 
 ```bash
 git clone https://github.com/Tanishq1030/Anchor.git
@@ -74,87 +77,38 @@ cd Anchor
 pip install -e .
 ```
 
-### 2. Initialize
-
-Sets up `.anchor/`, syncs the constitution & mitigation catalog, and installs the Git pre-commit hook.
+### Initialize your project
 
 ```bash
 anchor init
 ```
 
-### 3. Scan Your Code
+Sets up `.anchor/`, syncs the constitution & mitigation catalog, and installs the Git pre-commit hook.
+
+### Scan your code
 
 ```bash
-# Security audit
+# Full governance audit
 anchor check ./src
 
-# Architectural drift audit
-anchor check drift ./src
+# Scan with all frameworks and regulators
+anchor init --all && anchor check ./src
 ```
 
-### 4. Review and Apply Fixes
+### Review and apply fixes
 
 ```bash
-# Review suggested fixes
-anchor heal
-
-# Apply all auto-fixable issues
-anchor heal --apply
-```
-
-### 5. Audit a Model
-
-```bash
-anchor check --model ./my-model.gguf
+anchor heal          # Review suggested fixes
+anchor heal --apply  # Apply all auto-fixable issues
 ```
 
 **Full command reference**: [USAGE.md](USAGE.md)
 
 ---
 
-## Suppressing Findings
-
-When a finding is a **justified use** (e.g., your governance tool legitimately needs `subprocess`), suppress it with an inline comment:
-
-### Suppress a Specific Rule
-
-```python
-result = subprocess.run(cmd, capture_output=True)  # anchor: ignore ANC-018
-```
-
-### Suppress All Rules on a Line
-
-```python
-os.environ.get("SECRET_KEY")  # anchor: ignore-all
-```
-
-### How It Works
-
-| Feature         | Details                                                                       |
-| --------------- | ----------------------------------------------------------------------------- |
-| **Syntax**      | `# anchor: ignore ANC-XXX` (per-rule) or `# anchor: ignore-all`               |
-| **Scope**       | Line-level only — the comment must be on the same line as the flagged code    |
-| **Audit Trail** | Anchor uses `git blame` to record **who** authorized each suppression         |
-| **Visibility**  | Suppressed findings appear in the report as "suppressed" with the author name |
-
-> **Important**: Suppressions are tracked. Every suppressed finding is logged with the git blame author so your security team can audit who bypassed which rule and when.
-
-### Example Report Output
-
-```
-TOTAL FINDINGS: 2
-  BLOCKER : 0
-  ERROR   : 0
-  WARNING : 2
-  INFO    : 0
-6 suppressed findings (See report for audit trail)
-```
-
----
-
 ## CI/CD Integration
 
-Anchor acts as the "Gatekeeper" in GitHub Actions. If a PR violates the constitution, Anchor blocks the merge with a detailed violation report.
+Anchor acts as the enforcement gate in GitHub Actions. If a PR violates the constitution, Anchor blocks the merge with a detailed violation report.
 
 ```yaml
 # .github/workflows/anchor-audit.yml
@@ -166,6 +120,26 @@ Anchor acts as the "Gatekeeper" in GitHub Actions. If a PR violates the constitu
 
 ---
 
+## Suppressing Findings
+
+When a finding is a justified use (e.g., your governance tool legitimately needs `subprocess`), suppress it with an inline comment:
+
+```python
+# Per-rule suppression
+result = subprocess.run(cmd, capture_output=True)  # anchor: ignore ANC-018
+
+# Suppress all rules on a line
+os.environ.get("SECRET_KEY")  # anchor: ignore-all
+```
+
+| Feature | Details |
+|---|---|
+| **Scope** | Line-level only |
+| **Audit Trail** | Anchor uses `git blame` to record who authorized each suppression |
+| **Visibility** | Suppressed findings appear in the report with the author's name |
+
+---
+
 ## Project Structure
 
 ```
@@ -174,47 +148,40 @@ Anchor/
 │   ├── cli.py                  # CLI entry point (click)
 │   ├── core/
 │   │   ├── engine.py           # PolicyEngine — AST scanning via tree-sitter
-│   │   ├── healer.py           # Hybrid Healer fix suggestion and patching
+│   │   ├── healer.py           # Hybrid Healer — fix suggestion and patching
 │   │   ├── constitution.py     # SHA-256 integrity verification
-│   │   ├── policy_loader.py    # Federated policy merger
-│   │   ├── mapper.py           # GenAI threat model -> rule mapper
-│   │   └── model_auditor.py    # Model weight validation (Diamond Cage)
+│   │   ├── loader.py           # Federated policy merger
+│   │   └── mapper.py           # GenAI threat model → rule mapper
 │   ├── runtime/                # Interceptor SDK
 │   │   ├── guard.py            # AnchorGuard application safety API
 │   │   └── interceptors/       # SDK and HTTP library patches
-│   ├── adapters/               # Language-specific tree-sitter adapters (Go, Java, Rust)
+│   └── adapters/               # Language-specific tree-sitter adapters
 ├── tests/                      # Test suite
-│   ├── compliance_test.py      # 23-risk compliance validation
-│   ├── test_integration.py     # Integration tests
-│   └── fixtures/               # Test fixtures
-├── constitution.anchor         # Universal Constitution (23 FINOS risks)
-├── mitigation.anchor           # Mitigation Catalog (detection patterns)
-├── .env.example                # Environment variable reference
-├── setup.py                    # Package configuration
+├── .anchor/                    # Governance workspace (committed)
+│   ├── domains/                # Core domain rules (SEC, ETH, PRV ...)
+│   ├── frameworks/             # FINOS, OWASP, NIST
+│   └── government/             # RBI, EU AI Act, SEBI, CFPB, FCA, SEC
+├── constitution.anchor         # Active framework/regulator manifest
+├── mitigation.anchor           # Detection pattern catalog
 ├── case-studies/               # Real-world audit case studies
-├── docs/                       # Documentation
-└── V3_TECHNICAL_ROADMAP.md     # v3 "Sovereign Scalpel" roadmap
+└── docs/                       # Architecture documentation
 ```
 
 ---
 
-## Security Architecture
-
-### Tamper-Proofing
-
-The universal `constitution.anchor` and `mitigation.anchor` are **cloud-fetched** and **SHA-256 sealed**:
+## Security Architecture — SHA-256 Tamper Proofing
 
 ```
 ┌─────────────────────────────────────────────────┐
 │  GitHub Raw (Source of Truth)                    │
-│  constitution.anchor  ->  SHA-256: 3745014B...  │
-│  mitigation.anchor    ->  SHA-256: E3E32531...  │
+│  constitution.anchor  →  SHA-256: 3745014B...   │
+│  mitigation.anchor    →  SHA-256: E3E32531...   │
 └────────────────┬────────────────────────────────┘
                  │ fetch + verify
 ┌────────────────▼────────────────────────────────┐
 │  .anchor/cache/ (Local)                         │
-│  Hash mismatch -> INTEGRITY VIOLATION           │
-│  Hash match    -> Proceed with audit            │
+│  Hash mismatch → INTEGRITY VIOLATION            │
+│  Hash match    → Proceed with audit             │
 └─────────────────────────────────────────────────┘
 ```
 
@@ -224,56 +191,28 @@ No developer can weaken the rules to pass the audit. The hashes are baked into t
 
 ## Configuration
 
-All settings are optional and loaded from `.env` or environment variables:
-
-| Variable                  | Default        | Description                           |
-| ------------------------- | -------------- | ------------------------------------- |
+| Variable | Default | Description |
+|---|---|---|
 | `ANCHOR_CONSTITUTION_URL` | GitHub Raw URL | Override for air-gapped/mirror setups |
-| `ANCHOR_MITIGATION_URL`   | GitHub Raw URL | Override for the mitigation catalog   |
-| `ANCHOR_VERBOSE`          | `false`        | Enable detailed debug output          |
-| `ANCHOR_FETCH_TIMEOUT`    | `10`           | Timeout (seconds) for cloud sync      |
-
-See [`.env.example`](.env.example) for a full reference.
+| `ANCHOR_MITIGATION_URL` | GitHub Raw URL | Override for the mitigation catalog |
+| `ANCHOR_VERBOSE` | `false` | Enable detailed debug output |
+| `ANCHOR_FETCH_TIMEOUT` | `10` | Timeout (seconds) for cloud sync |
 
 ---
 
 ## Contributing
 
-We welcome contributions! Whether it's new detection patterns, bug fixes, or documentation improvements.
-
-**Quick links:**
-
 - [Contributing Guide](CONTRIBUTING.md)
 - [Open an Issue](https://github.com/Tanishq1030/Anchor/issues)
-- [Discussions](https://github.com/Tanishq1030/Anchor/discussions)
-
-### Ways to Contribute
-
-1. **Add Mitigation Patterns** — Propose new detection rules for the 23 FINOS risks via PR to `mitigation.anchor`.
-2. **Improve Detection** — Refine existing patterns to reduce false positives.
-3. **Language Adapters** — Add tree-sitter support for new languages (Go, Rust, Java).
-4. **Case Studies** — Document real-world audits in `case-studies/`.
-
----
-
-## Risk Coverage Summary
-
-Anchor v4.0.0 covers the complete federated risk taxonomy across core domains and opt-in frameworks/regulators:
-
-| Tier                            | Risks                                                                    | Coverage                      |
-| ------------------------------- | ------------------------------------------------------------------------ | ----------------------------- |
-| **Tier 1** — Code-Scannable     | Prompt Injection, Data Poisoning, Model Tampering, Credential Harvesting | Direct AST/Regex detection    |
-| **Tier 2** — Model Audit        | Model Leakage, Weight Corruption, Versioning Drift                       | Diamond Cage inspection       |
-| **Tier 3** — Mitigation Absence | Hallucination, Bias, Explainability, Availability                        | "Missing safeguard" detection |
-
-Full risk mapping: core domains (SEC, ETH, SHR, ALN, AGT, PRV, LEG, OPS, SUP) plus frameworks/regulators in [`constitution.anchor`](constitution.anchor).
+- [PyPI Package](https://pypi.org/project/anchor-audit/)
+- ✉️ [tan@anchorgovernance.tech](mailto:tan@anchorgovernance.tech)
 
 ---
 
 ## License
 
-MIT License. Built for the era of AI-Assisted Engineering and Automated Governance.
+Apache 2.0 — Open source. Built for the era of AI-Assisted Engineering.
 
 ---
 
-_Anchor v4.0.0 — Deterministic Governance for the AI-Native Stack._
+_Anchor V4.3.5 · [anchorgovernance.tech](https://anchorgovernance.tech) · Apache 2.0_

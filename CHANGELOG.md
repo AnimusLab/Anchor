@@ -1,6 +1,26 @@
 # Changelog
 
-All notable changes to Anchor are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+All notable changes to the Anchor governance engine are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+
+---
+
+## [4.3.5] — 2026-03-23
+
+### Changed
+- License corrected to **Apache 2.0** across `README.md`, `setup.py`, and PyPI metadata.
+- PyPI package renamed to `anchor-audit` — `pip install anchor-audit`.
+- Updated coverage stats: **43 domain rules**, **170 regulatory mappings**, **9 frameworks/regulators**.
+
+---
+
+## [4.1.2] — 2026-03-22
+
+### Fixed
+- **Multi-ID deduplication** — `ANC-NNN` and `FINOS-NNN` aliases no longer both fire for the same violation. Deduplicated on canonical ID + file + line at reporting time.
+- **Alias pattern mapping** — mitigation patterns were being mapped to alias IDs instead of canonical IDs, leaving aliases without detection patterns and reporting them as inactive. Patterns now bind to the canonical rule first; aliases receive fully-populated copies.
+
+### Performance
+- **Lazy grammar loading** — tree-sitter grammars now load per-language on first use rather than at package import. Eliminates ~3.5s startup overhead on cold installs with multiple language adapters installed.
 
 ---
 
@@ -25,12 +45,11 @@ All notable changes to Anchor are documented here. Format follows [Keep a Change
 ### New: Commands
 - `anchor sync --restore` — fetches authoritative governance files from registry and restores any tampered or modified files. Logs restores to `.anchor/logs/sync.log` with chain hash.
 - `anchor init --all` — installs all available domains, frameworks, and regulators in one command.
-- `anchor init --no-sign` — skips remote GOVERNANCE.lock fetch for offline initialisation. Scans run in UNVERIFIED mode until `anchor sync --restore` is run. UNVERIFIED reports are not valid for regulatory submission.
+- `anchor init --no-sign` — skips remote GOVERNANCE.lock fetch for offline initialisation. Scans run in UNVERIFIED mode until `anchor sync --restore` is run.
 
 ### New: Alias Resolution Chain
 - Legacy V3 `ANC-NNN` IDs resolve through FINOS framework layer: `ANC-NNN → FINOS-NNN`.
 - FINOS_Framework.anchor is the Rosetta Stone — full mapping in `constitution.anchor` under `legacy_aliases`.
-- Aliases inherit severity floor from canonical rule but do not inherit domain ID directly.
 
 ### New: Regulator Domains
 - `government/RBI_Regulations.anchor` — RBI FREE-AI Report August 2025
@@ -47,18 +66,18 @@ All notable changes to Anchor are documented here. Format follows [Keep a Change
 
 ### Fixed
 - `loader.py` — empty `policy.anchor` returned `NoneType` instead of `{}`, causing silent fallback to unpopulated V3 cache. Fixed with `raw = yaml.safe_load(...) or {}`.
-- `cli.py` — mitigation patterns were mapping to alias IDs instead of canonical IDs, leaving aliases without detection patterns and reporting them as inactive. Patterns now mapped to canonical rules first; aliases inherit fully-populated copies.
+- `cli.py` — mitigation patterns were mapping to alias IDs instead of canonical IDs. Patterns now mapped to canonical rules first; aliases inherit fully-populated copies.
 - Duplicate findings — `ANC-NNN` and `FINOS-NNN` no longer both fire for the same finding. Deduplicated on canonical ID + file + line.
 
 ### Changed
-- `policy.anchor` — `enforce_raise_only: true` is now enforced at the engine level, not just documented. Attempts to lower severity below the constitutional floor are rejected with an error.
+- `policy.anchor` — `enforce_raise_only: true` is now enforced at the engine level. Attempts to lower severity below the constitutional floor are rejected with an error.
 - `sealed:` and `seal: "sha256:PENDING"` fields removed from `constitution.anchor` — superseded by `GOVERNANCE.lock`.
 - `.anchor/` is now committed to the project repository. `.anchor/cache/` is added to `.gitignore` instead.
 
 ### Removed
 - Monolithic `risk_catalog.yaml` — fully superseded by federated domain architecture.
 - Local `.anchor.sig` signature file — superseded by remote `GOVERNANCE.lock`.
-- `active_domains` section in `constitution.anchor` — all domains are now mandatory, section is redundant.
+- `active_domains` section in `constitution.anchor` — all domains are now mandatory.
 
 ---
 

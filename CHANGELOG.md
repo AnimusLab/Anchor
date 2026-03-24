@@ -1,128 +1,55 @@
 # Changelog
 
-All notable changes to Anchor are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+All notable changes to the Anchor governance engine are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
 ## [4.3.5] — 2026-03-23
 
-### Landing Page & Public Documentation
-- Deployed production landing page at [anchorgovernance.tech](https://anchorgovernance.tech) via Cloudflare Pages.
-- Full mobile responsiveness via `useIsMobile` React hook — all section grids stack on screens < 768px.
-- Terminal animation uses `pre-wrap` + `wordBreak: break-all` to prevent horizontal overflow on mobile.
-- Ticker bar hidden on mobile to prevent `max-content` width overflow.
-
-### Documentation
-- Updated `README.md` — corrected version, license (Apache 2.0), PyPI install, domain URL, and coverage stats.
-- Updated `USAGE.md` — corrected version header, added PyPI install option.
-- Updated `CHANGELOG.md` — added all v4.1.x through v4.3.5 entries.
-
-### Stats (V4.3.5)
-- **43** domain rules across 9 namespaces (SEC, ETH, PRV, ALN, AGT, LEG, OPS, SUP, SHR)
-- **9** regulatory frameworks absorbed (3 standards bodies + 6 government regulators)
-- **170** total regulatory mappings
-- **0** self-audit violations — Anchor audits itself. CLEAN.
-
----
-
-## [4.3.1] — 2026-03-23
-
-### Landing Page
-- Replaced Sparkline in StatsSection with `FinancialChart` (SVG-based candlestick/OHLC visualization).
-- Replaced CasesSection grid with `AuditGraph` — SVG line chart of real open-source audit findings.
-- Added dedicated `ContactSection` with direct email CTA (`tan@anchorgovernance.tech`).
-- Standardized Jurisdiction Map items (removed inconsistent rule counts, unified layout).
-- Balanced Case Study grid with `gridColumn` spanning for 5-item layouts.
-- Updated all contact emails across Nav, Contact, and Footer sections.
-
-### Fixed
-- Removed dangling closing tags causing JSX syntax errors.
-- Fixed `Contact` nav link to scroll to `#contact` section instead of firing `mailto:`.
-
----
-
-## [4.2.0] — 2026-03-23
-
-### Deployment
-- Configured Cloudflare Pages deployment with root directory set to `landing/`.
-- Build command set to `npm install && npm run build` to resolve `npm ci` peer dependency conflicts.
-- Added `landing/public/_redirects` for SPA routing support on Cloudflare Pages.
-- Linked custom domain `anchorgovernance.tech` — leverages existing Cloudflare DNS and email routing.
-
-### Repository
-- Removed `node_modules` from Git tracking.
-- Added comprehensive `.gitignore` covering `node_modules`, `dist`, `.env`, `*.pyc`, `__pycache__`.
-- Regenerated `package-lock.json` to resolve lock file version conflicts.
-
----
-
-## [4.1.4] — 2026-03-23
-
-### Landing Page
-- Added `AuditGraph` component — SVG line chart plotting real open-source project audit findings.
-- Added `ContactSection` with gold CTA button and direct email link.
-- Case Studies section redesigned with `AuditGraph` replacing the manual case study card grid.
-
----
-
-## [4.1.3] — 2026-03-22
-
-### Landing Page
-- Added `FinancialChart` component — SVG candlestick chart visualizing governance domain rule growth.
-- Hero stats bar upgraded to use `FinancialChart` instead of flat `Sparkline`.
-- `DataBar` upgraded with `MiniBarChart` for "Total Coverage" metric.
-- Jurisdiction Map expanded to 3 columns: Domain Rules, Standards Bodies, Government Regulators.
+### Changed
+- License corrected to **Apache 2.0** across `README.md`, `setup.py`, and PyPI metadata.
+- PyPI package renamed to `anchor-audit` — `pip install anchor-audit`.
+- Updated coverage stats: **43 domain rules**, **170 regulatory mappings**, **9 frameworks/regulators**.
 
 ---
 
 ## [4.1.2] — 2026-03-22
 
-### Landing Page — Bloomberg Terminal Aesthetic
-- Introduced Bloomberg Terminal-inspired mono typography and color palette.
-- Added `Terminal` component with live cascading audit simulation.
-- Added `DataBar` ticker with live stats: domain rules, frameworks, regulatory mappings.
-- Added `AmbientParticles` and `DigitalMark` seal components.
-- Added `LiveClock` in IST to nav bar.
-- Added `Ticker` news bar with real regulatory headlines.
-- Jurisdiction Map redesigned with three-column layout (Domain Rules / Standards / Regulators).
-
 ### Fixed
-- Multi-ID violation suppression — canonical ID deduplication to prevent double-firing of `ANC-NNN` and `FINOS-NNN` aliases.
-- PyPI performance — lazy-loaded tree-sitter grammars per language; eliminated ~3.5s startup overhead on cold installs.
+- **Multi-ID deduplication** — `ANC-NNN` and `FINOS-NNN` aliases no longer both fire for the same violation. Deduplicated on canonical ID + file + line at reporting time.
+- **Alias pattern mapping** — mitigation patterns were being mapped to alias IDs instead of canonical IDs, leaving aliases without detection patterns and reporting them as inactive. Patterns now bind to the canonical rule first; aliases receive fully-populated copies.
 
----
-
-## [4.1.0] — 2026-03-22
-
-### Landing Page
-- `ViolationsSection` — interactive enforcement output with per-severity color-coded badges and statute references.
-- `StatsSection` — animated counters with sparklines and a "Anchor audited itself. CLEAN." self-audit card.
-- `CoverageSection` (Jurisdiction Map) — three-tier coverage display with domain/framework/regulator classification.
+### Performance
+- **Lazy grammar loading** — tree-sitter grammars now load per-language on first use rather than at package import. Eliminates ~3.5s startup overhead on cold installs with multiple language adapters installed.
 
 ---
 
 ## [4.0.0] — 2026-03-18
 
 ### Architecture
-- **Federated domain model** — replaced monolithic `risk_catalog.yaml` with structured governance directories: `domains/`, `frameworks/`, `government/`.
+- **Federated domain model** — replaced monolithic `risk_catalog.yaml` with structured governance directories: `domains/`, `frameworks/`, `government/`. Each layer has clear ownership and versioning.
 - **All domain files are now mandatory** — SEC, ETH, SHR, ALN, AGT, PRV, LEG, OPS, SUP load automatically. Frameworks and regulators remain opt-in via `constitution.anchor`.
-- **`constitution.anchor` is now the single manifest** — declares active frameworks and regulators.
+- **`constitution.anchor` is now the single manifest** — declares active frameworks and regulators. Domains require no declaration.
 
 ### New: Diamond Cage (Behavioral Verification)
 - WASM-based sandbox using WasmEdge for behavioral verification of AI-adjacent code and proposed patches.
+- Proves security invariants at scan time — not just static pattern matching.
 - Reports as `Diamond Cage: ACTIVE` in CLI output.
 
 ### New: GOVERNANCE.lock (Remote Integrity Verification)
-- `anchor check` fetches `GOVERNANCE.lock` from the Anchor registry and verifies per-file SHA-256 hashes.
-- `seal_check: strict` in `constitution.anchor` aborts on mismatch.
+- Replaces local `.anchor.sig` with a remote hash registry model.
+- `anchor check` fetches `GOVERNANCE.lock` from the Anchor registry and verifies per-file SHA-256 hashes against the local governance directory.
+- `seal_check: strict` in `constitution.anchor` — aborts on mismatch.
+- `offline_behaviour: warn` (default) — continues with warning if remote unreachable; set to `abort` for enterprise CI/CD.
 
 ### New: Commands
-- `anchor sync --restore` — fetches authoritative governance files and restores tampered files.
-- `anchor init --all` — installs all available domains, frameworks, and regulators.
-- `anchor init --no-sign` — skips remote GOVERNANCE.lock fetch for offline initialisation.
+- `anchor sync --restore` — fetches authoritative governance files from registry and restores any tampered or modified files. Logs restores to `.anchor/logs/sync.log` with chain hash.
+- `anchor init --all` — installs all available domains, frameworks, and regulators in one command.
+- `anchor init --no-sign` — skips remote GOVERNANCE.lock fetch for offline initialisation. Scans run in UNVERIFIED mode until `anchor sync --restore` is run.
 
 ### New: Alias Resolution Chain
 - Legacy V3 `ANC-NNN` IDs resolve through FINOS framework layer: `ANC-NNN → FINOS-NNN`.
+- FINOS_Framework.anchor is the Rosetta Stone — full mapping in `constitution.anchor` under `legacy_aliases`.
 
 ### New: Regulator Domains
 - `government/RBI_Regulations.anchor` — RBI FREE-AI Report August 2025
@@ -138,13 +65,19 @@ All notable changes to Anchor are documented here. Format follows [Keep a Change
 - `frameworks/OWASP_LLM.anchor` — OWASP LLM Top 10 2025
 
 ### Fixed
-- `loader.py` — empty `policy.anchor` returned `NoneType` instead of `{}`, causing silent fallback to unpopulated V3 cache.
-- `cli.py` — mitigation patterns were mapping to alias IDs instead of canonical IDs.
-- Duplicate findings — `ANC-NNN` and `FINOS-NNN` no longer both fire for the same finding.
+- `loader.py` — empty `policy.anchor` returned `NoneType` instead of `{}`, causing silent fallback to unpopulated V3 cache. Fixed with `raw = yaml.safe_load(...) or {}`.
+- `cli.py` — mitigation patterns were mapping to alias IDs instead of canonical IDs. Patterns now mapped to canonical rules first; aliases inherit fully-populated copies.
+- Duplicate findings — `ANC-NNN` and `FINOS-NNN` no longer both fire for the same finding. Deduplicated on canonical ID + file + line.
+
+### Changed
+- `policy.anchor` — `enforce_raise_only: true` is now enforced at the engine level. Attempts to lower severity below the constitutional floor are rejected with an error.
+- `sealed:` and `seal: "sha256:PENDING"` fields removed from `constitution.anchor` — superseded by `GOVERNANCE.lock`.
+- `.anchor/` is now committed to the project repository. `.anchor/cache/` is added to `.gitignore` instead.
 
 ### Removed
-- Monolithic `risk_catalog.yaml` — superseded by federated domain architecture.
+- Monolithic `risk_catalog.yaml` — fully superseded by federated domain architecture.
 - Local `.anchor.sig` signature file — superseded by remote `GOVERNANCE.lock`.
+- `active_domains` section in `constitution.anchor` — all domains are now mandatory.
 
 ---
 
@@ -163,6 +96,12 @@ Security and compliance analysis via Tree-sitter AST parsing with multi-language
 ## [2.4.15] — 2026-02-09
 
 Maintenance updates and dependency refresh for the 2.x line.
+
+---
+
+## [2.4.14] — 2026-02-08
+
+Stability and packaging refinements ahead of the 2.4.15 final release.
 
 ---
 

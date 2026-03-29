@@ -1,4 +1,4 @@
-﻿import click
+import click
 import subprocess  # anchor: ignore SEC-007
 import os
 import sys
@@ -1031,12 +1031,16 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
         ) for v in violations
     ]
 
-    # Dynamically extract execution context
+    # Dynamically extract execution context and force repository root as project name
     try:
-        git_commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], stderr=subprocess.DEVNULL).decode('ascii').strip()  # anchor: ignore RBI-018
+        git_commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], stderr=subprocess.DEVNULL).decode('ascii').strip()  # anchor: ignore SEC-007
+        repo_root = subprocess.check_output(['git', 'rev-parse', '--show-toplevel'], stderr=subprocess.DEVNULL).decode('ascii').strip()  # anchor: ignore SEC-007
+        project_name = os.path.basename(repo_root)
     except Exception:
         git_commit = "unknown_commit"
-    project_name = os.path.basename(os.path.abspath(scan_targets[0]))
+        # Fallback if not in a git repo: use dir name if target is a file
+        target_path = os.path.abspath(scan_targets[0])
+        project_name = os.path.basename(target_path) if os.path.isdir(target_path) else os.path.basename(os.path.dirname(target_path))
 
     # Generate rudimentary Layer 2 Hashes
     input_hash = hashlib.sha256(os.path.abspath(scan_targets[0]).encode()).hexdigest()

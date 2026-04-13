@@ -14,7 +14,7 @@ The "Diamond Cage" provides:
   comparison to prove a security fix is safe before applying it.
 """
 
-import subprocess  # anchor: ignore ANC-018
+import subprocess  # anchor: ignore SEC-007
 import os
 import sys
 import time

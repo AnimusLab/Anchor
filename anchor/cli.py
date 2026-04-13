@@ -19,6 +19,7 @@ from anchor.core.constitution import (
 from anchor.core.config import settings
 from anchor.utils.output import ANCHOR_ICON, CHECK, CROSS, WARN, BAR, ARROW
 from anchor.schema import AuditEntry, ExecutionContext, Cryptography, GovernanceStatus, Violation
+from anchor.core.crypto import sign_chain_hash
 
 
 from anchor import __version__
@@ -695,11 +696,11 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
                 "description": rule.description,
                 "category":    rule.category,
                 "maps_to":     rule.maps_to,
-                # detection fields populated below from mitigation.anchor
-                "match":       None,
-                "pattern":     None,
-                "message":     None,
-                "mitigation":  None,
+                # detection fields derived from Rule object (V4 federated)
+                "match":       rule.match,
+                "pattern":     rule.pattern,
+                "message":     rule.message,
+                "mitigation":  rule.mitigation,
             }
 
         if verbose or not rule_dict:
@@ -1057,7 +1058,8 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
         cryptography=Cryptography(
             input_hash=input_hash,
             output_hash=output_hash,
-            chain_hash=chain_hash
+            chain_hash=chain_hash,
+            signature=sign_chain_hash(chain_hash),
         ),
         governance_status=GovernanceStatus(
             is_compliant=len(failures) == 0,
@@ -1068,33 +1070,46 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
     )
 
     # =========================================================================
-    # ZERO-TOUCH TELEMETRY (Auto-Sync to Ledger)
+    # ZERO-KNOWLEDGE LEDGER SYNC
     # =========================================================================
-    # By default, it looks for the local dashboard. In production/CI, 
-    # the CISO just sets the ANCHOR_LEDGER_URL environment variable.
-    ledger_url = os.environ.get("ANCHOR_LEDGER_URL", "http://localhost:8000/api/ledger")
-    
+    # Architecture: ZK split — full AuditEntry stays local, only the
+    # cryptographic proof (hash + signature) is sent to the central ledger.
+    #
+    # What leaves the client network:
+    #   entity_id, timestamp, chain_hash, signature, CLEAN/VIOLATION status
+    #
+    # What stays local (.anchor/telemetry/):
+    #   file paths, line numbers, violation descriptions — all proprietary data
+    #
+    # Even if the Animus ledger is compromised, attackers get only hashes.
+    # =========================================================================
+
     import urllib.request
-    import urllib.error
-    
+
+    zk_payload = json.dumps({
+        "entity_id":  os.environ.get("ANCHOR_ENTITY_ID", "unknown"),
+        "timestamp":  entry.timestamp,
+        "chain_hash": entry.cryptography.chain_hash,
+        "signature":  entry.cryptography.signature,
+        "status":     "CLEAN" if entry.governance_status.is_compliant else "VIOLATION",
+    })
+
+    ledger_url = os.environ.get("ANCHOR_LEDGER_URL", "http://localhost:8000/api/ledger")
+
     try:
         req = urllib.request.Request(
-            ledger_url, 
-            data=entry.to_json().encode('utf-8'),
-            headers={'Content-Type': 'application/json'}
+            ledger_url,
+            data=zk_payload.encode("utf-8"),
+            headers={"Content-Type": "application/json"},
         )
-        # 1.5 second timeout ensures the CLI never hangs if the network drops
-        urllib.request.urlopen(req, timeout=1.5) 
-        
-        # Only print the success message if we aren't piping pure JSON/LLM text
+        urllib.request.urlopen(req, timeout=1.5)  # anchor: ignore SEC-007
         if not (json_out or llm):
-            click.secho(f"\n  [âœ”] Cryptographic audit synced to Ledger ({ledger_url})", fg="green")
-    except urllib.error.URLError:
-        # If the server is offline, we fail SILENTLY. 
-        # The CLI should never crash just because the dashboard is down.
-        pass
+            click.secho(f"\n  [+] ZK proof synced to Ledger ({ledger_url})", fg="green")
     except Exception:
-        pass
+        # Silently fail if air-gapped, offline, or server down.
+        # Full audit already sealed in .anchor/telemetry/.
+        if os.environ.get("ANCHOR_VERBOSE", "").lower() == "true":
+            click.secho("  [~] Ledger offline — audit sealed locally.", fg="yellow", dim=True)
     # =========================================================================
 
     # Route Output & Bypass standard terminal rendering if requested
@@ -1364,18 +1379,18 @@ def check_verify_sync(fix, verbose):
 
     # Locate package root for the canonical source
     package_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    canonical    = os.path.join(package_root, "anchor", "core", "resources", "mitigation.anchor.example")
+    canonical    = os.path.join(package_root, "anchor", "governance", "mitigation.anchor")
     root_copy    = "mitigation.anchor"
     cache_copy   = os.path.join(".anchor", "cache", "mitigation.anchor")
 
     files = {
-        "canonical (resources/mitigation.anchor.example)": canonical,
+        "canonical (anchor/governance/mitigation.anchor)": canonical,
         "root       (mitigation.anchor)":                   root_copy,
         "cache      (.anchor/cache/mitigation.anchor)":     cache_copy,
     }
 
     hashes = {label: sha256(path) for label, path in files.items()}
-    canon_hash = hashes["canonical (resources/mitigation.anchor.example)"]
+    canon_hash = hashes["canonical (anchor/governance/mitigation.anchor)"]
 
     click.secho("\nAnchor Mitigation Sync Check", bold=True)
     click.echo("=" * 60)

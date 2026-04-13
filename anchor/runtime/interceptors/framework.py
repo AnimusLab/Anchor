@@ -29,6 +29,8 @@ from anchor.runtime.interceptors.base import (
     PromptScanResult, ResponseScanResult, SessionStats,
 )
 from anchor.runtime.interceptors.output_scanner import scan_response
+from anchor.runtime.decision_auditor import DecisionAuditor
+import time
 
 logger = logging.getLogger("anchor.runtime.framework")
 
@@ -119,13 +121,59 @@ def _handle(result: PromptScanResult) -> None:
         logger.info(msg)
 
 
-def _handle_response(text: str, provider: str) -> None:
+def _handle_response(text: str, provider: str, prompt: str = "", latency_ms: float = 0.0, 
+                     mode: str = "conversational", jurisdiction: str = "GLOBAL", **metadata) -> dict:
+    """
+    Scans the response for violations and records the decision.
+    Returns the full AuditEntry.
+    """
     result = scan_response(text, provider)
+    
     if _stats:
         _stats.record_response(result)
-    if result.is_flagged:
-        top = result.findings[0]
-        logger.warning(f"[Anchor] {provider} response: {top.rule_id} — {top.message}")
+        
+    findings = [
+        {
+            "rule_id": f.rule_id,
+            "severity": f.severity.upper(),
+            "message": f.message,
+            "domain": "UNKNOWN",
+        }
+        for f in result.findings
+    ]
+
+    # Mode-based validation (Step 1)
+    if mode == "structured":
+        # Check if it looks like JSON (primitive check for now)
+        is_json = text.strip().startswith(("{", "["))
+        if not is_json:
+            findings.append({
+                "rule_id": "ETH-002",
+                "severity": "BLOCKER",
+                "message": "Prose returned in structured mode (Expected JSON)",
+                "domain": "ETHICS"
+            })
+    
+    # Layer 2: Decision Auditing (Step 1 Refactor: Returning local_entry)
+    audit_entry = {}
+    try:
+        audit_entry = DecisionAuditor().audit(
+            prompt=prompt,
+            response=text,
+            provider=provider,
+            findings=findings,
+            latency_ms=latency_ms,
+            jurisdiction=jurisdiction,
+            mode=mode
+        )
+    except Exception as e:
+        logger.debug(f"[Anchor] Decision auditor failed: {e}")
+
+    if findings:
+        top = findings[0]
+        logger.warning(f"[Anchor] {provider} response: {top.get('rule_id')} — {top.get('message')}")
+    
+    return audit_entry
 
 
 # ---------------------------------------------------------------------------
@@ -142,13 +190,17 @@ def _patch_openai() -> bool:
         )
         def _openai_create(wrapped, instance, args, kwargs):
             messages = kwargs.get("messages", [])
+            prompt_text = "\n".join([m.get("content", "") for m in messages if isinstance(m, dict)])
             _handle(_scan_messages(messages, "openai"))
+            
+            t0 = time.perf_counter()
             response = wrapped(*args, **kwargs)
-            # Extract text from ChatCompletion response
+            latency = (time.perf_counter() - t0) * 1000
+            
             try:
                 text = response.choices[0].message.content or ""
                 if text:
-                    _handle_response(text, "openai")
+                    _handle_response(text, "openai", prompt=prompt_text, latency_ms=latency)
             except Exception:
                 pass
             return response
@@ -173,17 +225,21 @@ def _patch_anthropic() -> bool:
         def _anthropic_create(wrapped, instance, args, kwargs):
             messages = kwargs.get("messages", [])
             system   = kwargs.get("system", "")
-            text     = f"[system] {system}\n" if system else ""
-            text    += "\n".join(
+            prompt_text = f"[system] {system}\n" if system else ""
+            prompt_text += "\n".join(
                 f"[{m.get('role','?')}] {m.get('content','')}"
                 for m in messages
             )
-            _handle(_scan_text(text, "anthropic"))
+            _handle(_scan_text(prompt_text, "anthropic"))
+            
+            t0 = time.perf_counter()
             response = wrapped(*args, **kwargs)
+            latency = (time.perf_counter() - t0) * 1000
+            
             try:
                 out = response.content[0].text if response.content else ""
                 if out:
-                    _handle_response(out, "anthropic")
+                    _handle_response(out, "anthropic", prompt=prompt_text, latency_ms=latency)
             except Exception:
                 pass
             return response
@@ -207,13 +263,17 @@ def _patch_google_genai() -> bool:
         )
         def _genai_generate(wrapped, instance, args, kwargs):
             contents = args[0] if args else kwargs.get("contents", "")
-            text     = contents if isinstance(contents, str) else str(contents)
-            _handle(_scan_text(text, "google-gemini"))
+            prompt_text = contents if isinstance(contents, str) else str(contents)
+            _handle(_scan_text(prompt_text, "google-gemini"))
+            
+            t0 = time.perf_counter()
             response = wrapped(*args, **kwargs)
+            latency = (time.perf_counter() - t0) * 1000
+            
             try:
                 out = response.text or ""
                 if out:
-                    _handle_response(out, "google-gemini")
+                    _handle_response(out, "google-gemini", prompt=prompt_text, latency_ms=latency)
             except Exception:
                 pass
             return response
@@ -241,13 +301,17 @@ def _patch_langchain() -> bool:
         )
         def _lc_invoke(wrapped, instance, args, kwargs):
             prompt = args[0] if args else kwargs.get("input", "")
-            text   = prompt if isinstance(prompt, str) else str(prompt)
-            _handle(_scan_text(text, "langchain"))
+            prompt_text = prompt if isinstance(prompt, str) else str(prompt)
+            _handle(_scan_text(prompt_text, "langchain"))
+            
+            t0 = time.perf_counter()
             response = wrapped(*args, **kwargs)
+            latency = (time.perf_counter() - t0) * 1000
+            
             try:
                 out = response.content if hasattr(response, "content") else str(response)
                 if out:
-                    _handle_response(out, "langchain")
+                    _handle_response(out, "langchain", prompt=prompt_text, latency_ms=latency)
             except Exception:
                 pass
             return response
@@ -269,12 +333,17 @@ def _patch_ollama() -> bool:
         @wrapt.patch_function_wrapper("ollama", "chat")
         def _ollama_chat(wrapped, instance, args, kwargs):
             messages = kwargs.get("messages", [])
+            prompt_text = "\n".join([m.get("content", "") for m in messages if isinstance(m, dict)])
             _handle(_scan_messages(messages, "ollama"))
+            
+            t0 = time.perf_counter()
             response = wrapped(*args, **kwargs)
+            latency = (time.perf_counter() - t0) * 1000
+            
             try:
                 out = response.get("message", {}).get("content", "")
                 if out:
-                    _handle_response(out, "ollama")
+                    _handle_response(out, "ollama", prompt=prompt_text, latency_ms=latency)
             except Exception:
                 pass
             return response
@@ -298,12 +367,17 @@ def _patch_groq() -> bool:
         )
         def _groq_create(wrapped, instance, args, kwargs):
             messages = kwargs.get("messages", [])
+            prompt_text = "\n".join([m.get("content", "") for m in messages if isinstance(m, dict)])
             _handle(_scan_messages(messages, "groq"))
+            
+            t0 = time.perf_counter()
             response = wrapped(*args, **kwargs)
+            latency = (time.perf_counter() - t0) * 1000
+            
             try:
                 out = response.choices[0].message.content or ""
                 if out:
-                    _handle_response(out, "groq")
+                    _handle_response(out, "groq", prompt=prompt_text, latency_ms=latency)
             except Exception:
                 pass
             return response
@@ -325,13 +399,18 @@ def _patch_cohere() -> bool:
         @wrapt.patch_function_wrapper("cohere.client", "Client.chat")
         def _cohere_chat(wrapped, instance, args, kwargs):
             message = kwargs.get("message", args[0] if args else "")
+            prompt_text = message if isinstance(message, str) else str(message)
             if isinstance(message, str):
                 _handle(_scan_text(message, "cohere"))
+            
+            t0 = time.perf_counter()
             response = wrapped(*args, **kwargs)
+            latency = (time.perf_counter() - t0) * 1000
+            
             try:
                 out = response.text or ""
                 if out:
-                    _handle_response(out, "cohere")
+                    _handle_response(out, "cohere", prompt=prompt_text, latency_ms=latency)
             except Exception:
                 pass
             return response
@@ -355,8 +434,20 @@ def _patch_mistral() -> bool:
         )
         def _mistral_chat(wrapped, instance, args, kwargs):
             messages = kwargs.get("messages", [])
+            prompt_text = "\n".join([m.get("content", "") for m in messages if isinstance(m, dict)])
             _handle(_scan_messages(messages, "mistral"))
-            return wrapped(*args, **kwargs)
+            
+            t0 = time.perf_counter()
+            response = wrapped(*args, **kwargs)
+            latency = (time.perf_counter() - t0) * 1000
+            
+            try:
+                out = response.choices[0].message.content or ""
+                if out:
+                    _handle_response(out, "mistral", prompt=prompt_text, latency_ms=latency)
+            except Exception:
+                pass
+            return response
 
         logger.info("[Anchor] Patched: mistralai.MistralClient.chat")
         return True
@@ -379,11 +470,25 @@ def _patch_transformers() -> bool:
         @wrapt.patch_function_wrapper("transformers.pipelines.base", "Pipeline.__call__")
         def _pipeline_call(wrapped, instance, args, kwargs):
             inputs = args[0] if args else kwargs.get("inputs", "")
-            text   = inputs if isinstance(inputs, str) else " ".join(
+            prompt_text = inputs if isinstance(inputs, str) else " ".join(
                 str(i) for i in inputs
             ) if isinstance(inputs, list) else str(inputs)
-            _handle(_scan_text(text, "huggingface-transformers"))
-            return wrapped(*args, **kwargs)
+            _handle(_scan_text(prompt_text, "huggingface-transformers"))
+            
+            t0 = time.perf_counter()
+            response = wrapped(*args, **kwargs)
+            latency = (time.perf_counter() - t0) * 1000
+            
+            try:
+                # Transformers output varies; usually a list of dicts with 'generated_text'
+                if isinstance(response, list) and len(response) > 0 and "generated_text" in response[0]:
+                    out = response[0]["generated_text"]
+                    # Usually includes the prompt; ideally we'd strip it
+                    if out:
+                        _handle_response(out, "huggingface-transformers", prompt=prompt_text, latency_ms=latency)
+            except Exception:
+                pass
+            return response
 
         logger.info("[Anchor] Patched: transformers.Pipeline.__call__")
         return True

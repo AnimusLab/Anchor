@@ -134,11 +134,13 @@ def _fix_anc_023(line: str):
             True
         )
     suggested = re.sub(r'\bos\.environ\b(?!\s*\.get)', 'os.environ.get("YOUR_KEY_NAME", "")', line, count=1)
-    return (
-        suggested.rstrip(),
-        "Use os.environ.get('SPECIFIC_KEY', '') to fetch only the variable your code needs.",
-        True
-    )
+    if suggested != line:
+        return (
+            suggested.rstrip(),
+            "Use os.environ.get('SPECIFIC_KEY', '') to fetch only the variable your code needs.",
+            True
+        )
+    return None
 
 
 def _fix_subprocess_shell(line: str):

@@ -31,6 +31,7 @@ rules:
     severity: "blocker"
     min_severity: "error"
     min_mitigations: 1
+    runtime_pattern: '(?i)(\b\d{3}-\d{2}-\d{4}\b|\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b|\b(?:\d[ -]??){13,16}\b)'
     detection: ~
     primitives: ~
 
@@ -40,19 +41,10 @@ rules:
     original_id: "Ri-016"
     category: "privacy"
     description: >
-      Embeddings stored in vector databases can be used to reconstruct
-      or approximate the original sensitive data they were derived from
-      through inversion attacks. When financial documents, customer
-      records, or proprietary data are embedded and stored without
-      access controls or embedding protection, an attacker with read
-      access to the vector store can recover sensitive information
-      without ever accessing the original data source. This creates
-      a secondary data exposure surface that is frequently overlooked
-      in RAG-based financial AI systems. GDPR Article 5 data minimization
-      and DPDP Act security obligations apply to embedding stores
-      exactly as they apply to the underlying data.
+      Embeddings stored in vector databases can be used to reconstruct original data.
     severity: "error"
     min_severity: "warning"
+    runtime_pattern: '(?i)(embedding|vector store|inversion|reconstruct|recover sensitive)'
     min_mitigations: 1
     detection: ~
     primitives: ~
@@ -63,19 +55,10 @@ rules:
     original_id: "Ri-022"
     category: "privacy"
     description: >
-      Data from one user's context, session, or request contaminates
-      another user's context through shared model state, improperly
-      isolated conversation history, or context window leakage in
-      multi-tenant AI deployments. In financial AI, cross-context
-      bleed can expose one customer's account details, transaction
-      history, or credit information to another customer in the same
-      model deployment. This is a critical violation of DPDP Act
-      Section 4 purpose limitation, RBI data governance requirements,
-      and basic financial data segregation principles. Multi-tenant
-      LLM deployments require strict session isolation that many
-      standard frameworks do not provide by default.
+      Data from one user's context contaminates another user's context.
     severity: "error"
     min_severity: "warning"
+    runtime_pattern: '(?i)(cross-context|bleed|contamination|shared session|tenant|leakage from session)'
     min_mitigations: 1
     detection: ~
     primitives: ~

@@ -101,17 +101,55 @@ _COMPILED: list[tuple[re.Pattern, str, str, str]] = [
 def scan_response(text: str, provider: str = "unknown") -> ResponseScanResult:
     """
     Scan the plaintext of an LLM response for dangerous patterns.
-
-    Args:
-        text:     The decoded text content of the response.
-        provider: Provider name for logging (from provider_registry).
-
-    Returns:
-        ResponseScanResult with is_flagged=True if any patterns matched.
+    Prioritizes Constitutional Rules (SEC, ETH, etc.) from the PolicyEngine.
     """
+    from anchor.runtime.decision_auditor import DecisionAuditor
     findings: List[Finding] = []
+    
+    # ── PART A: Constitutional Scan (High Fidelity) ─────────────────
+    engine = DecisionAuditor._shared_engine
+    canonical_triggered = set()
+
+    if engine:
+        # PolicyEngine stores all rules in self.all_rules
+        for rule in engine.all_rules:
+            pattern_str = rule.get("runtime_pattern")
+            if not pattern_str:
+                continue
+                
+            try:
+                # We compile on the fly here, but in production, 
+                # these should be pre-compiled during warm-up.
+                match = re.search(pattern_str, text, re.IGNORECASE | re.MULTILINE)
+                if match:
+                    findings.append(Finding(
+                        rule_id  = rule["id"],
+                        severity = rule.get("severity", "error"),
+                        message  = rule.get("message") or rule.get("description", "Constitutional violation"),
+                        snippet  = match.group(0)[:120],
+                        line     = text[:match.start()].count("\n") + 1,
+                    ))
+                    canonical_triggered.add(rule["id"])
+            except Exception:
+                pass # Pattern error should not crash the AI
+
+    # ── PART B: Legacy RSP Backstop (Deprecated) ────────────────────
+    # Map legacy RSP IDs to their new canonical equivalents to avoid double-reporting
+    # Once Step 4 (Full Migration) is complete, this backstop can be removed.
+    RSP_MAP = {
+        "RSP-001": "SEC-004", "RSP-002": "SEC-004", "RSP-003": "SEC-004", 
+        "RSP-004": "SEC-004", "RSP-005": "SEC-004",
+        "RSP-010": "SEC-007", "RSP-011": "SEC-007", "RSP-012": "SEC-007", 
+        "RSP-013": "SEC-007", "RSP-040": "SEC-007",
+        "RSP-050": "PRV-001", "RSP-051": "PRV-001", "RSP-052": "PRV-001"
+    }
 
     for compiled, rule_id, severity, message in _COMPILED:
+        # Skip if this logic is already covered by a triggered canonical rule
+        target_canonical = RSP_MAP.get(rule_id)
+        if target_canonical and target_canonical in canonical_triggered:
+            continue
+
         match = compiled.search(text)
         if match:
             findings.append(Finding(

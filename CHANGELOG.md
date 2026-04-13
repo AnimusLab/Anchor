@@ -4,6 +4,21 @@ All notable changes to the Anchor governance engine are documented here. Format 
 
 ---
 
+## [5.0.0-alpha] — 2026-04-13
+
+### Added
+- **Hierarchical Governance Mesh** — Introduced the 3-tier hierarchy: `Organization` (Enterprise) > `Project` (Execution Unit) > `User` (Identity).
+- **Self-Service Master Node** — Organizations can now register their own domains and self-provision cryptographic project keys (`entity_id` and `secret_key`) via the Auth Portal.
+- **Decentralized Team Onboarding** — "GitHub-style" invitation system allowing Managers to bring their developers onto the platform with specific RBAC roles (`lead`, `member`).
+- **Jurisdictional Routing** — Added `server_region` support (IN, EU, US) to ensure data sovereignty and regional regulatory compliance.
+- **Manager Dashboard** — A new multi-project control center with aggregated organizational telemetry and forensic vault controls.
+
+### Changed
+- **Unified Identity** — Transitioned from project-level secrets to professional email/password authentication linked to the organization.
+- **Root Admin Oversight** — Transitioned from manual entity provisioning to a "Mesh Registry" model for global oversight.
+
+---
+
 ## [4.3.5] — 2026-03-23
 
 ### Changed

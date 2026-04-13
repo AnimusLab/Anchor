@@ -26,17 +26,17 @@ class AnchorSettings(BaseSettings):
 
     # ── Constitution (Cloud Source) ────────────────────────────────
     constitution_url: str = Field(
-        default="https://raw.githubusercontent.com/AnimusLab/Anchor/main/anchor/governance/constitution.anchor",
+        default="https://raw.githubusercontent.com/Tanishq1030/Anchor/main/anchor/governance/constitution.anchor",
         description="URL to fetch the Universal Constitution from.",
     )
 
     mitigation_url: str = Field(
-        default="https://raw.githubusercontent.com/AnimusLab/Anchor/main/anchor/governance/mitigation.anchor",
+        default="https://raw.githubusercontent.com/Tanishq1030/Anchor/main/anchor/governance/mitigation.anchor",
         description="URL to fetch the Mitigation Catalog from.",
     )
 
     governance_lock_url: str = Field(
-        default="https://raw.githubusercontent.com/AnimusLab/Anchor/main/GOVERNANCE.lock",
+        default="https://raw.githubusercontent.com/Tanishq1030/Anchor/main/anchor/governance/GOVERNANCE.lock",
         description="URL to fetch the GOVERNANCE.lock integrity file from.",
     )
 

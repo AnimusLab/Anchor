@@ -1,66 +1,86 @@
+type: manifest
+version: '4.1'
 anchor_version: '>=4.0.0'
+name: Anchor Constitutional Root
 core_domains:
-- namespace: SEC
-  path: domains/security.anchor
+- path: domains/security.anchor
+  namespace: SEC
   required: true
   active: true
-- namespace: ETH
-  path: domains/ethics.anchor
+- path: domains/ethics.anchor
+  namespace: ETH
   required: true
   active: true
-- namespace: SHR
-  path: domains/shared.anchor
+- path: domains/shared.anchor
+  namespace: SHR
   required: true
   active: true
-- namespace: ALN
-  path: domains/alignment.anchor
+- path: domains/alignment.anchor
+  namespace: ALN
   required: true
   active: true
-- namespace: AGT
-  path: domains/agentic.anchor
+- path: domains/agentic.anchor
+  namespace: AGT
   required: true
   active: true
-- namespace: PRV
-  path: domains/privacy.anchor
+- path: domains/privacy.anchor
+  namespace: PRV
   required: true
   active: true
-- namespace: LEG
-  path: domains/legal.anchor
+- path: domains/legal.anchor
+  namespace: LEG
   required: true
   active: true
-- namespace: OPS
-  path: domains/operational.anchor
+- path: domains/operational.anchor
+  namespace: OPS
   required: true
   active: true
-- namespace: SUP
-  path: domains/supply_chain.anchor
+- path: domains/supply_chain.anchor
+  namespace: SUP
   required: true
-  active: true
-engine:
-  fail_on:
-  - BLOCKER
-  - ERROR
-  info_on:
-  - INFO
-  seal_check: warn
-  suppress_requires_reason: true
-  suppress_tracking: true
-  unknown_namespace: reject
-  warn_on:
-  - WARNING
 frameworks:
-- active: true
+- path: frameworks/FINOS_Framework.anchor
   namespace: FINOS
-  path: frameworks/FINOS_Framework.anchor
   source: FINOS AI Governance Framework
-- active: true
+  active: false
+- path: frameworks/OWASP_LLM.anchor
   namespace: OWASP
-  path: frameworks/OWASP_LLM.anchor
   source: OWASP LLM Top 10 2025
-- active: true
+  active: false
+- path: frameworks/NIST_AI_RMF.anchor
   namespace: NIST
-  path: frameworks/NIST_AI_RMF.anchor
   source: NIST AI RMF 1.0
+  active: false
+regulators:
+- path: government/RBI_Regulations.anchor
+  namespace: RBI
+  source: RBI FREE-AI Report August 2025
+  active: false
+- path: government/EU_AI_Act.anchor
+  namespace: EU
+  source: EU AI Act 2024/1689
+  active: false
+- path: government/SEBI_Regulations.anchor
+  namespace: SEBI
+  source: SEBI AI/ML Consultation 2024-2025
+  active: false
+- path: government/CFPB_Regulations.anchor
+  namespace: CFPB
+  source: CFPB Regulation B + 2024 Guidance
+  active: false
+- path: government/FCA_Regulations.anchor
+  namespace: FCA
+  source: FCA AI Governance Guidance 2024
+  active: false
+- path: government/SEC_Regulations.anchor
+  namespace: USSEC
+  source: SEC 2026 Examination Priorities
+  active: false
+policy:
+  path: policy.anchor
+  enforce_raise_only: true
+  allow_custom_rules: true
+  custom_rule_prefix: INTERNAL
 legacy_aliases:
   ANC-001: FINOS-001
   ANC-002: FINOS-002
@@ -85,43 +105,22 @@ legacy_aliases:
   ANC-021: FINOS-021
   ANC-022: FINOS-022
   ANC-023: FINOS-023
-name: Anchor Constitutional Root
+engine:
+  fail_on:
+  - BLOCKER
+  - ERROR
+  warn_on:
+  - WARNING
+  info_on:
+  - INFO
+  seal_check: strict
+  unknown_namespace: reject
+  suppress_tracking: true
+  suppress_requires_reason: true
 output:
   formats:
   - json
   - markdown
-  include_git_blame: true
   report_path: .anchor/reports/
   telemetry_path: .anchor/telemetry/
-policy:
-  allow_custom_rules: true
-  custom_rule_prefix: INTERNAL
-  enforce_raise_only: true
-  path: policy.anchor
-regulators:
-- active: true
-  namespace: RBI
-  path: government/RBI_Regulations.anchor
-  source: RBI FREE-AI Report August 2025
-- active: true
-  namespace: EU
-  path: government/EU_AI_Act.anchor
-  source: EU AI Act 2024/1689
-- active: true
-  namespace: SEBI
-  path: government/SEBI_Regulations.anchor
-  source: SEBI AI/ML Consultation 2024-2025
-- active: true
-  namespace: CFPB
-  path: government/CFPB_Regulations.anchor
-  source: CFPB Regulation B + 2024 Guidance
-- active: true
-  namespace: FCA
-  path: government/FCA_Regulations.anchor
-  source: FCA AI Governance Guidance 2024
-- active: false
-  namespace: USSEC
-  path: government/SEC_Regulations.anchor
-  source: SEC 2026 Examination Priorities
-type: manifest
-version: '4.1'
+  include_git_blame: true

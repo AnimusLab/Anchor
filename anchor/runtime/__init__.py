@@ -42,6 +42,7 @@ from anchor.runtime.interceptors.base import (
     PromptScanResult, ResponseScanResult,
 )
 from anchor.runtime.guard import AnchorGuard
+import functools
 
 logger = logging.getLogger("anchor.runtime")
 
@@ -167,7 +168,7 @@ def _load_custom_providers_from_policy() -> None:
           - domain: my-company.ai/chat
             name: my-company-ai
     """
-    import os, yaml  # anchor: ignore RI-08
+    import os, yaml  # anchor: ignore SEC-007
     policy_path = os.path.join(".anchor", "policy.anchor")
     if not os.path.exists(policy_path):
         return
@@ -206,6 +207,57 @@ def get_session_stats() -> dict:
     return d
 
 
+def enforce(mode: str = "conversational", jurisdiction: str = "GLOBAL", **metadata):
+    """
+    Decorator to protect custom AI functions with Anchor governance.
+    
+    This uses the 'Audit-Not-Block' architecture: violations are recorded 
+    to the cryptographic ledger as regulatory evidence, but the 
+    application flow is not interrupted.
+    
+    The audit result is attached to the return value as `_anchor_audit`. 
+    NOTE: This attachment will silent-fail for immutable types (str, bool, etc).
+    The primary audit record remains available in the side-effect ledger.
+    
+    Args:
+        mode: "conversational" (default) or "structured" (verifies JSON)
+        jurisdiction: Regulatory region for the audit (e.g., "EU", "IN", "GLOBAL")
+        **metadata: Optional key-value pairs for the audit record.
+    """
+    from anchor.runtime.decision_auditor import DecisionAuditor
+    from anchor.runtime.interceptors.framework import _handle_response
+
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            # Instantiate auditor (triggers singleton warm-up if needed)
+            auditor = DecisionAuditor()
+            
+            result = func(*args, **kwargs)
+            
+            # Audit the response
+            # We treat the function output as the response 'text'
+            text = result.content if hasattr(result, "content") else str(result)
+            audit = _handle_response(
+                text=text, 
+                provider="custom-decorator",
+                mode=mode,
+                jurisdiction=jurisdiction,
+                **metadata
+            )
+            
+            # Attach for convenience (silent fail for immutables)
+            if hasattr(result, "__dict__"):
+                try:
+                    result._anchor_audit = audit
+                except Exception:
+                    pass
+            
+            return result
+        return wrapper
+    return decorator
+
+
 # ---------------------------------------------------------------------------
 # Auto-activate on import (BLOCK mode, no verbose)
 # ---------------------------------------------------------------------------
@@ -220,6 +272,7 @@ __all__ = [
     "register_provider",
     "is_active",
     "get_session_stats",
+    "enforce",
     "AnchorGuard",
     "AnchorViolationError",
     "InterceptorMode",

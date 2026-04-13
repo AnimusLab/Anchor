@@ -46,8 +46,7 @@ class HealSuggestion:
 # ---------------------------------------------------------------------------
 
 def _fix_anc_001(line: str):
-    """ANC-001: Public LLM API call → route through PII-scrubbing proxy."""
-    # Suggest wrapping with a proxy or using an internal client
+    """SEC-006: Public LLM API call → route through PII-scrubbing proxy."""
     return (
         "# Route through your PII-scrubbing proxy instead of calling the public API directly.",
         "Direct calls to public LLM APIs (OpenAI, Anthropic, Cohere) may leak sensitive data. "
@@ -57,7 +56,7 @@ def _fix_anc_001(line: str):
 
 
 def _fix_anc_002(line: str):
-    """ANC-002: Vector store upsert without encryption."""
+    """SEC-002: Vector store upsert without encryption."""
     return (
         "",
         "Encrypt embeddings before upserting to vector stores. Unencrypted embeddings can be "
@@ -118,7 +117,7 @@ def _fix_anc_022(line: str):
 
 
 def _fix_anc_023(line: str):
-    """ANC-023: Bulk env access  os.environ → targeted os.environ.get()"""
+    """SEC-004: Credential Harvesting — bulk env access  os.environ → targeted os.environ.get()"""
     m = re.search(r'(\w+)\s*=\s*os\.environ(?!\s*\.get)', line)
     if m:
         var = m.group(1)
@@ -135,15 +134,17 @@ def _fix_anc_023(line: str):
             True
         )
     suggested = re.sub(r'\bos\.environ\b(?!\s*\.get)', 'os.environ.get("YOUR_KEY_NAME", "")', line, count=1)
-    return (
-        suggested.rstrip(),
-        "Use os.environ.get('SPECIFIC_KEY', '') to fetch only the variable your code needs.",
-        True
-    )
+    if suggested != line:
+        return (
+            suggested.rstrip(),
+            "Use os.environ.get('SPECIFIC_KEY', '') to fetch only the variable your code needs.",
+            True
+        )
+    return None
 
 
 def _fix_subprocess_shell(line: str):
-    """ANC-018: subprocess without Diamond Cage sandboxing."""
+    """SEC-007: Shell Injection — subprocess without Diamond Cage sandboxing."""
     if "shell=True" in line:
         suggested = line.replace("shell=True", "shell=False")
         return (
@@ -176,12 +177,12 @@ def _fix_eval(line: str):
 
 
 def _fix_open_file(line: str):
-    """RI-08: Raw file open → add suppression comment if intentional"""
+    """SEC-007: Raw file open — add suppression comment if intentional."""
     if "# anchor: ignore" not in line:
-        suggested = line.rstrip() + "  # anchor: ignore RI-08"
+        suggested = line.rstrip() + "  # anchor: ignore SEC-007"
         return (
             suggested,
-            "If this file access is intentional and safe, add '# anchor: ignore RI-08' "
+            "If this file access is intentional and safe, add '# anchor: ignore SEC-007' "
             "to suppress this finding and create an audit trail.",
             True
         )
@@ -225,22 +226,18 @@ def _fix_pickle(line: str):
 # Fixer registry: maps rule_id prefix → fixer function
 # ---------------------------------------------------------------------------
 _FIXERS: list[tuple[str, callable]] = [
-    ("ANC-001",  _fix_anc_001),
-    ("ANC-002",  _fix_anc_002),
-    ("ANC-010",  _fix_anc_010),
-    ("ANC-011",  _fix_anc_011),
-    ("ANC-015",  _fix_anc_015),
-    ("ANC-018",  _fix_subprocess_shell),
-    ("ANC-022",  _fix_anc_022),
-    ("ANC-023",  _fix_anc_023),
-    ("RI-12",    _fix_subprocess_shell),
-    ("ANC-030",  _fix_eval),
-    ("ANC-031",  _fix_eval),
-    ("RI-08",    _fix_open_file),
-    ("ANC-010",  _fix_hardcoded_secret),
-    ("ANC-011",  _fix_hardcoded_secret),
-    ("ANC-012",  _fix_hardcoded_secret),
-    ("ANC-PKL",  _fix_pickle),
+    ("SEC-006",  _fix_anc_001),   # Public LLM Endpoint (was ANC-001)
+    ("SEC-002",  _fix_anc_002),   # Unencrypted Vector Store (was ANC-002)
+    ("ALN-001",  _fix_anc_010),   # Missing guardrail (was ANC-010)
+    ("ETH-001",  _fix_anc_011),   # Sensitive attribute as feature (was ANC-011)
+    ("ALN-002",  _fix_anc_015),   # LLM output without moderation (was ANC-015)
+    ("SEC-007",  _fix_subprocess_shell),  # Shell Injection (was ANC-018, RI-12)
+    ("AGT-001",  _fix_anc_022),   # Unverified cross-agent message (was ANC-022)
+    ("SEC-004",  _fix_anc_023),   # Credential / bulk env harvesting (was ANC-023)
+    ("SEC-007",  _fix_open_file), # Raw file open (was RI-08)
+    ("SEC-001",  _fix_eval),      # Prompt Injection / code exec (was ANC-030, ANC-031)
+    ("SEC-004",  _fix_hardcoded_secret),  # Hardcoded secret (was ANC-010/011/012)
+    ("SEC-003",  _fix_pickle),    # Model Tampering via pickle (was ANC-PKL)
 ]
 
 
@@ -341,7 +338,7 @@ def apply_fix(suggestion: HealSuggestion) -> bool:
     line_no   = suggestion.line
 
     try:
-        with open(file_path, "r", encoding="utf-8") as f:  # anchor: ignore RI-08
+        with open(file_path, "r", encoding="utf-8") as f:  # anchor: ignore SEC-007
             source_lines = f.readlines()
 
         if line_no < 1 or line_no > len(source_lines):
@@ -352,7 +349,7 @@ def apply_fix(suggestion: HealSuggestion) -> bool:
         fixed = " " * leading + suggestion.suggested + "\n"
         source_lines[line_no - 1] = fixed
 
-        with open(file_path, "w", encoding="utf-8") as f:  # anchor: ignore RI-08
+        with open(file_path, "w", encoding="utf-8") as f:  # anchor: ignore SEC-007
             f.writelines(source_lines)
         return True
     except Exception:
@@ -366,7 +363,7 @@ def apply_fix(suggestion: HealSuggestion) -> bool:
 def _read_line(file_path: str, line_no: int) -> Optional[str]:
     """Read a specific 1-indexed line from a file."""
     try:
-        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:  # anchor: ignore RI-08
+        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:  # anchor: ignore SEC-007
             for i, line in enumerate(f, start=1):
                 if i == line_no:
                     return line.rstrip()

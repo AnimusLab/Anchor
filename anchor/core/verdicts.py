@@ -83,10 +83,11 @@ def _cluster_html_vs_api(contexts: List[CallContext]) -> List[SemanticRole]:
 
 def _is_form_like(symbol_name: str, anchor: IntentAnchor) -> bool:
     """Heuristic: symbol was built to render HTML forms."""
-    keywords = ("form", "widget", "renderer")
+    keywords = (r"\bform\b", r"\bwidget\b", r"\brenderer\b")
+    import re
     name_lower = symbol_name.lower()
     intent_lower = anchor.intent_description.lower()
-    return any(k in name_lower or k in intent_lower for k in keywords)
+    return any(re.search(k, name_lower) or re.search(k, intent_lower) for k in keywords)
 
 
 # ---------------------------------------------------------------------------

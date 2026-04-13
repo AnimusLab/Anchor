@@ -18,21 +18,10 @@ rules:
     original_id: "Ri-005"
     category: "robustness"
     description: >
-      Proprietary AI model weights, architectures, or fine-tuning
-      data are exposed to unauthorized parties through inadequate
-      access controls, insecure model serving infrastructure, or
-      model extraction attacks that reconstruct model behavior through
-      repeated API queries. In financial AI, model theft is a material
-      risk because proprietary credit scoring models, fraud detection
-      logic, and algorithmic trading strategies represent significant
-      competitive and regulatory assets. A stolen credit model can be
-      reverse-engineered to understand approval thresholds, enabling
-      adversarial loan applications designed to game the system.
-      Model extraction attacks require no direct access to weights —
-      an attacker can reconstruct approximate model behavior through
-      black-box API access alone.
+      Proprietary AI model weights or architectures are exposed.
     severity: "blocker"
     min_severity: "blocker"
+    runtime_pattern: '(?i)(model weights|architecture|fine-tuning data|extract|reconstruct|reverse-engineer|api query limit)'
     min_mitigations: 1
     detection: ~
     primitives: ~
@@ -43,20 +32,10 @@ rules:
     original_id: "Ri-006"
     category: "robustness"
     description: >
-      AI model weights are corrupted, modified, or replaced with
-      adversarial variants without detection, causing the deployed
-      model to differ from the validated and approved version. Weight
-      corruption can occur through supply chain compromise of model
-      repositories, unauthorized access to model storage, or
-      deliberate poisoning of model artifacts during deployment
-      pipelines. The danger is that a corrupted model may pass
-      standard functional tests while containing backdoor triggers
-      or systematic biases that only activate under specific conditions.
-      Without cryptographic verification of model artifacts at load
-      time, there is no way to prove that the model currently running
-      in production is the model that was audited and approved.
+      AI model weights are corrupted or replaced with adversarial variants.
     severity: "blocker"
     min_severity: "error"
+    runtime_pattern: '(?i)(corrupt|modified|adversarial variant|poisoned artifact|backdoor trigger|malicious weight)'
     min_mitigations: 1
     detection: ~
     primitives: ~
@@ -67,21 +46,10 @@ rules:
     original_id: "Ri-007"
     category: "operations"
     description: >
-      AI models deployed in production operate on unpinned or
-      undocumented versions, causing silent behavioral changes when
-      model providers update their APIs or when local models are
-      replaced without formal change management. Versioning drift
-      means the model producing decisions today is not the model
-      that was validated, tested, or approved — breaking the chain
-      of accountability that regulators require. FCA 2024 requires
-      model version traceability per decision. SEBI requires 5-year
-      retention of model input and output data with version documentation.
-      RBI FREE-AI Recommendation 24 requires an AI inventory with
-      version tracking for supervisory inspection. A system that
-      cannot identify exactly which model version produced a specific
-      decision cannot satisfy any of these requirements.
+      AI models deployed operate on unpinned or undocumented versions.
     severity: "warning"
     min_severity: "info"
+    runtime_pattern: '(?i)(unpinned|undocumented version|behavioral change|drift|untracked version|change management failure)'
     min_mitigations: 1
     detection: ~
     primitives: ~

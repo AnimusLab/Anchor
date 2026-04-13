@@ -16,15 +16,13 @@ class PythonAdapter(LanguageAdapter):
         return Language(tspy.language())
 
     def build_dangerous_call_query(self, function_names: List[str]) -> str:
-        """
-        Query for Python function calls like:
-        eval(...)
-        subprocess.run(...)  # anchor: ignore SEC-007
-        """
-        funcs_regex = "|".join(function_names)
+        funcs_regex = "|".join(function_names).replace(".", r"\.")
         return f"""
         (call
-            function: (identifier) @func_name
+            function: [
+                (identifier) @func_name
+                (attribute) @func_name
+            ]
             (#match? @func_name "^({funcs_regex})$")
         ) @violation
         """

@@ -18,22 +18,10 @@ rules:
     original_id: "Ri-011"
     category: "operations"
     description: >
-      AI systems in critical financial infrastructure lack circuit
-      breakers, fallback mechanisms, or rate limiting controls that
-      would prevent availability failures from cascading into
-      operational outages. Financial AI systems that handle real-time
-      fraud detection, credit decisioning, or payment routing create
-      single points of failure when they have no graceful degradation
-      path — a model API outage or rate limit breach can halt
-      transaction processing entirely. Additionally, adversarial
-      denial-of-service attacks targeting AI inference endpoints
-      can render financial services unavailable by exhausting compute
-      resources through expensive prompt submissions. RBI FREE-AI
-      Recommendation 21 requires business continuity plans that
-      account for AI system failure scenarios, and red-teaming
-      exercises to validate resilience under stress conditions.
+      AI systems in critical financial infrastructure lack circuit breakers.
     severity: "error"
     min_severity: "warning"
+    runtime_pattern: '(?i)(timeout|rate limit|overload|denial of service|dos|resource exhaustion|infinite loop|recursion|slow response)'
     min_mitigations: 1
     detection: ~
     primitives: ~

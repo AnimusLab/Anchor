@@ -6,7 +6,7 @@ long_description = (here / "README.md").read_text(encoding="utf-8")
 
 setup(
     name="anchor-audit",
-    version="4.3.5",
+    version="5.0.0",
     description="The Federated Governance Engine for AI (Universal Multi-Language)",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -38,6 +38,7 @@ setup(
         "wrapt",
         "requests",
         "GitPython",
+        "pyahocorasick",
     ],
     extras_require={
         "dev": ["pytest", "black", "mypy"],
@@ -54,7 +55,7 @@ setup(
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
         "Topic :: Software Development :: Quality Assurance",
-        "License :: OSI Approved :: MIT License",
+        "License :: OSI Approved :: Apache Software License",
         "Programming Language :: Python :: 3",
     ],
 )

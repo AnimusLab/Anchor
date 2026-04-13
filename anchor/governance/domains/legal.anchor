@@ -18,20 +18,10 @@ rules:
     original_id: "Ri-018"
     category: "compliance"
     description: >
-      AI models trained on or generating content that reproduces
-      copyrighted material, trade secrets, or proprietary code
-      without authorization creates intellectual property liability
-      for the deploying organization. In financial AI, this includes
-      models trained on proprietary financial data sets, models that
-      reproduce licensed analytical frameworks in generated reports,
-      and code generation models that reproduce GPL-licensed code in
-      commercial products. IP infringement risk is elevated in RAG
-      systems where copyrighted documents are chunked and retrieved
-      verbatim into model outputs. Several ongoing lawsuits establish
-      that organizations deploying models on proprietary data bear
-      liability for IP violations in those models' outputs.
+      AI models producing content that reproduces copyrighted material.
     severity: "warning"
     min_severity: "info"
+    runtime_pattern: '(?i)(copyright|trademark|patent|proprietary|all rights reserved|confidential|trade secret)'
     min_mitigations: 1
     detection: ~
     primitives: ~
@@ -42,21 +32,10 @@ rules:
     original_id: "Ri-019"
     category: "compliance"
     description: >
-      AI systems deployed in regulated financial contexts operate
-      without documented compliance with applicable regulatory
-      frameworks — EU AI Act, RBI FREE-AI, SEBI AI/ML requirements,
-      CFPB Regulation B, FCA guidance, or equivalent jurisdiction-
-      specific requirements. Non-compliance is not merely a legal
-      risk — it is an operational risk. Regulatory action can suspend
-      AI-powered products, freeze lending operations, or trigger
-      mandatory audits. EU AI Act enforcement begins August 2026 with
-      fines up to 6% of global annual revenue for high-risk AI
-      violations. RBI has no fine ceiling for FREE-AI non-compliance.
-      CFPB's $45M Goldman Sachs action in 2024 establishes the
-      enforcement precedent. Documenting compliance is not optional
-      — it is the first requirement of every applicable framework.
+      AI systems deployed without documented compliance with regulatory frameworks.
     severity: "error"
     min_severity: "error"
+    runtime_pattern: '(?i)(non-compliant|violation|regulation|mandate|compliance failure|article 13|article 14)'
     min_mitigations: 1
     detection: ~
     primitives: ~

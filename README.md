@@ -3,7 +3,7 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![PyPI](https://img.shields.io/badge/PyPI-anchor--audit-gold.svg)](https://pypi.org/project/anchor-audit/)
-[![Version: 4.3.5](https://img.shields.io/badge/Version-4.3.5-green.svg)]()
+[![Version: 5.0.0](https://img.shields.io/badge/Version-5.0.0-emerald.svg)]()
 
 > "Governance without enforcement is documentation."
 
@@ -28,6 +28,7 @@ The regulators have started counting. Anchor enforces.
 
 ## What Anchor Does
 
+- **Sovereign Multi-Tenancy (Layer 05)** — [NEW in v5.0] Decentralized identity for the enterprise. Organizations (Sovereign Hubs) manage their own staff and sub-projects via the Anchor Master Node, ensuring strict data isolation and regulatory jurisdiction (IN, EU, US).
 - **Static Code Analysis (Layer 01)** — Tree-sitter AST scanning against a cryptographically sealed constitutional rule set. Every violation gets a `violation_id` mapped to the exact regulation it breaches.
 - **Diamond Cage (Layer 02)** — WASM-based behavioral verification sandbox. Proves security invariants at scan time, not just static pattern matching. Reports as `Diamond Cage: ACTIVE`.
 - **Hybrid Healer (Sovereign Scalpel)** — Goes beyond detection to remediation. Proposes file-specific AST patches, applied via `anchor heal --apply`.

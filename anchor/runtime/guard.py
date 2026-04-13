@@ -42,6 +42,8 @@ from anchor.runtime.interceptors.base import (
     SessionStats,
 )
 from anchor.runtime.interceptors.output_scanner import scan_response as _scan_response
+from anchor.runtime import decision_auditor
+import time
 
 logger = logging.getLogger("anchor.guard")
 
@@ -145,6 +147,8 @@ class AnchorGuard:
         self.provider = provider
         self.mode     = InterceptorMode(mode.lower())
         self.stats    = stats or SessionStats()
+        self._last_prompt:      str   = ""
+        self._last_prompt_time: float = 0.0
 
     # ------------------------------------------------------------------
     # Public API
@@ -173,6 +177,9 @@ class AnchorGuard:
         AnchorViolationError
             In BLOCK mode, when a blocker/error severity finding is detected.
         """
+        self._last_prompt      = text
+        self._last_prompt_time = time.perf_counter()
+        
         result = _scan_prompt_text(text, self.provider)
         self.stats.record_prompt(result)
         self._handle_prompt(result)
@@ -195,8 +202,36 @@ class AnchorGuard:
         ResponseScanResult
             Contains is_flagged (bool) and a list of Finding objects.
         """
+        latency = 0.0
+        if self._last_prompt_time > 0:
+            latency = (time.perf_counter() - self._last_prompt_time) * 1000
+            
         result = _scan_response(text, self.provider)
         self.stats.record_response(result)
+        
+        findings = [
+            {
+                "rule_id": f.rule_id,
+                "severity": f.severity.upper(),
+                "message": f.message,
+                "domain": "UNKNOWN",
+            }
+            for f in result.findings
+        ]
+        
+        # Layer 2: Decision Auditing
+        try:
+            decision_auditor.audit(
+                prompt=self._last_prompt,
+                response=text,
+                provider=self.provider,
+                findings=findings,
+                mode="guard",
+                latency_ms=latency
+            )
+        except Exception:
+            pass
+
         if result.is_flagged:
             self._handle_response(result)
         return result

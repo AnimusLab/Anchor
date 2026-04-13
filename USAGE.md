@@ -1,6 +1,6 @@
 # Anchor CLI — Command Reference
 
-Anchor V4.3.5 — Deterministic Governance for the AI-Native Stack.
+Anchor V5.0.0 — Deterministic Governance for the AI-Native Stack.
 
 🌐 **[anchorgovernance.tech](https://anchorgovernance.tech)**
 
@@ -16,6 +16,29 @@ pip install anchor-audit
 git clone https://github.com/Tanishq1030/Anchor.git
 cd Anchor && pip install -e .
 ```
+
+---
+
+## Cryptographic Identity & Provisioning (v5.0+)
+
+Anchor v5.0 introduces a **Hierarchical Identity** model. Every project code-base must be cryptographically linked to a parent Organization via a secure `.env` configuration.
+
+### 1. Provision Your Keys
+Log in to your **Company Dashboard** at [app.anchorgovernance.tech](https://app.anchorgovernance.tech) and create a new project. You will receive:
+- `ANCHOR_ENTITY_ID`: A unique, organization-prefixed project identifier.
+- `ANCHOR_SECRET_KEY`: A high-entropy cryptographic secret.
+
+### 2. Configure Your Environment
+Create a `.env` file in your project root:
+
+```env
+ANCHOR_ENTITY_ID="your-org-prefix-project-name"
+ANCHOR_SECRET_KEY="your-secret-key-from-dashboard"
+ANCHOR_NETWORK_PROXY="https://app.anchorgovernance.tech/api"
+```
+
+### 3. Initialize & Link
+Run `anchor init` to bind your local workspace to the mesh. This will verify your credentials and sync your organization's custom policies.
 
 ---
 

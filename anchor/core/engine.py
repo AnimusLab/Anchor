@@ -156,7 +156,6 @@ class PolicyEngine:
         if self.verbose:
             click.secho(f"   [VERBOSE] Scanning {len(target_files)} files...", fg="cyan")
             for full_path in target_files:
-                click.echo(f"   Scanning: {full_path}")
                 scanned_count += 1
                 adapter = LanguageRegistry.get_adapter_for_file(full_path)
                 if adapter:
@@ -166,13 +165,13 @@ class PolicyEngine:
                             if len(content) > 2 * 1024 * 1024:
                                 ignored_files += 1
                                 continue
+                            
                             results = self.scan_file(content, full_path, adapter)
                             all_violations.extend(results.get("violations", []))
                             all_suppressed.extend(results.get("suppressed", []))
 
                             # --- Diamond Cage: behavioral scan on Python files ---
                             if cage and full_path.endswith(".py"):
-                                click.echo(f"      [CAGE] Behavioral scan starting for {full_path}...")
                                 context_dir = str(Path(full_path).parent)
                                 cage_result = cage.behavioral_scan(
                                     target_file=full_path,
@@ -181,9 +180,8 @@ class PolicyEngine:
                                 behavioral_hits.extend(
                                     cage_result.get("behavioral_violations", [])
                                 )
-                                click.echo(f"      [CAGE] Result: {cage_result.get('snapshot', {}).get('elapsed_ms', 0):.2f}ms")
                     except Exception as e:
-                        click.echo(f"[!] Error scanning {full_path}: {e}")
+                        pass
                 else:
                     ignored_files += 1
         else:
@@ -242,11 +240,15 @@ class PolicyEngine:
             return {"violations": [], "suppressed": []}
 
         for rule in self.rules:
+            if self.verbose:
+                import click
+                click.secho(f"    DEBUG: Rule {rule.get('id')} - match: {bool(rule.get('match'))}, pattern: {bool(rule.get('pattern'))}", fg="white", dim=True)
+            
             if rule.get("severity") == "ignore":
                 continue
 
             # --- MODE A: The "Rosetta Stone" (Smart AST) ---
-            if "match" in rule:
+            if rule.get("match"):
                 try:
                     match_config = rule["match"]
                     rule_type = match_config.get("type")

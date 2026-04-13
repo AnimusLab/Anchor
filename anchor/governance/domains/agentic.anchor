@@ -41,6 +41,7 @@ rules:
       permission scope.
     severity: "blocker"
     min_severity: "blocker"
+    runtime_pattern: '(?i)(bypass|override|admin|root|sudo|unauthorized|permissions)'
     min_mitigations: 1
     detection: ~
     primitives: ~
@@ -70,6 +71,7 @@ rules:
       trusted implicitly by the model's reasoning.
     severity: "blocker"
     min_severity: "error"
+    runtime_pattern: '(?i)(tool output|fabricated|interceptor|poisoned tool)'
     min_mitigations: 1
     detection: ~
     primitives: ~
@@ -100,6 +102,7 @@ rules:
       call any tool from that server.
     severity: "blocker"
     min_severity: "error"
+    runtime_pattern: '(?i)(mcp server|manifest|tool schema|protocol error)'
     min_mitigations: 1
     detection: ~
     primitives: ~
@@ -128,6 +131,7 @@ rules:
       of subsequent transactions before detection.
     severity: "error"
     min_severity: "warning"
+    runtime_pattern: '(?i)(persistent state|memory|vector store|long-term memory)'
     min_mitigations: 1
     detection: ~
     primitives: ~
@@ -161,6 +165,7 @@ rules:
       consumed by downstream agents.
     severity: "blocker"
     min_severity: "blocker"
+    runtime_pattern: '(?i)(multi-agent|swarm|delegate|orchestrator|trust boundary)'
     min_mitigations: 1
     detection: ~
     primitives: ~

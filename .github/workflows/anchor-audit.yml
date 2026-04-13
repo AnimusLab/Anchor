@@ -37,6 +37,7 @@ jobs:
           ANCHOR_STRICT: "true"
           ANCHOR_CONSTITUTION_URL: "file://${{ github.workspace }}/anchor/governance/constitution.anchor"
           ANCHOR_MITIGATION_URL: "file://${{ github.workspace }}/anchor/governance/mitigation.anchor"
+          ANCHOR_GOVERNANCE_LOCK_URL: "file://${{ github.workspace }}/anchor/governance/GOVERNANCE.lock"
 
       - name: Generate Step Summary
         if: always()

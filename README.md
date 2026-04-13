@@ -3,7 +3,7 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![PyPI](https://img.shields.io/badge/PyPI-anchor--audit-gold.svg)](https://pypi.org/project/anchor-audit/)
-[![Version: 5.0.0-alpha](https://img.shields.io/badge/Version-5.0.0--alpha-emerald.svg)]()
+[![Version: 5.0.0](https://img.shields.io/badge/Version-5.0.0-emerald.svg)]()
 
 > "Governance without enforcement is documentation."
 

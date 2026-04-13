@@ -43,6 +43,7 @@ rules:
       governance process catching up.
     severity: "warning"
     min_severity: "info"
+    runtime_pattern: '(?i)(repurpose|beyond scope|unvalidated|not approved for|unauthorized use|expanded context)'
     min_mitigations: 1
     detection: ~
     primitives: ~
@@ -76,6 +77,7 @@ rules:
       inquiry.
     severity: "warning"
     min_severity: "info"
+    runtime_pattern: '(?i)(drift|degrade|performance drop|accuracy decay|out-of-distribution|stale data)'
     min_mitigations: 1
     detection: ~
     primitives: ~
@@ -109,6 +111,7 @@ rules:
       belongs in shared rather than any single domain.
     severity: "error"
     min_severity: "warning"
+    runtime_pattern: '(?i)(reputational|conduct|brand damage|unethical advice|poor outcome|retail customer harm)'
     min_mitigations: 1
     detection: ~
     primitives: ~

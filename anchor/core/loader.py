@@ -35,6 +35,11 @@ class Rule:
     source_file: Optional[str] = None
     original_id: Optional[str] = None
     v3_id: Optional[str] = None
+    match: Optional[dict] = None
+    pattern: Optional[str] = None
+    runtime_pattern: Optional[str] = None
+    message: Optional[str] = None
+    mitigation: Optional[str] = None
 
 
 @dataclass
@@ -108,7 +113,7 @@ def verify_remote_lockfile(anchor_dir: Path, offline_attr: str = "warn") -> bool
             raise RuntimeError(f"Cannot verify governance integrity — remote unreachable: {e}")
         elif local_lock_path.exists():
             print("WARNING: Governance integrity could not be verified remotely — using local .anchor.lock")
-            lock_data = yaml.safe_load(local_lock_path.read_text())
+            lock_data = yaml.safe_load(local_lock_path.read_text(encoding="utf-8"))
         else:
             print("NOTE: No GOVERNANCE.lock found. Run anchor sync --restore to initialise governance integrity verification.")
             return False
@@ -144,7 +149,7 @@ def verify_remote_lockfile(anchor_dir: Path, offline_attr: str = "warn") -> bool
 
 def load_manifest(constitution_path: Path) -> ConstitutionManifest:
     """Read and parse constitution.anchor manifest."""
-    raw = yaml.safe_load(constitution_path.read_text())
+    raw = yaml.safe_load(constitution_path.read_text(encoding="utf-8"))
 
     if raw.get("type") != "manifest":
         raise ValueError(
@@ -176,7 +181,7 @@ def load_domain_file(
     if not file_path.exists():
         raise FileNotFoundError(f"Domain file not found: {file_path}")
 
-    raw = yaml.safe_load(file_path.read_text())
+    raw = yaml.safe_load(file_path.read_text(encoding="utf-8"))
     namespace = raw.get("namespace", "")
 
     if namespace != expected_namespace:
@@ -213,6 +218,11 @@ def load_domain_file(
             source_file=str(file_path),
             original_id=rule_data.get("original_id"),
             v3_id=rule_data.get("v3_id"),
+            match=rule_data.get("match"),
+            pattern=rule_data.get("pattern"),
+            runtime_pattern=rule_data.get("runtime_pattern"),
+            message=rule_data.get("message"),
+            mitigation=rule_data.get("mitigation"),
         )
         rules[rule_id] = rule
 
@@ -234,7 +244,7 @@ def load_policy(
     if not policy_path.exists():
         return {}, {}
 
-    raw = yaml.safe_load(policy_path.read_text()) or {}
+    raw = yaml.safe_load(policy_path.read_text(encoding="utf-8")) or {}
     overrides = {}
     custom_rules = {}
 
@@ -285,6 +295,10 @@ def load_policy(
             description=custom.get("description", ""),
             category=custom.get("category", "custom"),
             source_file="policy.anchor",
+            match=custom.get("match"),
+            pattern=custom.get("pattern"),
+            message=custom.get("message"),
+            mitigation=custom.get("mitigation"),
         )
         custom_rules[rule_id] = rule
 

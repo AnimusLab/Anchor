@@ -1,6 +1,6 @@
 # Anchor CLI — Command Reference
 
-Anchor V5.0.0 — Deterministic Governance for the AI-Native Stack.
+Anchor V5.0.1 — Deterministic Governance for the AI-Native Stack.
 
 🌐 **[anchorgovernance.tech](https://anchorgovernance.tech)**
 

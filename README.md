@@ -1,3 +1,12 @@
+---
+title: Anchor Governance SDK
+emoji: ⚓
+colorFrom: amber
+colorTo: slate
+sdk: static
+pinned: false
+---
+
 # Anchor — Governance Engine for AI
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
@@ -9,7 +18,7 @@
 
 Anchor is the **surveillance and enforcement layer for AI**. It audits AI-adjacent code against a cryptographically sealed constitutional rule set, mapping every violation to the exact statute it breaches — enforced deterministically via AST analysis, runtime interceptors, and behavioral verification (Diamond Cage).
 
-🌐 **[anchorgovernance.tech](https://anchorgovernance.tech)**
+**[anchorgovernance.tech](https://anchorgovernance.tech)**
 
 ---
 
@@ -206,7 +215,7 @@ No developer can weaken the rules to pass the audit. The hashes are baked into t
 - [Contributing Guide](CONTRIBUTING.md)
 - [Open an Issue](https://github.com/Tanishq1030/Anchor/issues)
 - [PyPI Package](https://pypi.org/project/anchor-audit/)
-- ✉️ [tan@anchorgovernance.tech](mailto:tan@anchorgovernance.tech)
+- [tan@anchorgovernance.tech](mailto:tan@anchorgovernance.tech)
 
 ---
 

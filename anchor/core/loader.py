@@ -21,6 +21,14 @@ import yaml
 # ── DATA CLASSES ─────────────────────────────────────────────
 
 @dataclass
+class Primitives:
+    action: str
+    object: str
+    context: str
+    authority: str
+    flow: str
+
+@dataclass
 class Rule:
     id: str
     name: str
@@ -40,6 +48,7 @@ class Rule:
     runtime_pattern: Optional[str] = None
     message: Optional[str] = None
     mitigation: Optional[str] = None
+    primitives: Optional[Primitives] = None
 
 
 @dataclass
@@ -204,6 +213,28 @@ def load_domain_file(
         rule_id = raw_id if raw_id.startswith(f"{namespace}-") \
             else f"{namespace}-{raw_id}"
 
+        # Parse Primitives (V5 Structural Logic)
+        primitives = None
+        if "primitives" in rule_data:
+            p = rule_data["primitives"] or {}
+            required = ["action", "object", "context", "authority", "flow"]
+            missing = [f for f in required if f not in p]
+            if missing:
+                # In development (PENDING seal), we warn. In strict, we fail.
+                msg = f"Rule {rule_id} has incomplete primitives. Missing: {missing}"
+                if seal == "sha256:PENDING":
+                    print(f"WARNING: {msg}")
+                else:
+                    raise ValueError(msg)
+            
+            primitives = Primitives(
+                action=p.get("action", "unknown"),
+                object=p.get("object", "unknown"),
+                context=p.get("context", "unknown"),
+                authority=p.get("authority", "unknown"),
+                flow=p.get("flow", "unknown")
+            )
+
         rule = Rule(
             id=rule_id,
             name=rule_data["name"],
@@ -223,6 +254,7 @@ def load_domain_file(
             runtime_pattern=rule_data.get("runtime_pattern"),
             message=rule_data.get("message"),
             mitigation=rule_data.get("mitigation"),
+            primitives=primitives,
         )
         rules[rule_id] = rule
 

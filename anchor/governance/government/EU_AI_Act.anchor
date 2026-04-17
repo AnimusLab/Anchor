@@ -46,6 +46,12 @@ rules:
       and CI/CD integration satisfy the technical continuous testing
       requirement. Fines up to €30 million or 6% of global annual
       revenue for non-compliance after August 2, 2026.
+    primitives:
+      action: maintain
+      object: risk_management_system
+      context: full_lifecycle
+      authority: regulatory_compliance_service
+      flow: continuous_testing_flow
 
   - id: "EU-ART10"
     name: "Data and Data Governance"
@@ -68,6 +74,12 @@ rules:
       every dataset used in credit scoring, AML, or fraud detection
       must have documented provenance, bias testing results, and
       residency records available for conformity assessment.
+    primitives:
+      action: ensure
+      object: data_representative_quality
+      context: bias_mitigation_context
+      authority: data_governance_framework
+      flow: training_data_lineage
 
   - id: "EU-ART11"
     name: "Technical Documentation — Before Market Placement"
@@ -90,6 +102,12 @@ rules:
       adopted. Anchor's audit report, sealed constitution, and
       violation taxonomy together constitute the technical
       documentation that feeds the EU conformity assessment process.
+    primitives:
+      action: generate
+      object: conformity_assessment_package
+      context: market_placement_gate
+      authority: product_provider
+      flow: technical_documentation_flow
 
   - id: "EU-ART12"
     name: "Record-Keeping — Auto-Generated Tamper-Evident Logs"
@@ -115,6 +133,12 @@ rules:
       This is the most technically specific Article in the EU AI Act
       and the one most directly satisfied by Anchor's Decision Audit
       Chain architecture.
+    primitives:
+      action: generate
+      object: tamper_evident_logs
+      context: automatic_log_retention
+      authority: decision_audit_chain
+      flow: audit_entry_persistence
 
   - id: "EU-ART13"
     name: "Transparency — Information to Deployers"
@@ -140,6 +164,12 @@ rules:
       enough information for the deploying institution — and
       ultimately the affected individual — to understand why the
       decision was made.
+    primitives:
+      action: provide
+      object: operational_transparency
+      context: high_risk_deployment
+      authority: provider
+      flow: usage_instructions
 
   - id: "EU-ART14"
     name: "Human Oversight — Intervention and Override"
@@ -164,6 +194,12 @@ rules:
       adequate context, or under time pressure that makes genuine
       review impossible does not satisfy Article 14. The oversight
       mechanism must be designed to be practically effective.
+    primitives:
+      action: allow
+      object: human_intervention
+      context: effective_oversight_control
+      authority: human_reviewer
+      flow: oversight_override_flow
 
   - id: "EU-ART15"
     name: "Accuracy, Robustness and Cybersecurity"
@@ -188,6 +224,12 @@ rules:
       context. Anchor's SEC- and AGT- domain rules provide the
       technical detection layer for every adversarial attack category
       enumerated in Article 15.
+    primitives:
+      action: achieve
+      object: system_robustness
+      context: adversarial_attack_resilience
+      authority: security_orchestration
+      flow: cybersecurity_protection
 
   - id: "EU-ART16"
     name: "Provider Obligations — Complete List"
@@ -210,6 +252,12 @@ rules:
       placement, affix CE marking where required, appoint an
       authorised representative in the EU where applicable, and
       cooperate with national competent authorities on request.
+    primitives:
+      action: conduct
+      object: conformity_assessment
+      context: EU_database_registration
+      authority: authorized_provider
+      flow: compliance_evidence_flow
 
   - id: "EU-ART26"
     name: "Deployer Obligations — Monitoring and Oversight"
@@ -233,6 +281,12 @@ rules:
       the system processes personal data. The deployer bears
       regulatory liability for every decision the system makes
       in their deployment context.
+    primitives:
+      action: monitor
+      object: system_anomalies
+      context: operational_oversight
+      authority: deploying_institution
+      flow: incident_notification_flow
 
   - id: "EU-ART99"
     name: "Penalties — No Safe Harbour After August 2026"
@@ -256,3 +310,9 @@ rules:
       inspections, demand documentation, and impose fines without
       prior warning. The only defense is documented, demonstrable
       compliance — not intent to comply.
+    primitives:
+      action: mitigate
+      object: penalty_exposure
+      context: non_compliance_liability
+      authority: supervising_authority
+      flow: compliance_attestation_flow

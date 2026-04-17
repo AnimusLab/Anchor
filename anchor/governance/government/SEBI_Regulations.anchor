@@ -42,6 +42,12 @@ rules:
       SEBI requires that senior management understand and be
       accountable for every AI tool deployed in trading, advisory,
       and compliance functions.
+    primitives:
+      action: designate
+      object: senior_management_responsibility
+      context: market_participation
+      authority: board_of_directors
+      flow: oversight_accountability_flow
 
   - id: "SEBI-002"
     name: "Model Validation, Documentation and Interpretability"
@@ -63,6 +69,12 @@ rules:
       specifically requires that AI model decisions be capable of
       being explained to the regulator, the firm's board, and
       affected investors.
+    primitives:
+      action: explain
+      object: model_logic
+      context: jurisdictional_audit
+      authority: registered_entity
+      flow: reasoning_traceability_flow
 
   - id: "SEBI-003"
     name: "Periodic Accuracy Reporting to SEBI"
@@ -83,6 +95,12 @@ rules:
       in a structured format. Anchor's audit report output provides
       the structured compliance evidence that satisfies this periodic
       reporting obligation.
+    primitives:
+      action: report
+      object: ai_accuracy_results
+      context: periodic_supervisory_filing
+      authority: market_participant
+      flow: accuracy_disclosure_flow
 
   - id: "SEBI-004"
     name: "5-Year Input and Output Data Retention"
@@ -103,6 +121,12 @@ rules:
       period for most SEBI enforcement actions — data retention for
       this period ensures that the firm can defend against any
       regulatory inquiry within that window.
+    primitives:
+      action: retain
+      object: input_output_data
+      context: five_year_statutory_limitation
+      authority: decision_audit_chain
+      flow: tamper_evident_persistence
 
   - id: "SEBI-005"
     name: "Segregated Testing Environment Before Deployment"
@@ -124,6 +148,12 @@ rules:
       this because live market conditions — volatility spikes,
       liquidity crises, unusual order patterns — may expose model
       failures that standard testing environments do not surface.
+    primitives:
+      action: gate
+      object: ai_deployment_artifact
+      context: segregated_testing_environment
+      authority: governance_enforcer
+      flow: shadow_testing_flow
 
   - id: "SEBI-006"
     name: "Continuous Monitoring as AI Models Evolve"
@@ -145,6 +175,12 @@ rules:
       was validated at deployment is not necessarily the same model
       six months later, and SEBI requires that organizations have
       systems in place to detect and respond to that drift.
+    primitives:
+      action: detect
+      object: model_behavioral_drift
+      context: post_deployment_operation
+      authority: anchor_runtime_service
+      flow: continuous_evaluation_flow
 
   - id: "SEBI-007"
     name: "Investor Disclosures for AI-Driven Decisions"
@@ -164,6 +200,12 @@ rules:
       comprehensible to investors, not just technical staff. Investor
       grievance mechanisms for AI-driven decisions must be established
       and documented.
+    primitives:
+      action: disclose
+      object: ai_decision_features
+      context: investor_grievance_mechanism
+      authority: market_participant
+      flow: investor_transparency_flow
 
   - id: "SEBI-008"
     name: "No Discriminatory AI Outputs — Fairness Mandatory"
@@ -184,6 +226,12 @@ rules:
       required. Training courses on data bias are mandatory for
       data scientists developing AI systems for SEBI-regulated
       market participants.
+    primitives:
+      action: audit
+      object: discriminatory_outputs
+      context: data_quality_governance
+      authority: predictive_model
+      flow: fair_outcomes_egress
 
   - id: "SEBI-010"
     name: "Third-Party AI Vendor Accountability — No Transfer"
@@ -205,3 +253,9 @@ rules:
       regulatory compliance obligations — but even contractual
       protections do not transfer the regulatory liability that
       SEBI places on the market participant.
+    primitives:
+      action: sign
+      object: third_party_decision_audit
+      context: non_transferable_liability
+      authority: deploying_firm_key
+      flow: liability_ownership_flow

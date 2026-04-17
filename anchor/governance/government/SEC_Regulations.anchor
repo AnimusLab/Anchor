@@ -51,6 +51,12 @@ rules:
       documented on paper. Anchor's sealed, version-controlled
       governance stack provides the technical evidence that
       governance is active and enforceable.
+    primitives:
+      action: report
+      object: material_ai_risk
+      context: quarterly_filing
+      authority: registrant
+      flow: disclosure_flow
 
   - id: "USSEC-002"
     name: "AI Washing — Securities Fraud Exposure"
@@ -77,6 +83,12 @@ rules:
       exists, works as described, and is governed as claimed.
       Anchor's audit chain provides the technical proof that
       governance claims are substantiated.
+    primitives:
+      action: substantiates
+      object: governance_maturity
+      context: securities_fraud_exposure
+      authority: registered_entity
+      flow: substantiation_chain
 
   - id: "USSEC-003"
     name: "AI in Investment Advice — Fiduciary Obligations"
@@ -103,6 +115,12 @@ rules:
       with the customer's investment profile and risk tolerance.
       A black-box AI generating investment advice without
       explainability controls fails Regulation Best Interest.
+    primitives:
+      action: explain
+      object: ai_investment_recommendation
+      context: fiduciary_obligation
+      authority: investment_adviser
+      flow: reason_code_egress
 
   - id: "USSEC-004"
     name: "AI Model Risk in Trading Systems — Audit Trail"
@@ -128,6 +146,12 @@ rules:
       model version cannot satisfy SEC examination requirements
       and creates significant regulatory exposure in the event
       of a market disruption inquiry.
+    primitives:
+      action: reconstruct
+      object: ai_assisted_trading_decision
+      context: SEC_examination
+      authority: market_surveillance
+      flow: audit_trail_reconstruction
 
   - id: "USSEC-005"
     name: "Cybersecurity of AI Systems — SEC Rule 10"
@@ -155,3 +179,9 @@ rules:
       threats. Anchor's SEC- and AGT- domain rules satisfy the
       technical detection requirement for AI-specific cybersecurity
       under SEC Rule 10.
+    primitives:
+      action: protect
+      object: ai_infrastructure
+      context: SEC_Rule_10
+      authority: registered_firm
+      flow: attack_vector_mitigation

@@ -24,7 +24,12 @@ rules:
     runtime_pattern: '(?i)(I apologize|not found|fabricated|fictitious|error 404|non-existent)'
     min_mitigations: 1
     detection: ~
-    primitives: ~
+    primitives:
+      action: withhold
+      object: truthful_information
+      context: factually_incorrect
+      authority: generative_model
+      flow: output_hallucination
 
   - id: "ALN-002"
     name: "Goal Misrepresentation"
@@ -38,4 +43,9 @@ rules:
     runtime_pattern: '(?i)(diverge|misaligned|emergent behavior|optimize for|unintended)'
     min_mitigations: 1
     detection: ~
-    primitives: ~
+    primitives:
+      action: diverge
+      object: declared_purpose
+      context: emergent_behavior
+      authority: autonomous_system
+      flow: misaligned_pursuit

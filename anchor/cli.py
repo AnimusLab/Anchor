@@ -23,7 +23,7 @@ from anchor.core.crypto import sign_chain_hash
 
 
 from anchor import __version__
-__version__ = "4.3.5"
+__version__ = "5.0.2"
 
 @click.group()
 @click.version_option(version=__version__)
@@ -67,7 +67,7 @@ def cli():
 @click.option('--policy-name', default='policy.anchor', help='Name for your project policy file.')
 def init(domains, frameworks, regulators, sandbox, all_items, force, no_sign, policy_name):
     """
-    Initialise Anchor V4 governance in a repository.
+    Initialise Anchor V5 governance in a repository.
 
     Creates .anchor/ with the requested domain, framework, and regulator files.
     Always loads all core domains: security, ethics, shared, privacy, alignment, legal, operational, supply-chain, agentic.
@@ -159,7 +159,7 @@ def init(domains, frameworks, regulators, sandbox, all_items, force, no_sign, po
     dot_anchor = ".anchor"
 
     click.echo("")
-    click.secho("Anchor V4 - init", fg="cyan", bold=True)
+    click.secho("Anchor V5 - init", fg="cyan", bold=True)
     click.echo("")
 
     if all_items:

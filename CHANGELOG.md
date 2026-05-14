@@ -2,6 +2,20 @@
 
 All notable changes to the Anchor governance engine are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [5.0.2] — 2026-05-14
+
+### Added
+- **Cryptographic Enforcement Kernel** — Transitioned Anchor from a "governance engine" to a deterministic enforcement kernel.
+- **Zero Intent Drift Mandate** — Integrated mathematical drift $D < \epsilon$ as the core security objective.
+- **V5 Primitive Vocabulary** — Deployed the 5-node primitive set (`ACTION`, `OBJECT`, `CONTEXT`, `AUTHORITY`, `FLOW`) across all regulatory statutes.
+- **The Anchor Healer** — Autonomous remediation node for generating mathematically verified patches (MVP).
+- **Diamond Cage (V5)** — Enhanced WASM sandbox with Differential Behavioral Verification (DBV).
+- **Decision Audit Chain (DAC)** — HMAC-signed, hash-chained, append-only ledger for all autonomous AI decisions.
+
+### Changed
+- **README 2.0** — Complete rewrite of the repository landing page to reflect the "Regulatory Sarcophagus" aesthetic.
+- **Version Synchronization** — Unified version 5.0.2 across CLI, Constitution, and SDK.
+
 ---
 
 ## [5.0.0-alpha] — 2026-04-13

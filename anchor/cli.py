@@ -23,7 +23,7 @@ from anchor.core.crypto import sign_chain_hash
 
 
 from anchor import __version__
-__version__ = "5.0.2"
+__version__ = "5.0.3"
 
 @click.group()
 @click.version_option(version=__version__)
@@ -159,7 +159,7 @@ def init(domains, frameworks, regulators, sandbox, all_items, force, no_sign, po
     dot_anchor = ".anchor"
 
     click.echo("")
-    click.secho("Anchor V5 - init", fg="cyan", bold=True)
+    click.secho("Anchor V5.0.3 - init", fg="cyan", bold=True)
     click.echo("")
 
     if all_items:

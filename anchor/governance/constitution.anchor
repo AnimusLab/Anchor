@@ -4,7 +4,7 @@
 # ─────────────────────────────────────────────────────────────
 
 type: manifest
-version: "5.0.2"
+version: "5.0.3"
 anchor_version: ">=5.0.0"
 name: "Anchor Constitutional Root"
 

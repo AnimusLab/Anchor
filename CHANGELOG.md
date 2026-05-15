@@ -2,7 +2,7 @@
 
 All notable changes to the Anchor governance engine are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [5.0.2] — 2026-05-14
+## [5.0.3] — 2026-05-15
 
 ### Added
 - **Cryptographic Enforcement Kernel** — Transitioned Anchor from a "governance engine" to a deterministic enforcement kernel.

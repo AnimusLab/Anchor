@@ -1,7 +1,7 @@
 """
 anchor/runtime/__init__.py
 
-Public API for the Anchor Interceptor SDK (Layer 1, V5.0.2).
+Public API for the Anchor Interceptor SDK (Layer 1, V5.0.3).
 
 One import activates full runtime governance across ALL AI providers:
 

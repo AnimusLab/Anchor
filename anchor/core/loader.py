@@ -309,9 +309,28 @@ def load_policy(
 
         overrides[rule_id] = new_severity
 
-    rules = raw.get("custom_rules") or raw.get("rules") or []
+    rules = raw.get("custom_rules") or []
+    raw_rules = raw.get("rules")
+    if isinstance(raw_rules, list):
+        rules.extend(raw_rules)
+    elif isinstance(raw_rules, dict):
+        # Map them as overrides if in dictionary form
+        for r_id, r_val in raw_rules.items():
+            if r_id in existing_rules:
+                new_severity = r_val.get("severity") if isinstance(r_val, dict) else r_val
+                if new_severity:
+                    new_severity = new_severity.lower()
+                    existing_severity = existing_rules[r_id].severity.lower()
+                    min_severity = existing_rules[r_id].min_severity.lower()
+                    if severity_gte(new_severity, existing_severity) and severity_gte(new_severity, min_severity):
+                        overrides[r_id] = new_severity
+
     for custom in rules:
-        rule_id = custom["id"]
+        if not isinstance(custom, dict):
+            continue
+        rule_id = custom.get("id")
+        if not rule_id:
+            continue
 
         if not rule_id.startswith(custom_prefix):
             raise ValueError(
@@ -320,7 +339,7 @@ def load_policy(
 
         rule = Rule(
             id=rule_id,
-            name=custom["name"],
+            name=custom.get("name", "Custom Rule"),
             namespace=custom_prefix,
             severity=custom.get("severity", "error"),
             min_severity=custom.get("min_severity", "warning"),

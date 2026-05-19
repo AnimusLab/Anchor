@@ -44,7 +44,12 @@ rules:
     runtime_pattern: '(?i)(bypass|override|admin|root|sudo|unauthorized|permissions)'
     min_mitigations: 1
     detection: ~
-    primitives: ~
+    primitives:
+      action: execute
+      object: unauthorized_action
+      context: intent_failure
+      authority: agentic_reasoning
+      flow: bypass_enforcement
 
   - id: "AGT-002"
     name: "Tool Chain Manipulation and Injection"
@@ -74,7 +79,12 @@ rules:
     runtime_pattern: '(?i)(tool output|fabricated|interceptor|poisoned tool)'
     min_mitigations: 1
     detection: ~
-    primitives: ~
+    primitives:
+      action: manipulate
+      object: tool_chain_feedback
+      context: poisoned_feedback_loop
+      authority: external_attacker
+      flow: corrupted_reasoning
 
   - id: "AGT-003"
     name: "MCP Server Supply Chain Compromise"
@@ -105,7 +115,12 @@ rules:
     runtime_pattern: '(?i)(mcp server|manifest|tool schema|protocol error)'
     min_mitigations: 1
     detection: ~
-    primitives: ~
+    primitives:
+      action: poison
+      object: tool_schemas
+      context: compromised_mcp_server
+      authority: malicious_integrated_service
+      flow: reasoning_redirection
 
   - id: "AGT-004"
     name: "Agent State Persistence Poisoning"
@@ -134,7 +149,12 @@ rules:
     runtime_pattern: '(?i)(persistent state|memory|vector store|long-term memory)'
     min_mitigations: 1
     detection: ~
-    primitives: ~
+    primitives:
+      action: inject
+      object: persistent_memory
+      context: behavioral_backdoor
+      authority: adversarial_actor
+      flow: long_term_compromise
 
   - id: "AGT-005"
     name: "Multi-Agent Trust Boundary Violations"
@@ -168,4 +188,9 @@ rules:
     runtime_pattern: '(?i)(multi-agent|swarm|delegate|orchestrator|trust boundary)'
     min_mitigations: 1
     detection: ~
-    primitives: ~
+    primitives:
+      action: propagate
+      object: malicious_behavior
+      context: swarm_implicit_trust
+      authority: compromised_agent
+      flow: cascading_failure

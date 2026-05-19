@@ -46,6 +46,12 @@ rules:
       decision level why the algorithm reached its conclusions.
       This is the most directly enforced AI compliance obligation
       in US financial services.
+    primitives:
+      action: explain
+      object: principal_reasons_for_denial
+      context: credit_application_context
+      authority: generative_model
+      flow: adverse_action_egress
 
   - id: "CFPB-002"
     name: "AI Credit Models — Algorithm Not an Excuse"
@@ -67,6 +73,12 @@ rules:
       explain its AI credit decisions at the individual level
       is in violation of Regulation B regardless of the model's
       technical architecture.
+    primitives:
+      action: explain
+      object: individual_decision_level
+      context: Regulation_B_compliance
+      authority: generative_model
+      flow: reasoning_code_trace
 
   - id: "CFPB-003"
     name: "Prohibited Basis Discrimination — ECOA Enforcement"
@@ -92,6 +104,12 @@ rules:
       a facially neutral AI model that produces systematically
       worse outcomes for protected groups is a ECOA violation
       regardless of how it was designed.
+    primitives:
+      action: discriminate
+      object: decision_outcome
+      context: disparate_impact_context
+      authority: predictive_model
+      flow: biased_inference
 
   - id: "CFPB-004"
     name: "Model Risk Management — Documented Validation"
@@ -114,3 +132,9 @@ rules:
       initial deployment. Model risk management for AI credit
       models is subject to the same supervisory scrutiny as
       traditional statistical models under OCC SR 11-7.
+    primitives:
+      action: validate
+      object: AI_credit_model
+      context: ongoing_monitoring
+      authority: supervisory_guidance
+      flow: validation_artifact_egress

@@ -71,6 +71,13 @@ rules:
         synonym_coverage: partial
         rationale: "ECOA / FHA Sec 804"
 
+    primitives:
+      action: discriminate
+      object: decision_outcomes
+      context: prohibited_proxies
+      authority: predictive_model
+      flow: biased_inference
+
   - id: "ETH-002"
     name: "Explainability Absence"
     source: "FINOS"
@@ -91,6 +98,12 @@ rules:
       - "FeatureAttribution"
     # Legacy runtime_pattern kept for conversational mode only
     runtime_pattern: '(?i)(I cannot explain|black-box|no reasoning|unexplainable)'
+    primitives:
+      action: withhold
+      object: machine_readable_explanations
+      context: structured_output
+      authority: black_box_model
+      flow: opaque_decisioning
 
   - id: "ETH-003"
     name: "Human Oversight Removal"
@@ -104,7 +117,12 @@ rules:
     runtime_pattern: '(?i)(no human|fully automated|autonomous decision|bypass review)'
     min_mitigations: 1
     detection: ~
-    primitives: ~
+    primitives:
+      action: bypass
+      object: human_review
+      context: autonomous_decision
+      authority: agentic_workflow
+      flow: automated_control_loop
 
   - id: "ETH-004"
     name: "Toxic Output"
@@ -118,4 +136,9 @@ rules:
     runtime_pattern: '(?i)(hate|kill|murder|bomb|terrorist|slur|offensive)'
     min_mitigations: 1
     detection: ~
-    primitives: ~
+    primitives:
+      action: generate
+      object: harmful_content
+      context: model_response
+      authority: generative_model
+      flow: egress_stream

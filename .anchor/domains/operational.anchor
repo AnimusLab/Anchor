@@ -24,4 +24,9 @@ rules:
     runtime_pattern: '(?i)(timeout|rate limit|overload|denial of service|dos|resource exhaustion|infinite loop|recursion|slow response)'
     min_mitigations: 1
     detection: ~
-    primitives: ~
+    primitives:
+      action: exhaust
+      object: system_resources
+      context: critical_infrastructure
+      authority: malicious_request_stream
+      flow: denial_of_service

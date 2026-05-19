@@ -45,6 +45,12 @@ rules:
       occurred for specific decisions does not satisfy this requirement.
       The FCA has indicated that oversight records will be a primary
       focus of AI-related supervisory visits.
+    primitives:
+      action: demonstrate
+      object: human_oversight
+      context: supervisory_review
+      authority: human_reviewer
+      flow: oversight_record_egress
 
   - id: "FCA-002"
     name: "Model Version Traceability Per Decision"
@@ -66,6 +72,12 @@ rules:
       must remain traceable to the model version that produced them.
       This requirement is a prerequisite for any post-hoc supervisory
       review of AI-assisted decisions.
+    primitives:
+      action: respond
+      object: model_version_query
+      context: post_hoc_supervisory_review
+      authority: decision_audit_chain
+      flow: version_traceability_flow
 
   - id: "FCA-003"
     name: "CCO Personal Liability — AI Governance Failures"
@@ -91,6 +103,12 @@ rules:
       which Anchor's sealed audit chain provides. A CCO who cannot
       produce evidence of active AI governance when the FCA asks
       is personally exposed.
+    primitives:
+      action: produce
+      object: active_governance_evidence
+      context: fitness_and_propriety
+      authority: named_compliance_officer
+      flow: governance_attestation_flow
 
   - id: "FCA-004"
     name: "AML AI Output Cryptographic Verification"
@@ -114,6 +132,12 @@ rules:
       that would survive regulatory scrutiny. This is particularly
       critical in automated AML pipelines where human review
       occurs after flagging rather than before.
+    primitives:
+      action: verify
+      object: aml_flagging_result
+      context: suspect_activity_report
+      authority: automated_aml_pipeline
+      flow: cryptographic_verification_flow
 
   - id: "FCA-005"
     name: "Consumer Duty — Good Outcomes for Retail Customers"
@@ -140,3 +164,9 @@ rules:
       that systematically disadvantage retail customers violates
       Consumer Duty regardless of technical compliance with
       other regulatory requirements.
+    primitives:
+      action: deliver
+      object: good_customer_outcomes
+      context: retail_customer_interaction
+      authority: deploying_institution
+      flow: conduct_quality_flow

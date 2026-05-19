@@ -31,8 +31,12 @@ rules:
     min_severity: "error"
     runtime_pattern: '(?i)(ignore previous|system prompt|jailbreak|DAN|Developer Mode|translate to|repeat after me|you are now)'
     min_mitigations: 1
-    detection: ~
-    primitives: ~
+    primitives:
+      action: inject
+      object: instructions
+      context: untrusted_prompt
+      authority: external_actor
+      flow: instruction_stack
 
   - id: "SEC-002"
     name: "Data Poisoning"
@@ -54,7 +58,12 @@ rules:
     runtime_pattern: '(?i)(poisoned|corrupted data|fine-tuning trigger|backdoor|malicious label)'
     min_mitigations: 1
     detection: ~
-    primitives: ~
+    primitives:
+      action: corrupt
+      object: training_data
+      context: fine_tuning_pipeline
+      authority: malicious_actor
+      flow: data_pipeline
 
   - id: "SEC-003"
     name: "Model Tampering"
@@ -77,7 +86,12 @@ rules:
     runtime_pattern: '(?i)(weights|hashes|tamper|corrupt model|malicious architecture)'
     min_mitigations: 1
     detection: ~
-    primitives: ~
+    primitives:
+      action: modify
+      object: model_weights
+      context: model_storage
+      authority: unauthorized_actor
+      flow: artifact_mutation
 
   - id: "SEC-004"
     name: "Credential Harvesting"
@@ -96,6 +110,12 @@ rules:
       type: "function_call"
       name: "os.environ"
     mitigation: "Use os.environ.get('KEY', default) to fetch specific secrets."
+    primitives:
+      action: access
+      object: api_credentials
+      context: environment_variables
+      authority: ai_agent
+      flow: exfiltration_path
 
   - id: "SEC-005"
     name: "Authorization Bypass"
@@ -117,7 +137,12 @@ rules:
     runtime_pattern: '(?i)(unauthorized|escalate|bypass check|skip auth|access denied)'
     min_mitigations: 1
     detection: ~
-    primitives: ~
+    primitives:
+      action: skip
+      object: permission_checks
+      context: tool_chaining
+      authority: model_agent
+      flow: privilege_escalation
 
   - id: "SEC-006"
     name: "Raw Network Access"
@@ -136,10 +161,13 @@ rules:
       RBI Digital Lending Directions and EU AI Act data requirements.
     severity: "error"
     min_severity: "warning"
-    runtime_pattern: '(?i)(unproxied|direct api|raw request|localhost|internal network)'
-    min_mitigations: 1
     detection: ~
-    primitives: ~
+    primitives:
+      action: egress
+      object: outbound_telemetry
+      context: unproxied_request
+      authority: ai_component
+      flow: direct_network
 
   - id: "SEC-007"
     name: "Shell Injection"
@@ -156,6 +184,12 @@ rules:
       type: "function_call"
       name: "os.system"
     mitigation: "Use subprocess with shell=False and list arguments."
+    primitives:
+      action: execute
+      object: shell_commands
+      context: untrusted_input
+      authority: sub_process
+      flow: control_flow
 
   - id: "SEC-008"
     name: "Insecure Deserialization"
@@ -168,8 +202,12 @@ rules:
     severity: "error"
     min_severity: "warning"
     min_mitigations: 1
-    detection: ~
-    primitives: ~
+    primitives:
+      action: process
+      object: serialized_data
+      context: untrusted_input
+      authority: data_parser
+      flow: object_instantiation
 
   - id: "SEC-009"
     name: "SQL Injection"
@@ -182,6 +220,12 @@ rules:
     min_severity: "error"
     runtime_pattern: "(?i)(SELECT.*FROM.*WHERE.*=.*'.*f-string|INSERT INTO.*VALUES.*%s)"
     mitigation: "Use parameterized queries or ORMs."
+    primitives:
+      action: concatenate
+      object: sql_queries
+      context: dynamic_query
+      authority: tool_integrated_code
+      flow: database_ingress
 
   - id: "SEC-010"
     name: "Insecure Python Execution"
@@ -194,6 +238,12 @@ rules:
     min_severity: "blocker"
     runtime_pattern: '(?i)(eval\(|exec\(|__import__\(|getattr\(.*"eval"|getattr\(.*"exec")'
     mitigation: "Use restricted Python sandboxes (Diamond Cage) instead of eval/exec."
+    primitives:
+      action: execute
+      object: python_code
+      context: dynamic_imports
+      authority: generative_model
+      flow: runtime_exec
 
   - id: "SEC-011"
     name: "Supply Chain Attack"
@@ -203,15 +253,29 @@ rules:
     description: >
       Compromised dependencies, model repositories, MCP servers, or
       third-party AI tool integrations introduce malicious code or
-      model artifacts into the AI pipeline. Supply chain attacks in
-      AI systems are particularly difficult to detect because the
-      compromise occurs upstream — a poisoned model checkpoint from
-      a public repository, a compromised MCP server injecting malicious
-      tool responses, or a tampered dependency that exfiltrates model
-      inputs to an attacker-controlled endpoint. Every external AI
-      component is a potential supply chain attack surface.
+      model artifacts into the AI pipeline.
     severity: "blocker"
     min_severity: "error"
     min_mitigations: 1
     detection: ~
-    primitives: ~
+    primitives:
+      action: compromise
+      object: upstream_dependency
+      context: model_repository
+      authority: compromised_vendor
+      flow: supply_chain_flow
+
+  - id: "SEC-012"
+    name: "Governance Configuration Modification"
+    source: "Anchor-V5"
+    category: "security"
+    description: "Unauthorized or unrestricted modification of foundational governance configuration files and policy manifests."
+    severity: "blocker"
+    min_severity: "blocker"
+    min_mitigations: 1
+    primitives:
+      action: modify
+      object: governance_configuration
+      context: unrestricted
+      authority: unauthorised_actor
+      flow: direct_mutation

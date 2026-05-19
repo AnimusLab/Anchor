@@ -33,7 +33,12 @@ rules:
     min_mitigations: 1
     runtime_pattern: '(?i)(\b\d{3}-\d{2}-\d{4}\b|\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b|\b(?:\d[ -]??){13,16}\b)'
     detection: ~
-    primitives: ~
+    primitives:
+      action: transmit
+      object: personally_identifiable_info
+      context: third_party_hosted_model
+      authority: unauthorized_data_flow
+      flow: pii_leakage
 
   - id: "PRV-002"
     name: "Vector Inversion Attack"
@@ -47,7 +52,12 @@ rules:
     runtime_pattern: '(?i)(embedding|vector store|inversion|reconstruct|recover sensitive)'
     min_mitigations: 1
     detection: ~
-    primitives: ~
+    primitives:
+      action: reconstruct
+      object: original_sensitive_data
+      context: embedding_extraction
+      authority: adversarial_inference
+      flow: inversion_attack
 
   - id: "PRV-003"
     name: "Cross-context Data Bleed"
@@ -61,4 +71,9 @@ rules:
     runtime_pattern: '(?i)(cross-context|bleed|contamination|shared session|tenant|leakage from session)'
     min_mitigations: 1
     detection: ~
-    primitives: ~
+    primitives:
+      action: contaminate
+      object: user_session_context
+      context: cross_tenant_leakage
+      authority: shared_state_artifact
+      flow: context_bleeding

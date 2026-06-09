@@ -153,6 +153,32 @@ class PolicyEngine:
         all_suppressed   = []
         behavioral_hits  = []
 
+        runtime_integrated = False
+        ai_libraries_detected = False
+
+        def check_integrations(file_content: bytes):
+            nonlocal runtime_integrated, ai_libraries_detected
+            try:
+                content_str = file_content.decode("utf-8", errors="ignore")
+                if ("import anchor.runtime" in content_str or
+                    "from anchor import runtime" in content_str or
+                    "@anchor.enforce" in content_str or
+                    "@enforce" in content_str or
+                    "require('anchor-runtime')" in content_str or
+                    'require("anchor-runtime")' in content_str or
+                    ("import" in content_str and "anchor-runtime" in content_str)):
+                    runtime_integrated = True
+
+                for ai_lib in ["openai", "anthropic", "cohere", "langchain", "llama_index", "google.generativeai"]:
+                    if (f"import {ai_lib}" in content_str or
+                        f"from {ai_lib}" in content_str or
+                        f"require('{ai_lib}')" in content_str or
+                        f'require("{ai_lib}")' in content_str or
+                        ("import" in content_str and ai_lib in content_str)):
+                        ai_libraries_detected = True
+            except:
+                pass
+
         if self.verbose:
             click.secho(f"   [VERBOSE] Scanning {len(target_files)} files...", fg="cyan")
             for full_path in target_files:
@@ -166,6 +192,7 @@ class PolicyEngine:
                                 ignored_files += 1
                                 continue
                             
+                            check_integrations(content)
                             results = self.scan_file(content, full_path, adapter)
                             all_violations.extend(results.get("violations", []))
                             all_suppressed.extend(results.get("suppressed", []))
@@ -195,6 +222,7 @@ class PolicyEngine:
                                 if len(content) > 2 * 1024 * 1024:
                                     ignored_files += 1
                                     continue
+                                check_integrations(content)
                                 results = self.scan_file(content, full_path, adapter)
                                 all_violations.extend(results.get("violations", []))
                                 all_suppressed.extend(results.get("suppressed", []))
@@ -214,6 +242,41 @@ class PolicyEngine:
                             pass
                     else:
                         ignored_files += 1
+
+        # Evaluate runtime integration requirements if AI usage was detected
+        if ai_libraries_detected and not runtime_integrated:
+            for rule in self.rules:
+                is_runtime_rule = False
+                r_id = rule.get("id", "")
+                
+                if rule.get("obligation_type") in ("provenance", "audit"):
+                    is_runtime_rule = True
+                elif r_id.startswith("ETH-"):
+                    is_runtime_rule = True
+                elif rule.get("runtime_pattern") and not rule.get("match") and not rule.get("pattern"):
+                    is_runtime_rule = True
+                elif rule.get("maps_to") == "DAC-AuditEntry" or (isinstance(rule.get("maps_to"), list) and "DAC-AuditEntry" in rule.get("maps_to")):
+                    is_runtime_rule = True
+                
+                if is_runtime_rule:
+                    matching_ids = {r_id}
+                    if hasattr(self, "all_rules") and self.all_rules:
+                        for other in self.all_rules:
+                            m_to = other.get('maps_to')
+                            if m_to == r_id or (isinstance(m_to, list) and r_id in m_to):
+                                matching_ids.add(other['id'])
+                    v_id = ", ".join(sorted(list(matching_ids)))
+                    
+                    all_violations.append({
+                        "id": v_id,
+                        "name": rule.get("name", "Runtime Governance Check"),
+                        "description": rule.get("description", "This rule requires active runtime interception to enforce compliance."),
+                        "message": "Runtime integration missing. To enforce this rule and satisfy compliance, you must import anchor.runtime at your application entrypoint.",
+                        "mitigation": rule.get("mitigation") or "Add 'import anchor.runtime' at the entrypoint of your application.",
+                        "file": "constitution.anchor",
+                        "line": 1,
+                        "severity": rule.get("severity", "error")
+                    })
 
         if self.verbose:
             click.secho(f"   Scan Prep Complete: {len(target_files)} files found.", fg="green", dim=True)
@@ -253,6 +316,49 @@ class PolicyEngine:
                     match_config = rule["match"]
                     rule_type = match_config.get("type")
                     s_expr = ""
+
+                    # ── NEW: DAG Call-Sequence Prerequisite Check ──────────────
+                    # Rule YAML shape:
+                    #   match:
+                    #     type: call_sequence
+                    #     action: execute_trade      # the gated function
+                    #     gate:   margin_check        # must be called first
+                    #     scope:  function            # "function" (default) or "file"
+                    if rule_type == "call_sequence":
+                        action_name = match_config.get("action")
+                        gate_name   = match_config.get("gate")
+                        scope       = match_config.get("scope", "function")
+
+                        if action_name and gate_name:
+                            decoded = content.decode('utf-8', errors='ignore')
+                            dag_violations = self._check_call_sequence(
+                                tree, adapter, decoded, file_path,
+                                action_name, gate_name, scope
+                            )
+                            for v in dag_violations:
+                                # Aggregate IDs
+                                matching_ids = {rule['id']}
+                                for other in self.all_rules:
+                                    m_to = other.get('maps_to')
+                                    if m_to == rule['id'] or (isinstance(m_to, list) and rule['id'] in m_to):
+                                        matching_ids.add(other['id'])
+                                v_id = ", ".join(sorted(matching_ids))
+                                violations.append({
+                                    "id": v_id,
+                                    "name": rule.get("name", "Call-Sequence Violation"),
+                                    "description": rule.get(
+                                        "description",
+                                        f"'{action_name}' called without prior '{gate_name}' in same scope."
+                                    ),
+                                    "message": rule.get("message", "DAG prerequisite not satisfied"),
+                                    "mitigation": rule.get("mitigation", f"Ensure '{gate_name}' is called before '{action_name}'."),
+                                    "file": file_path,
+                                    "line": v["line"],
+                                    "severity": rule.get("severity", "error"),
+                                    "dag_context": v.get("context"),
+                                })
+                        continue  # call_sequence handled; skip rest of Mode A
+                    # ──────────────────────────────────────────────────────────
 
                     # Map High-Level Intent to Adapter Implementation
                     if rule_type == "function_call":
@@ -560,6 +666,132 @@ class PolicyEngine:
             if re.search(pattern, line):
                 results.append((i + 1, line.strip()))
         return results
+
+    def _check_call_sequence(
+        self, tree, adapter, decoded_content: str, file_path: str,
+        action_name: str, gate_name: str, scope: str
+    ) -> List[Dict]:
+        """
+        DAG Topology Check (Mode A extension).
+
+        Scans every function definition in the file.
+        If `action_name` is called within a scope where `gate_name` was
+        NOT called earlier in the same scope, it's a prerequisite violation.
+
+        Returns a list of violation dicts: {line, context}.
+        """
+        violations = []
+        try:
+            root = tree.root_node
+            lines = decoded_content.splitlines()
+
+            # Build a query to capture all function definitions.
+            # We walk from root and collect all 'function_definition' nodes.
+            function_nodes = self._collect_function_nodes(root)
+
+            for fn_node in function_nodes:
+                fn_name = self._get_function_name(fn_node)
+                calls_in_fn = self._collect_calls_in_node(fn_node)
+
+                gate_lines   = sorted(ln for name, ln in calls_in_fn if name == gate_name)
+                action_lines = sorted(ln for name, ln in calls_in_fn if name == action_name)
+
+                if not action_lines:
+                    continue  # action not called in this function — nothing to check
+
+                for action_line in action_lines:
+                    # Gate must have been called at least once BEFORE this action line
+                    gate_called_before = any(gl < action_line for gl in gate_lines)
+                    if not gate_called_before:
+                        ctx = f"In function '{fn_name}'"
+                        if fn_name:
+                            ctx += f" (line {self._get_node_start_line(fn_node)})"
+                        violations.append({
+                            "line": action_line,
+                            "context": ctx,
+                        })
+                        if self.verbose:
+                            import click
+                            click.secho(
+                                f"    [DAG] '{action_name}' at line {action_line} "
+                                f"called without prior '{gate_name}' — {ctx}",
+                                fg="red"
+                            )
+        except Exception as e:
+            if self.verbose:
+                print(f"    [DAG] call_sequence check failed: {e}")
+        return violations
+
+    def _collect_function_nodes(self, root_node) -> List:
+        """Walk AST and return all function/method definition nodes."""
+        result = []
+        FUNC_TYPES = {
+            "function_definition",     # Python
+            "method_definition",       # TypeScript / Java
+            "function_declaration",    # TypeScript / Go
+            "function_item",           # Rust
+        }
+        stack = [root_node]
+        while stack:
+            node = stack.pop()
+            if node.type in FUNC_TYPES:
+                result.append(node)
+            # Still descend — nested functions/closures are independent scopes
+            stack.extend(node.children)
+        return result
+
+    def _collect_calls_in_node(self, node) -> List[tuple]:
+        """Return list of (function_name, line_number) for all calls within node."""
+        calls = []
+        CALL_TYPES = {
+            "call",              # Python: func()
+            "call_expression",  # TypeScript / Go / Rust
+        }
+        stack = [node]
+        while stack:
+            n = stack.pop()
+            if n.type in CALL_TYPES:
+                name = self._extract_call_name(n)
+                if name:
+                    calls.append((name, n.start_point[0] + 1))  # 1-indexed line
+            stack.extend(n.children)
+        return calls
+
+    def _extract_call_name(self, call_node) -> str:
+        """Extract the bare function name from a call node."""
+        try:
+            # Python AST: call → function (Name or Attribute)
+            for child in call_node.children:
+                if child.type in ("identifier", "name"):
+                    txt = child.text
+                    return txt.decode('utf-8', errors='ignore') if hasattr(txt, 'decode') else str(txt)
+                if child.type in ("attribute", "member_expression", "field_expression"):
+                    # obj.method() — grab the right side
+                    for sub in reversed(child.children):
+                        if sub.type in ("identifier", "property_identifier"):
+                            txt = sub.text
+                            return txt.decode('utf-8', errors='ignore') if hasattr(txt, 'decode') else str(txt)
+        except Exception:
+            pass
+        return ""
+
+    def _get_function_name(self, fn_node) -> str:
+        """Return the name of a function definition node, or empty string."""
+        try:
+            for child in fn_node.children:
+                if child.type in ("identifier", "name", "property_identifier"):
+                    txt = child.text
+                    return txt.decode('utf-8', errors='ignore') if hasattr(txt, 'decode') else str(txt)
+        except Exception:
+            pass
+        return "<anonymous>"
+
+    def _get_node_start_line(self, node) -> int:
+        """Return the 1-indexed start line of a node."""
+        try:
+            return node.start_point[0] + 1
+        except Exception:
+            return 0
 
     def _get_suppression_author(self, file_path: str, line_num: int) -> str:
         """Use git blame to identify who authorized the suppression."""

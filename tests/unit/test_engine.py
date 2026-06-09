@@ -88,3 +88,57 @@ def test_engine_exclude_path():
     assert engine._is_path_excluded("tests/test_api.py", engine.config["exclude"]) == True
     assert engine._is_path_excluded("vendor/library/src.py", engine.config["exclude"]) == True
     assert engine._is_path_excluded("src/main.py", engine.config["exclude"]) == False
+
+
+def test_engine_runtime_integration_check(tmp_path):
+    # Setup standard rules requiring runtime interception
+    config = {
+        "rules": [
+            {
+                "id": "EU-ART12",
+                "name": "Record Keeping",
+                "severity": "blocker",
+                "obligation_type": "provenance",
+                "description": "Requires logs"
+            },
+            {
+                "id": "SEC-001",
+                "name": "Regular Static Rule",
+                "severity": "error",
+                "pattern": "some_static_pattern"
+            }
+        ]
+    }
+    engine = PolicyEngine(config)
+    
+    # Case A: Scans codebase with AI imports but NO anchor.runtime integration
+    project_dir = tmp_path / "project_no_rt"
+    project_dir.mkdir()
+    # Write a file using openai but missing anchor.runtime
+    (project_dir / "app.py").write_text("import openai\nclient = openai.OpenAI()")
+    
+    results = engine.scan_directory(str(project_dir))
+    # It should detect openai import, see that anchor.runtime is missing, and trigger a violation for EU-ART12
+    violations = results["violations"]
+    assert len(violations) == 1
+    assert violations[0]["id"] == "EU-ART12"
+    assert "Runtime integration missing" in violations[0]["message"]
+    
+    # Case B: Scans codebase with AI imports AND anchor.runtime integrated
+    project_dir_with_rt = tmp_path / "project_with_rt"
+    project_dir_with_rt.mkdir()
+    (project_dir_with_rt / "app.py").write_text("import anchor.runtime\nimport openai\nclient = openai.OpenAI()")
+    
+    results_with_rt = engine.scan_directory(str(project_dir_with_rt))
+    # Integration check is satisfied, so no violations should be raised
+    assert len(results_with_rt["violations"]) == 0
+
+    # Case C: Scans codebase with NO AI imports (and no anchor.runtime)
+    project_dir_no_ai = tmp_path / "project_no_ai"
+    project_dir_no_ai.mkdir()
+    (project_dir_no_ai / "app.py").write_text("print('hello world')")
+    
+    results_no_ai = engine.scan_directory(str(project_dir_no_ai))
+    # No AI libraries are imported, so EU-ART12 should not trigger
+    assert len(results_no_ai["violations"]) == 0
+

@@ -297,4 +297,4 @@ class DecisionAuditor:
         except Exception:
             pass 
         
-        return entry
+        return local_entry_dict

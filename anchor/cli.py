@@ -4,7 +4,7 @@ import os
 import sys
 import yaml
 import json
-import urllib.request
+import urllib.request as urllib_request
 import argparse
 import hashlib
 from anchor.core.policy_loader import PolicyLoader
@@ -638,7 +638,8 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
             if not os.path.exists(cache_dir):
                 os.makedirs(cache_dir)
 
-            with urllib.request.urlopen(url, timeout=settings.fetch_timeout) as response:
+            req = urllib_request.Request(url)  # type: ignore
+            with urllib_request.urlopen(req, timeout=settings.fetch_timeout) as response:
                 content = response.read()
                 with open(target_path, "wb") as f:
                     f.write(content)
@@ -759,13 +760,31 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
                     # Merge detection pattern into the rule metadata
                     match_data = m.get("match")
                     if match_data:
-                        rule_dict[resolved_id]["match"] = match_data
-                        # If the match block has a top-level pattern (V3 style) or internal
-                        if "pattern" in match_data:
-                            rule_dict[resolved_id]["pattern"] = match_data["pattern"]
+                        existing_match = rule_dict[resolved_id].get("match")
+                        # If both existing and new match blocks are regex, combine patterns
+                        # so multiple mitigations for the same rule don't clobber each other.
+                        if (
+                            existing_match
+                            and existing_match.get("type") == "regex"
+                            and match_data.get("type") == "regex"
+                            and existing_match.get("pattern")
+                            and match_data.get("pattern")
+                        ):
+                            combined = (
+                                f"(?:{existing_match['pattern']})"
+                                f"|"
+                                f"(?:{match_data['pattern']})"
+                            )
+                            rule_dict[resolved_id]["match"] = {"type": "regex", "pattern": combined}
+                            rule_dict[resolved_id]["pattern"] = combined
+                        else:
+                            rule_dict[resolved_id]["match"] = match_data
+                            # If the match block has a top-level pattern (V3 style) or internal
+                            if "pattern" in match_data:
+                                rule_dict[resolved_id]["pattern"] = match_data["pattern"]
 
-                    # Explicit top-level pattern support
-                    if m.get("pattern"):
+                    # Explicit top-level pattern support (only set if not already present)
+                    if m.get("pattern") and not rule_dict[resolved_id].get("pattern"):
                         rule_dict[resolved_id]["pattern"] = m.get("pattern")
 
                     rule_dict[resolved_id]["message"]    = m.get("message", rule_dict[resolved_id].get("name"))
@@ -1100,9 +1119,12 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
         req = urllib.request.Request(
             ledger_url,
             data=zk_payload.encode("utf-8"),
-            headers={"Content-Type": "application/json"},
+            headers={
+                "Content-Type": "application/json",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            },
         )
-        urllib.request.urlopen(req, timeout=1.5)  # anchor: ignore SEC-007
+        urllib.request.urlopen(req, timeout=5.0)  # anchor: ignore SEC-007
         if not (json_out or llm):
             click.secho(f"\n  [+] ZK proof synced to Ledger ({ledger_url})", fg="green")
     except Exception:
@@ -1404,13 +1426,13 @@ def check_verify_sync(fix, verbose):
             status = click.style(f"[{CHECK}]     ", fg="green")
             click.echo(f"  {status} {label}")
             if verbose:
-                click.echo(f"            SHA-256: {h[:16]}...")
+                click.echo(f"            SHA-256: {(h or 'N/A')[:16]}...")
         else:
             status = click.style(f"[{CROSS}]     ", fg="red", bold=True)
             click.echo(f"  {status} {label}")
             if verbose:
-                click.echo(f"            Expected: {canon_hash[:16]}...")
-                click.echo(f"            Got:      {h[:16]}...")
+                click.echo(f"            Expected: {(canon_hash or 'N/A')[:16]}...")
+                click.echo(f"            Got:      {(h or 'N/A')[:16]}...")
             all_synced = False
 
     click.echo("=" * 60)

@@ -90,5 +90,7 @@ class AuditResult:
     rationale: str
     evidence: List[str]
     remediation: Optional[str] = None  # Instructions for an AI Agent
+    file_path: Optional[str] = None    # Attached by drift scanner (cli.py)
+    line_number: Optional[int] = None  # Attached by drift scanner (cli.py)
 
     

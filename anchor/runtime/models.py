@@ -21,13 +21,19 @@ class AuditEntry:
     timestamp: str = ""
     project_name: str = ""
     git_commit: str = ""
-    
+
+    # Identity & Jurisdiction
+    jurisdiction: str = "GLOBAL"   # Regulatory region (e.g., 'EU', 'INDIA', 'GLOBAL')
+    provider: str = "unknown"      # AI provider label (e.g., 'openai', 'custom-decorator')
+
     # Governance Status
-    status: str = "CLEAN" # "CLEAN" or "VIOLATION"
+    is_compliant: bool = True      # True = CLEAN, False = VIOLATION
+    status: str = "CLEAN"          # "CLEAN" or "VIOLATION"
     rule_id: Optional[str] = None
     
     # Cryptographic Chain
     findings_hash: str = ""
+    prev_chain_hash: str = ""      # Hash of previous entry (chain integrity)
     chain_hash: str = ""
     signature: str = ""
     
@@ -48,11 +54,19 @@ class AuditEntry:
                 "authority": self.authority,
                 "flow": self.flow
             },
+            "execution_context": {
+                "provider": self.provider,
+                "jurisdiction": self.jurisdiction,
+            },
             "governance_status": {
+                "is_compliant": self.is_compliant,
                 "status": self.status,
                 "rule_id": self.rule_id
             },
+            "violations": self.violations,
             "cryptography": {
+                "findings_hash": self.findings_hash,
+                "prev_chain_hash": self.prev_chain_hash,
                 "chain_hash": self.chain_hash,
                 "signature": self.signature
             },
@@ -68,7 +82,7 @@ class AuditEntry:
         }
         return dialects.get(dialect_name, self.to_dict)()
 
-    def to_rbi_json(self) -> Dict[str, Any]:
+    def to_rbi_json(self, entity_name: str = "") -> Dict[str, Any]:
         """Maps to RBI FREE-AI (2026) Pillar 2: The Seven Sutras."""
         sutra_map = {
             "ETH": "Fairness (Sutra 4) & Explainability (Sutra 7)",
@@ -77,7 +91,11 @@ class AuditEntry:
             "GVR": "Governance & Accountability (Sutra 6)"
         }
         
-        prefix = self.rule_id[:3] if self.rule_id else "GVR"
+        # Infer rule prefix from self.rule_id, or fall back to the first violation in the list
+        effective_rule_id = self.rule_id
+        if not effective_rule_id and self.violations:
+            effective_rule_id = self.violations[0].get("rule_id")
+        prefix = effective_rule_id[:3] if effective_rule_id else "GVR"
         primary_sutra = sutra_map.get(prefix, "Algorithmic Integrity (Sutra 1)")
 
         return {
@@ -85,6 +103,7 @@ class AuditEntry:
             "framework": "FREE-AI Pillar 2",
             "sutra_alignment": primary_sutra,
             "incident_metadata": {
+                "entity_id": entity_name,
                 "branch_context": self.context,
                 "timestamp": self.timestamp,
                 "severity": "CRITICAL" if self.status == "VIOLATION" else "LOW"
@@ -102,12 +121,12 @@ class AuditEntry:
         """Maps to SEC Regulation S-K / Item 1.05: Materiality and Principles of Governance."""
         return {
             "regulator": "U.S. Securities and Exchange Commission",
-            "disclosure_type": "8-K / Item 1.05 (Material AI Risk)",
+            "form_type": "8-K / Item 1.05",
             "materiality_signal": "HIGH" if self.status == "VIOLATION" else "LOW",
             "governance_event": {
                 "category": "Algorithmic Risk Management",
                 "description": f"Breach detected in {self.object} during operational flow {self.flow}.",
-                "mitigation_status": "Effectively Mitigated via Anchor Interceptor",
+                "control_status": "Effectively Mitigated via Anchor Interceptor",
                 "verification_hash": f"sha256:{self.chain_hash[:16]}..."
             },
             "filer_context": {

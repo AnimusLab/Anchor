@@ -30,6 +30,7 @@ class DecisionAuditor:
     _proxy_automaton = None
     _proxy_concept_map = {}
     _is_warmed_up = False
+    _relay_client = None
 
     def __init__(self):
         if not DecisionAuditor._is_warmed_up:
@@ -40,6 +41,20 @@ class DecisionAuditor:
         self._cache_git_context()
         self._warm_up_constitution()
         self._warm_up_taxonomy()
+        
+        # Initialize Sovereign Relay Client
+        relay_url = os.environ.get("ANCHOR_RELAY_URL")
+        secret_key = os.environ.get("ANCHOR_MAT", os.environ.get("ANCHOR_SECRET_KEY", "default-key")).strip()
+        if relay_url and not DecisionAuditor._relay_client:
+            try:
+                host, port = relay_url.split(":")
+                from anchor.runtime.relay_protocol import SpokeRelayClient
+                client = SpokeRelayClient(host, int(port), secret_key, audit_log_path=DecisionAuditor._audit_log or ".anchor/runtime_chain.jsonl")
+                client.start()
+                DecisionAuditor._relay_client = client
+            except Exception:
+                pass
+                
         DecisionAuditor._is_warmed_up = True
 
     def _cache_git_context(self):
@@ -296,5 +311,12 @@ class DecisionAuditor:
                 urllib.request.urlopen(req, timeout=1.0)
         except Exception:
             pass 
+            
+        # 5. Relaying lightweight ZK header to Sovereign Hub
+        if DecisionAuditor._relay_client:
+            try:
+                DecisionAuditor._relay_client.send_header(local_entry_dict)
+            except Exception:
+                pass
         
         return local_entry_dict

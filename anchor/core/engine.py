@@ -156,8 +156,10 @@ class PolicyEngine:
         runtime_integrated = False
         ai_libraries_detected = False
 
-        def check_integrations(file_content: bytes):
+        def check_integrations(file_content: bytes, file_path: str):
             nonlocal runtime_integrated, ai_libraries_detected
+            if "setup.py" in file_path:
+                return
             try:
                 content_str = file_content.decode("utf-8", errors="ignore")
                 if ("import anchor.runtime" in content_str or
@@ -192,7 +194,7 @@ class PolicyEngine:
                                 ignored_files += 1
                                 continue
                             
-                            check_integrations(content)
+                            check_integrations(content, full_path)
                             results = self.scan_file(content, full_path, adapter)
                             all_violations.extend(results.get("violations", []))
                             all_suppressed.extend(results.get("suppressed", []))
@@ -222,7 +224,7 @@ class PolicyEngine:
                                 if len(content) > 2 * 1024 * 1024:
                                     ignored_files += 1
                                     continue
-                                check_integrations(content)
+                                check_integrations(content, full_path)
                                 results = self.scan_file(content, full_path, adapter)
                                 all_violations.extend(results.get("violations", []))
                                 all_suppressed.extend(results.get("suppressed", []))

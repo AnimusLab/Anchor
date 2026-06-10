@@ -30,7 +30,7 @@ import os
 def run_shell(cmd):
     subprocess.run(cmd, shell=True)          # dangerous: shell=True # anchor: ignore SEC-007
     result = eval(input(">>> "))             # dangerous: eval(input)
-    os.system("rm -rf /tmp/data")           # dangerous: os.system
+    os.system("rm -rf /tmp/data")           # dangerous: os.system # anchor: ignore-all
 
 class AuthManager:
     SECRET_KEY = "hardcoded-secret-abc123"  # hardcoded secret

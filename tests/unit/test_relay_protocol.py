@@ -45,7 +45,7 @@ def test_relay_protocol_flow(tmp_path):
         },
         "violations": [{"rule_id": "SEC-007", "message": "Shell injection"}],
         "telemetry": {
-            "prompt_preview": "import os; os.system('ls')",
+            "prompt_preview": "user prompt text",
             "response_preview": "blocked"
         }
     }
@@ -92,7 +92,7 @@ def test_relay_protocol_flow(tmp_path):
         decrypted_payload = json.loads(decrypted_raw)
         
         # Verify decrypted payload matches original sensitive data
-        assert decrypted_payload["telemetry"]["prompt_preview"] == "import os; os.system('ls')"
+        assert decrypted_payload["telemetry"]["prompt_preview"] == "user prompt text"
         assert decrypted_payload["violations"][0]["rule_id"] == "SEC-007"
         
     finally:

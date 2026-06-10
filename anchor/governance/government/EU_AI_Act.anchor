@@ -15,10 +15,9 @@ credit: >
   2026. Credit scoring, AML monitoring, and fraud detection are
   legally classified as high-risk AI systems under Annex III.
 layer_2_status: >
-  Rules marked obligation_type: provenance or audit depend on
-  AnchorRuntime (Layer 2) and the Decision Audit Chain (DAC).
-  Layer 2 is currently in development. These rules are specified
-  as designed and will be enforced once Layer 2 ships.
+  Layer 2 (AnchorRuntime/DAC) shipped in v5.0.3. The dialect output methods below
+  are implemented; regulator-specific field mappings have not undergone external
+  legal review.
 seal: "sha256:PENDING"
 
 rules:
@@ -120,7 +119,7 @@ rules:
       evidence. signature = per-entry integrity seal. timestamp =
       retention timestamp. model_id + model_version = system
       identification. eu_article12_record() method serializes
-      to EU AI Act compliant log format. Layer 2 in development.
+      to EU AI Act compliant log format. Layer 2 active.
     severity: "blocker"
     min_severity: "blocker"
     description: >
@@ -180,7 +179,7 @@ rules:
       ETH-003 human oversight removal fires when autonomous
       decision code has no human review checkpoint. AnchorRuntime
       compliant flag per AuditEntry records whether human oversight
-      was maintained for each decision. Layer 2 in development
+      was maintained for each decision. Layer 2 active
       for runtime enforcement.
     severity: "blocker"
     min_severity: "blocker"
@@ -268,7 +267,7 @@ rules:
       AnchorRuntime continuous eval satisfies continuous monitoring
       requirement. Real-time violation detection per AuditEntry.
       compliant boolean per decision records governance status.
-      Layer 2 in development.
+      Layer 2 active.
     severity: "blocker"
     min_severity: "error"
     description: >

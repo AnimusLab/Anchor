@@ -15,9 +15,9 @@ credit: >
   in October 2024 established the enforcement precedent for AI credit
   model explainability obligations in US financial services.
 layer_2_status: >
-  Rules marked obligation_type: provenance depend on AnchorRuntime
-  (Layer 2) and the Decision Audit Chain (DAC). Layer 2 is currently
-  in development.
+  Layer 2 (AnchorRuntime/DAC) shipped in v5.0.3. The dialect output methods below
+  are implemented; regulator-specific field mappings have not undergone external
+  legal review.
 seal: "sha256:PENDING"
 
 rules:
@@ -120,7 +120,7 @@ rules:
       anchor audit pre-deployment produces validation evidence.
       Violation taxonomy as documented validation artifact.
       DAC audit chain as ongoing monitoring record. Layer 2
-      in development for full monitoring support.
+      active for full monitoring support.
     severity: "error"
     min_severity: "error"
     description: >

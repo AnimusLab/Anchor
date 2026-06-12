@@ -15,9 +15,9 @@ credit: >
   degree of AI adoption. Third-party vendor liability does not
   transfer to SEBI-regulated entities.
 layer_2_status: >
-  Rules marked obligation_type: provenance or audit depend on
-  AnchorRuntime (Layer 2) and the Decision Audit Chain (DAC).
-  Layer 2 is currently in development.
+  Layer 2 (AnchorRuntime/DAC) shipped in v5.0.3. The dialect output methods below
+  are implemented; regulator-specific field mappings have not undergone external
+  legal review.
 seal: "sha256:PENDING"
 
 rules:
@@ -84,7 +84,7 @@ rules:
     anchor_mechanism: >
       anchor audit --report generates JSON and Markdown accuracy
       and compliance reports. /audit endpoint exposes the full
-      audit chain for regulator access. Layer 2 in development
+      audit chain for regulator access. Layer 2 active
       for full continuous reporting support.
     severity: "error"
     min_severity: "error"
@@ -110,7 +110,7 @@ rules:
     anchor_mechanism: >
       DAC AuditEntry records input_hash + output_hash per decision
       with ISO 8601 timestamp. Append-only log provides 5-year
-      retention with tamper-evident integrity. Layer 2 in development.
+      retention with tamper-evident integrity. Layer 2 active.
     severity: "blocker"
     min_severity: "blocker"
     description: >
@@ -164,7 +164,7 @@ rules:
       SUP-003 versioning drift violation fires on undeclared model
       version changes. AnchorRuntime continuous eval provides
       post-deployment monitoring. model_version in AuditEntry
-      per decision enables drift detection. Layer 2 in development.
+      per decision enables drift detection. Layer 2 active.
     severity: "error"
     min_severity: "error"
     description: >
@@ -242,7 +242,7 @@ rules:
       Non-repudiation chain — the deploying firm's AuditEntry
       signed with their key proves ownership of every AI decision
       regardless of which vendor's model produced it. Layer 2
-      in development.
+      active.
     severity: "blocker"
     min_severity: "blocker"
     description: >

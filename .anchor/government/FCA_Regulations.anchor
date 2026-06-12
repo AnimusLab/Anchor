@@ -16,9 +16,9 @@ credit: >
   CROs can be held personally accountable for AI governance
   failures from that date.
 layer_2_status: >
-  Rules marked obligation_type: provenance or audit depend on
-  AnchorRuntime (Layer 2) and the Decision Audit Chain (DAC).
-  Layer 2 is currently in development.
+  Layer 2 (AnchorRuntime/DAC) shipped in v5.0.3. The dialect output methods below
+  are implemented; regulator-specific field mappings have not undergone external
+  legal review.
 seal: "sha256:PENDING"
 
 rules:
@@ -33,7 +33,7 @@ rules:
       ETH-003 human oversight removal violation fires on
       autonomous decision code without human review checkpoint.
       AuditEntry records compliant boolean per decision.
-      Layer 2 in development.
+      Layer 2 active.
     severity: "blocker"
     min_severity: "error"
     description: >
@@ -60,7 +60,7 @@ rules:
     anchor_mechanism: >
       model_version in every AuditEntry records exact model version
       per decision. SUP-003 versioning drift violation fires on
-      undeclared model version changes. Layer 2 in development.
+      undeclared model version changes. Layer 2 active.
     severity: "error"
     min_severity: "error"
     description: >
@@ -119,7 +119,7 @@ rules:
       AML-002 violation fires on AML output without output_hash
       verification. output_hash in AuditEntry provides SHA-256
       binding of every AML flagging result to the model output
-      that produced it. Layer 2 in development.
+      that produced it. Layer 2 active.
     severity: "error"
     min_severity: "error"
     description: >

@@ -14,10 +14,9 @@ credit: >
   file maps those recommendations to Anchor enforcement mechanisms.
   Full report: RBI Expert Committee on FREE-AI, August 2025.
 layer_2_status: >
-  Rules marked obligation_type: provenance, audit, or disclosure
-  depend on AnchorRuntime (Layer 2) and the Decision Audit Chain (DAC).
-  Layer 2 is currently in development. These rules are specified as
-  designed and will be enforced once Layer 2 ships.
+  Layer 2 (AnchorRuntime/DAC) shipped in v5.0.3. The dialect output methods below
+  are implemented; regulator-specific field mappings have not undergone external
+  legal review.
 seal: "sha256:PENDING"
 
 rules:
@@ -58,7 +57,7 @@ rules:
       decision produces an AuditEntry with entry_id, timestamp,
       model_id, model_version, input_hash, output_hash, violations,
       risk_level, chain_hash, and signature. cims_payload() serializes
-      to RBI CIMS-reportable JSON on demand. Layer 2 in development.
+      to RBI CIMS-reportable JSON on demand. Layer 2 active.
     severity: "blocker"
     min_severity: "blocker"
     description: >
@@ -86,7 +85,7 @@ rules:
       chain_hash + signature in AuditEntry provides cryptographic
       non-repudiation. The deploying RE's AuditEntry proves ownership
       of every AI decision — vendor liability cannot be claimed when
-      the decision chain is signed by the RE's key. Layer 2 in development.
+      the decision chain is signed by the RE's key. Layer 2 active.
     severity: "blocker"
     min_severity: "blocker"
     description: >
@@ -113,7 +112,7 @@ rules:
     anchor_mechanism: >
       DAC AuditLog.verify_chain() method and /audit API endpoint
       expose the full tamper-evident audit chain for regulator
-      inspection in real time. Layer 2 in development.
+      inspection in real time. Layer 2 active.
     severity: "blocker"
     min_severity: "error"
     description: >
@@ -277,7 +276,7 @@ rules:
       model_version + model_id in every AuditEntry constitutes the
       AI inventory record per decision. SUP-003 versioning drift
       violation fires when model version is undeclared or inconsistent.
-      Layer 2 in development.
+      Layer 2 active.
     severity: "error"
     min_severity: "error"
     description: >
@@ -306,7 +305,7 @@ rules:
       DAC verify_chain() provides tamper-evident audit chain for
       third-party auditors. /audit endpoint exposes the chain for
       independent audit firms. anchor audit --report generates
-      the biannual audit report artifact. Layer 2 in development
+      the biannual audit report artifact. Layer 2 active
       for full DAC audit support.
     severity: "blocker"
     min_severity: "error"

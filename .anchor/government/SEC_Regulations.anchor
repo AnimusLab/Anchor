@@ -18,9 +18,9 @@ credit: >
   Applies to SEC-registered investment advisers, broker-dealers,
   and any firm using AI in securities-related activities.
 layer_2_status: >
-  Rules marked obligation_type: provenance or audit depend on
-  AnchorRuntime (Layer 2) and the Decision Audit Chain (DAC).
-  Layer 2 is currently in development.
+  Layer 2 (AnchorRuntime/DAC) shipped in v5.0.3. The dialect output methods below
+  are implemented; regulator-specific field mappings have not undergone external
+  legal review.
 seal: "sha256:PENDING"
 
 rules:
@@ -131,7 +131,7 @@ rules:
       DAC AuditEntry records every AI-assisted trading decision
       with model_id, model_version, input_hash, output_hash,
       timestamp, and chain_hash. Full tamper-evident audit chain
-      survives legal discovery. Layer 2 in development.
+      survives legal discovery. Layer 2 active.
     severity: "blocker"
     min_severity: "error"
     description: >

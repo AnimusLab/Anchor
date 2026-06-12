@@ -24,7 +24,10 @@ def generate_lock():
     with open('GOVERNANCE.lock', 'w', encoding='utf-8') as f:
         yaml.dump(lock_data, f, default_flow_style=False, sort_keys=False)
     
-    print(f"Generated GOVERNANCE.lock with {len(files)} files.")
+    with open('anchor/governance/GOVERNANCE.lock', 'w', encoding='utf-8') as f:
+        yaml.dump(lock_data, f, default_flow_style=False, sort_keys=False)
+    
+    print(f"Generated GOVERNANCE.lock with {len(files)} files in root and anchor/governance/.")
 
 if __name__ == "__main__":
     generate_lock()

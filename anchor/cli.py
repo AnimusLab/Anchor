@@ -23,7 +23,7 @@ from anchor.core.crypto import sign_chain_hash
 
 
 from anchor import __version__
-__version__ = "5.0.6"
+__version__ = "5.0.7"
 
 @click.group()
 @click.version_option(version=__version__)

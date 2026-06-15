@@ -4,6 +4,9 @@ from tree_sitter import Language
 from typing import List
 
 class RustAdapter(LanguageAdapter):
+    class_types = {"struct_item", "enum_item", "union_item", "trait_item"}
+    function_types = {"function_item"}
+
     @property
     def language_id(self) -> str:
         return "rust"

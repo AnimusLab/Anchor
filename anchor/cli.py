@@ -1499,45 +1499,52 @@ def check_drift(target, repo, limit, only_violations, as_json, verbose, report):
     target_path = _Path(target).resolve()
     repo_path   = _Path(repo).resolve()
 
+    from anchor.core.registry import LanguageRegistry
+    supported_extensions = set(LanguageRegistry._ext_map.keys())
+
     if target_path.is_file():
-        py_files = [target_path] if target_path.suffix == '.py' else []
+        target_files = [target_path] if target_path.suffix in supported_extensions else []
     elif target_path.is_dir():
         skip_dirs = {'.git', '__pycache__', 'venv', '.venv', 'node_modules',
                      'dist', 'build', 'migrations', '.anchor'}
-        py_files = []
+        target_files = []
         for root, dirs, files in os.walk(target_path):
             dirs[:] = [d for d in dirs if d not in skip_dirs]
             for f in files:
-                if f.endswith('.py'):
-                    py_files.append(_Path(root) / f)
+                _, ext = os.path.splitext(f)
+                if ext in supported_extensions:
+                    target_files.append(_Path(root) / f)
     else:
         click.secho(f"Target not found: {target}", fg='red')
         raise SystemExit(1)
 
-    if not py_files:
-        click.secho("WARNING: No Python files found in target.", fg='yellow')
+    if not target_files:
+        click.secho("WARNING: No supported source files found in target.", fg='yellow')
         raise SystemExit(0)
 
-    # --- Extract all symbols from those files ---
+    # --- Extract all symbols from those files using language adapters ---
     def extract_symbols(file_path):
         try:
-            source = file_path.read_text(encoding='utf-8', errors='ignore')
-            tree   = _ast.parse(source)
-            syms   = []
-            for node in _ast.walk(tree):
-                if isinstance(node, (_ast.ClassDef, _ast.FunctionDef)):
-                    sym_type = 'class' if isinstance(node, _ast.ClassDef) else 'function'
-                    rel      = os.path.relpath(str(file_path), str(repo_path))
-                    syms.append(CodeSymbol(
-                        name=node.name, type=sym_type,
-                        file_path=rel, line_number=node.lineno,
-                    ))
+            adapter = LanguageRegistry.get_adapter_for_file(str(file_path))
+            if not adapter:
+                return []
+            
+            source_bytes = file_path.read_bytes()
+            extracted = adapter.extract_symbols(source_bytes)
+            
+            syms = []
+            rel = os.path.relpath(str(file_path), str(repo_path))
+            for item in extracted:
+                syms.append(CodeSymbol(
+                    name=item['name'], type=item['type'],
+                    file_path=rel, line_number=item['line_number'],
+                ))
             return syms
         except Exception:
             return []
 
     all_symbols = []
-    for f in py_files:
+    for f in target_files:
         all_symbols.extend(extract_symbols(f))
 
     if not all_symbols:

@@ -4,6 +4,9 @@ from tree_sitter import Language
 from typing import List
 
 class JavaAdapter(LanguageAdapter):
+    class_types = {"class_declaration", "interface_declaration", "enum_declaration", "record_declaration"}
+    function_types = {"method_declaration", "constructor_declaration"}
+
     @property
     def language_id(self) -> str:
         return "java"

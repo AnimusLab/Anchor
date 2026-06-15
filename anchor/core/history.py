@@ -5,6 +5,21 @@ from git import Repo, Commit
 from anchor.core.models import IntentAnchor, CodeSymbol, AnchorConfidence
 
 
+def safe_print(msg: str):
+    try:
+        print(msg)
+    except UnicodeEncodeError:
+        replacements = {
+            "⚠️": "[WARNING]",
+            "❌": "[ERROR]",
+            "✅": "[SUCCESS]",
+            "⚓": "[ANCHOR]",
+        }
+        for k, v in replacements.items():
+            msg = msg.replace(k, v)
+        print(msg.encode('ascii', errors='replace').decode('ascii'))
+
+
 class HistoryEngine:
     def __init__(self, repo_path: str):
         self.repo = Repo(repo_path)
@@ -25,11 +40,11 @@ class HistoryEngine:
         except Exception as e:
             error_msg = str(e)
             if "dubious ownership" in error_msg:
-                print(f"❌ Git error for {git_path}: Dubious ownership detected.")
-                print(f"   To fix this, run:")
-                print(f"   git config --global --add safe.directory {self.repo.working_dir}")
+                safe_print(f"❌ Git error for {git_path}: Dubious ownership detected.")
+                safe_print(f"   To fix this, run:")
+                safe_print(f"   git config --global --add safe.directory {self.repo.working_dir}")
             else:
-                print(f"❌ Git error for {git_path}: {error_msg}")
+                safe_print(f"❌ Git error for {git_path}: {error_msg}")
             return None
 
         first_occurrence: Optional[Commit] = None
@@ -64,7 +79,7 @@ class HistoryEngine:
                 continue
 
         if not first_occurrence:
-            print(f"⚠️ Could not find origin for {symbol.name}")
+            safe_print(f"⚠️ Could not find origin for {symbol.name}")
             return None
 
         # print(f"✅ FOUND ANCHOR: {first_occurrence.hexsha[:7]} ({datetime.fromtimestamp(first_occurrence.committed_date).date()})")

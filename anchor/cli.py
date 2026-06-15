@@ -1504,13 +1504,12 @@ def check_drift(target, repo, limit, only_violations, as_json, verbose, report):
     elif target_path.is_dir():
         skip_dirs = {'.git', '__pycache__', 'venv', '.venv', 'node_modules',
                      'dist', 'build', 'migrations', '.anchor'}
-        py_files = [
-            _Path(root) / f
-            for root, dirs, files in os.walk(target_path)
-            for f in files
-            if f.endswith('.py')
-            for _ in [dirs.__setitem__(slice(None), [d for d in dirs if d not in skip_dirs])]
-        ]
+        py_files = []
+        for root, dirs, files in os.walk(target_path):
+            dirs[:] = [d for d in dirs if d not in skip_dirs]
+            for f in files:
+                if f.endswith('.py'):
+                    py_files.append(_Path(root) / f)
     else:
         click.secho(f"Target not found: {target}", fg='red')
         raise SystemExit(1)

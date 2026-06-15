@@ -1,11 +1,11 @@
-# ANCHOR (v5.0.7)
+# ANCHOR (v5.0.8)
 
 **The Cryptographic Enforcement Kernel for Agentic AI**
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![PyPI](https://img.shields.io/pypi/v/anchor-audit?label=PyPI&color=gold)](https://pypi.org/project/anchor-audit/)
-[![Version: 5.0.7](https://img.shields.io/badge/Version-5.0.7-emerald.svg)](https://github.com/AnimusLab/Anchor/releases)
+[![Version: 5.0.8](https://img.shields.io/badge/Version-5.0.8-emerald.svg)](https://github.com/AnimusLab/Anchor/releases)
 [![AnimusLab](https://img.shields.io/badge/AnimusLab-Research%20Institute-indigo.svg)](https://www.animuslab.dev)
 
 > 📄 Research: "The $3 Billion Warning — Governance Failures in Automated Finance" · SSRN (under review)
@@ -522,7 +522,7 @@ Anchor operates on a three-layer constitutional architecture:
 
 ---
 
-### V. v5.0.7: The Primitive Vocabulary
+### V. v5.0.8: The Primitive Vocabulary
 
 Version 5 introduces the algorithmic decomposition of regulatory risk. Governance is no longer reliant on vague, hand-authored regex. Every regulatory statute (EU AI Act, FINOS, CFPB, SEC) is algorithmically compiled into five primitive enforcement nodes:
 

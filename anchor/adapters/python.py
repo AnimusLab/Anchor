@@ -4,6 +4,9 @@ from tree_sitter import Language, Parser
 from typing import List
 
 class PythonAdapter(LanguageAdapter):
+    class_types = {"class_definition"}
+    function_types = {"function_definition"}
+
     @property
     def language_id(self) -> str:
         return "python"

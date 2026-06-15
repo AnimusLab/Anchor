@@ -4,6 +4,9 @@ from tree_sitter import Language, Parser
 from typing import List
 
 class TypeScriptAdapter(LanguageAdapter):
+    class_types = {"class_declaration", "class"}
+    function_types = {"function_declaration", "method_definition", "generator_function", "function"}
+
     @property
     def language_id(self) -> str:
         return "typescript"

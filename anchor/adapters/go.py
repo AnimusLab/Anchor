@@ -4,6 +4,9 @@ from tree_sitter import Language
 from typing import List
 
 class GoAdapter(LanguageAdapter):
+    class_types = {"type_spec"}
+    function_types = {"function_declaration", "method_declaration"}
+
     @property
     def language_id(self) -> str:
         return "go"

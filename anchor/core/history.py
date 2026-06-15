@@ -57,7 +57,7 @@ class HistoryEngine:
                 file_content = blob.data_stream.read().decode('utf-8')
 
                 # Check if symbol exists in this version
-                if self._symbol_exists_in_source(symbol.name, symbol.type, file_content):
+                if self._symbol_exists_in_source(symbol.name, symbol.type, file_content, git_path):
                     if not first_occurrence:
                         first_occurrence = commit
 
@@ -96,29 +96,96 @@ class HistoryEngine:
             confidence_reason="Inferred from first documented appearance in git history"
         )
 
-    def _symbol_exists_in_source(self, name: str, sym_type: str, source: str) -> bool:
-        """Parses the historical source code to see if the class/function is defined."""
+def extract_comments_above(source: str, start_line: int, lang_id: str) -> str:
+    lines = source.splitlines()
+    idx = start_line - 2
+    comment_lines = []
+    
+    while idx >= 0:
+        line = lines[idx].strip()
+        if not line:
+            break
+        
+        is_comment = False
+        comment_text = ""
+        if lang_id == 'python' and line.startswith('#'):
+            is_comment = True
+            comment_text = line.lstrip('#').strip()
+        elif lang_id in ('go', 'typescript', 'java', 'rust'):
+            if line.startswith('//'):
+                is_comment = True
+                comment_text = line.lstrip('/').strip()
+            elif line.startswith('/*'):
+                is_comment = True
+                comment_text = line.lstrip('/*').rstrip('*/').strip()
+            elif line.startswith('*'):
+                is_comment = True
+                comment_text = line.lstrip('*').strip()
+            elif line.endswith('*/'):
+                is_comment = True
+                comment_text = line.rstrip('*/').strip()
+        
+        if is_comment:
+            comment_lines.append(comment_text)
+            idx -= 1
+        else:
+            break
+            
+    comment_lines.reverse()
+    return "\n".join(comment_lines)
+
+
+    def _symbol_exists_in_source(self, name: str, sym_type: str, source: str, file_path: str) -> bool:
+        """Parses the historical source code using the correct adapter to see if the class/function is defined."""
+        from anchor.core.registry import LanguageRegistry
+        adapter = LanguageRegistry.get_adapter_for_file(file_path)
+        if not adapter:
+            return False
         try:
-            tree = ast.parse(source)
-            for node in ast.walk(tree):
-                if isinstance(node, ast.ClassDef) and sym_type == 'class' and node.name == name:
+            source_bytes = source.encode('utf-8', errors='ignore') if isinstance(source, str) else source
+            symbols = adapter.extract_symbols(source_bytes)
+            for sym in symbols:
+                if sym['name'] == name and sym['type'] == sym_type:
                     return True
-                if isinstance(node, ast.FunctionDef) and sym_type in ('function', 'method') and node.name == name:
-                    return True
-        except SyntaxError:
+        except Exception:
             return False
         return False
 
     def _extract_docstring(self, name: str, commit: Commit, file_path: str) -> str:
-        """Extracts the docstring from the AST of the historical commit."""
+        """Extracts the docstring or preceding comments for a symbol in a historical commit."""
+        from anchor.core.registry import LanguageRegistry
+        adapter = LanguageRegistry.get_adapter_for_file(file_path)
+        if not adapter:
+            return ""
+            
         try:
-            blob = commit.tree / file_path
-            source = blob.data_stream.read().decode('utf-8')
-            tree = ast.parse(source)
-
-            for node in ast.walk(tree):
-                if isinstance(node, (ast.FunctionDef, ast.ClassDef)) and node.name == name:
-                    return ast.get_docstring(node) or ""
+            blob = commit.tree / file_path.replace("\\", "/")
+            source = blob.data_stream.read().decode('utf-8', errors='ignore')
+            
+            # 1. If Python, try standard AST docstring extraction first
+            if adapter.language_id == 'python':
+                try:
+                    import ast as py_ast
+                    tree = py_ast.parse(source)
+                    for node in py_ast.walk(tree):
+                        if isinstance(node, (py_ast.FunctionDef, py_ast.ClassDef)) and node.name == name:
+                            doc = py_ast.get_docstring(node)
+                            if doc:
+                                return doc
+                except Exception:
+                    pass
+            
+            # 2. Find the symbol's start line in this historical version using the adapter
+            source_bytes = source.encode('utf-8', errors='ignore')
+            symbols = adapter.extract_symbols(source_bytes)
+            start_line = None
+            for sym in symbols:
+                if sym['name'] == name:
+                    start_line = sym['line_number']
+                    break
+                    
+            if start_line is not None:
+                return extract_comments_above(source, start_line, adapter.language_id)
         except Exception:
             return ""
         return ""

@@ -8,6 +8,8 @@
 [![Version: 5.0.7](https://img.shields.io/badge/Version-5.0.7-emerald.svg)](https://github.com/AnimusLab/Anchor/releases)
 [![AnimusLab](https://img.shields.io/badge/AnimusLab-Research%20Institute-indigo.svg)](https://www.animuslab.dev)
 
+> 📄 Research: "The $3 Billion Warning — Governance Failures in Automated Finance" · SSRN (under review)
+
 > "Probabilistic observation is not governance. Mathematical enforcement is."
 
 Anchor is a federated, two-layer governance engine designed to mathematically seal the behavior of autonomous AI systems. It replaces post-hoc probabilistic classifiers with deterministic structural contracts, ensuring zero "intent drift" in high-frequency, high-stakes financial and operational routing.
@@ -30,7 +32,7 @@ Anchor is architected to guarantee $D < \epsilon$ through cryptographic enforcem
 
 | Event | Date | Amount |
 |---|---|---|
-| Goldman Sachs CFPB enforcement — AI explainability failure | Oct 2024 | **$45M** |
+| Goldman Sachs + Apple CFPB enforcement — AI explainability failure | Oct 2024 | **$89M+** |
 | EU AI Act full enforcement begins — credit scoring, AML, fraud | Aug 2026 | Mandatory |
 | SEC AI Governance — named #1 examination priority, above crypto | 2026 | Mandatory |
 | RBI FREE-AI — 26 mandatory recommendations, per-decision audit trails | Aug 2025 | Mandatory |
@@ -628,10 +630,12 @@ os.environ.get("SECRET_KEY")  # anchor: ignore-all
 | Resource | URL |
 |---|---|
 | **PyPI Package** | [pypi.org/project/anchor-audit](https://pypi.org/project/anchor-audit/) |
-| **Technical Preprint** | [zenodo.org/records/19734724](https://zenodo.org/records/19734724) |
+| **Technical Preprint (Zenodo)** | [zenodo.org/records/19734724](https://zenodo.org/records/19734724) |
+| **SSRN Research Paper** | [ssrn.com/abstract=6933558](https://ssrn.com/abstract=6933558) |
 | **Research Institute** | [animuslab.dev](https://www.animuslab.dev) |
 | **Anchor Research Program** | [animuslab.dev/programs](https://www.animuslab.dev/programs) |
 | **Research Archive** | [animuslab.dev/research](https://www.animuslab.dev/research) |
+| **Governance Platform** | [anchorgovernance.tech](https://anchorgovernance.tech) |
 | **GitHub Organization** | [github.com/AnimusLab](https://github.com/AnimusLab) |
 
 ---

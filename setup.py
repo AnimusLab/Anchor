@@ -10,9 +10,9 @@ setup(
     description="The Federated Governance Engine for AI (Universal Multi-Language)",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/Tanishq1030/anchor",
+    url="https://github.com/AnimusLab/Anchor",
     author="Tanishq",
-    author_email="tanishqdasari2004@gmail.com",
+    author_email="tan@animuslab.dev",
     packages=find_packages(),
     include_package_data=True,
     package_data={

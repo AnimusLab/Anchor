@@ -1,17 +1,20 @@
-# ANCHOR (v5.0.2)
+# ANCHOR (v5.0.7)
 
 **The Cryptographic Enforcement Kernel for Agentic AI**
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![PyPI](https://img.shields.io/badge/PyPI-anchor--audit-gold.svg)](https://pypi.org/project/anchor-audit/)
-[![Version: 5.0.2](https://img.shields.io/badge/Version-5.0.2-emerald.svg)]()
+[![PyPI](https://img.shields.io/pypi/v/anchor-audit?label=PyPI&color=gold)](https://pypi.org/project/anchor-audit/)
+[![Version: 5.0.7](https://img.shields.io/badge/Version-5.0.7-emerald.svg)](https://github.com/AnimusLab/Anchor/releases)
+[![AnimusLab](https://img.shields.io/badge/AnimusLab-Research%20Institute-indigo.svg)](https://www.animuslab.dev)
 
 > "Probabilistic observation is not governance. Mathematical enforcement is."
 
 Anchor is a federated, two-layer governance engine designed to mathematically seal the behavior of autonomous AI systems. It replaces post-hoc probabilistic classifiers with deterministic structural contracts, ensuring zero "intent drift" in high-frequency, high-stakes financial and operational routing.
 
 This is not a linter. This is the **Decision Audit Chain (DAC)**.
+
+**Research & Institutional Context:** [animuslab.dev](https://www.animuslab.dev) · [Technical Preprint (Zenodo)](https://zenodo.org/records/19734724) · [Anchor Research Program](https://www.animuslab.dev/programs)
 
 ---
 
@@ -178,7 +181,7 @@ graph LR
     style CONST fill:#0c4a6e,stroke:#06b6d4,color:#e0f2fe
 ```
 
-#### 3. Layer 2 — Runtime Interceptor
+#### 4. Layer 2 — Runtime Interceptor
 ```mermaid
 graph TB
     subgraph "Application Code"
@@ -252,7 +255,7 @@ graph TB
     style AUD fill:#14532d,stroke:#22c55e,color:#dcfce7
 ```
 
-#### 4. Diamond Cage — WASM Sandbox
+#### 5. Diamond Cage — WASM Sandbox
 ```mermaid
 graph LR
     subgraph "Pre-Deployment (anchor check --sandbox)"
@@ -292,7 +295,7 @@ graph LR
     style SAFE fill:#14532d,stroke:#22c55e,color:#dcfce7
 ```
 
-#### 5. Hub ↔ Spoke — Sovereign Relay Protocol
+#### 6. Hub ↔ Spoke — Sovereign Relay Protocol
 ```mermaid
 sequenceDiagram
     participant SDK as Anchor SDK<br/>(Developer's Code)
@@ -320,7 +323,7 @@ sequenceDiagram
     HUB->>AUDIT: Serve decrypted<br/>forensic payload
 ```
 
-#### 6. Database Schema
+#### 7. Database Schema
 ```mermaid
 erDiagram
     Organization ||--o{ Fleet : "has projects"
@@ -334,7 +337,7 @@ erDiagram
         string id PK "org_a1b2..."
         string hub_id UK "animuslab"
         string display_name "Animus Global"
-        string domain UK "animuslab.ai"
+        string domain UK "animuslab.dev"
         string region "India"
         string org_type "enterprise | regulator"
         string master_key_hash "SHA-256"
@@ -387,7 +390,7 @@ erDiagram
     }
 ```
 
-#### 7. Frontend Portal Architecture
+#### 8. Frontend Portal Architecture
 ```mermaid
 graph TB
     subgraph "Public"
@@ -436,7 +439,7 @@ graph TB
     style RADM fill:#1e293b,stroke:#ef4444,color:#e2e8f0
 ```
 
-#### 8. Connection: How `anchor` ↔ `anchor-web` Talk
+#### 9. Connection: How `anchor` ↔ `anchor-web` Talk
 ```mermaid
 graph LR
     subgraph "Developer's Machine"
@@ -449,7 +452,7 @@ graph LR
     end
 
     subgraph "Anchor Cloud"
-        HUB_SRV["Hub Node\n(api.anchorgovernance.tech)\nMetadata-only registry"]
+        HUB_SRV["Hub Node\n(Master Control)\nMetadata-only registry"]
         ENT_DASH["Enterprise Portal\n(dashboard)"]
         REG_DASH["Oversight Portal\n(oversight)"]
         MESH_VIZ["Mesh Dashboard\n(mesh)"]
@@ -492,7 +495,7 @@ Anchor operates on a three-layer constitutional architecture:
 | **Mitigation Catalog** | `mitigation.anchor` | Defines **HOW** to detect each risk. Regex + AST patterns. Cloud-synced. |
 | **State Law** | `policy.anchor` | **Your** local overrides. Change severity, add company-specific rules. |
 
-#### Coverage — V5.0.2
+#### Coverage — V5.0.7
 
 | Tier | Content | Count |
 |---|---|---|
@@ -517,7 +520,7 @@ Anchor operates on a three-layer constitutional architecture:
 
 ---
 
-### V. v5.0.2: The Primitive Vocabulary
+### V. v5.0.7: The Primitive Vocabulary
 
 Version 5 introduces the algorithmic decomposition of regulatory risk. Governance is no longer reliant on vague, hand-authored regex. Every regulatory statute (EU AI Act, FINOS, CFPB, SEC) is algorithmically compiled into five primitive enforcement nodes:
 
@@ -531,7 +534,7 @@ Version 5 introduces the algorithmic decomposition of regulatory risk. Governanc
 
 ### VI. The Anchor Healer: Autonomous Remediation
 
-Beyond detection, Anchor v5.0.2 introduces the **Healer** node. When a violation is detected in the AST or runtime stream, Anchor generates a mathematically verified patch (MVP) that restricts the execution path without breaking functionality. This patch is then validated inside the **Diamond Cage** before deployment.
+Beyond detection, Anchor v5 introduces the **Healer** node. When a violation is detected in the AST or runtime stream, Anchor generates a mathematically verified patch (MVP) that restricts the execution path without breaking functionality. This patch is then validated inside the **Diamond Cage** before deployment.
 
 ---
 
@@ -620,4 +623,17 @@ os.environ.get("SECRET_KEY")  # anchor: ignore-all
 
 ---
 
-**AnimusLab** // *System Witness* // 2026
+### XII. Links
+
+| Resource | URL |
+|---|---|
+| **PyPI Package** | [pypi.org/project/anchor-audit](https://pypi.org/project/anchor-audit/) |
+| **Technical Preprint** | [zenodo.org/records/19734724](https://zenodo.org/records/19734724) |
+| **Research Institute** | [animuslab.dev](https://www.animuslab.dev) |
+| **Anchor Research Program** | [animuslab.dev/programs](https://www.animuslab.dev/programs) |
+| **Research Archive** | [animuslab.dev/research](https://www.animuslab.dev/research) |
+| **GitHub Organization** | [github.com/AnimusLab](https://github.com/AnimusLab) |
+
+---
+
+**[AnimusLab](https://www.animuslab.dev)** · *Independent Research Institute* · *Governable Intelligence* · 2026

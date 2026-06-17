@@ -341,7 +341,7 @@ def init(domains, frameworks, regulators, sandbox, all_items, force, no_sign, po
 # RULES:
 #   1. Can only RAISE severity (ERROR -> BLOCKER is allowed)
 #   2. Cannot LOWER severity â€” the floor is absolute
-#   3. Cannot suppress constitutional rules
+
   # Example: raise SEC-006 from error to blocker
   # - id: SEC-006
   #   severity: blocker

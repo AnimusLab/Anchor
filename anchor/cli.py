@@ -1589,7 +1589,7 @@ def check_drift(ctx, target, repo, limit, only_violations, as_json, verbose, rep
             if not anchor:
                 continue
             contexts = extract_usages(str(repo_path), symbol.name)
-            result   = analyze_drift(symbol.name, anchor, contexts)
+            result   = analyze_drift(symbol.name, anchor, contexts, repo_path=str(repo_path))
             # Attach metadata for reporting
             result.file_path = symbol.file_path
             result.line_number = symbol.line_number
@@ -1604,12 +1604,19 @@ def check_drift(ctx, target, repo, limit, only_violations, as_json, verbose, rep
                 'file':     symbol.file_path,
                 'line':     symbol.line_number,
                 'verdict':  result.verdict.value,
+                'confidence': result.confidence_level,
+                'requires_human_review': result.requires_human_review,
+                'priority_score': result.priority_score,
                 'rationale': result.rationale,
                 'evidence': result.evidence,
+                'detected_capabilities': result.detected_capabilities,
+                'missing_controls': result.missing_controls,
                 'anchor': {
-                    'commit':     result.anchor.commit_sha[:7],
-                    'date':       str(result.anchor.commit_date.date()),
-                    'confidence': result.anchor.confidence.value,
+                    'commit':           result.anchor.commit_sha[:7],
+                    'date':             str(result.anchor.commit_date.date()),
+                    'confidence':       result.anchor.confidence.value,
+                    'confidence_score': result.anchor.confidence_score,
+                    'commit_intent':    result.anchor.commit_intent[:120] if result.anchor.commit_intent else "",
                 },
             })
 
@@ -1627,9 +1634,23 @@ def check_drift(ctx, target, repo, limit, only_violations, as_json, verbose, rep
     has_cicd = os.path.isdir(".github") or os.path.isdir(".gitlab-ci")
     dot_anchor = ".anchor"
 
-    # --- Partition results ---
-    drift_violations = [r for r in results if r.verdict.value != 'aligned']
-    aligned          = [r for r in results if r.verdict.value == 'aligned']
+    # --- Partition results (vNext) ---
+    # Verified Findings: high confidence, real violations
+    verified_violations = sorted(
+        [r for r in results if r.verdict.value not in ('aligned', 'confidence_too_low')
+         and not r.requires_human_review],
+        key=lambda r: r.priority_score, reverse=True
+    )
+    # Requires Human Review: medium/low confidence violations
+    requires_review = sorted(
+        [r for r in results if r.verdict.value not in ('aligned', 'confidence_too_low')
+         and r.requires_human_review],
+        key=lambda r: r.priority_score, reverse=True
+    )
+    needs_investigation = [r for r in results if r.verdict.value == 'confidence_too_low']
+    aligned             = [r for r in results if r.verdict.value == 'aligned']
+    # All non-aligned for backward-compat reporting
+    drift_violations    = verified_violations + requires_review
 
     from datetime import datetime
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -1645,67 +1666,113 @@ def check_drift(ctx, target, repo, limit, only_violations, as_json, verbose, rep
 
         with open(txt_path, "w", encoding="utf-8") as f:  # anchor: ignore SEC-007
             f.write("=" * 80 + "\n")
-            f.write("   ANCHOR DRIFT VIOLATIONS\n")
+            f.write("   ANCHOR LAYER 1 ASSESSMENT — DRIFT & GOVERNANCE\n")
             f.write("=" * 80 + "\n\n")
             f.write(f"Target:    {target_path}\n")
             f.write(f"Timestamp: {timestamp}\n")
-            f.write(f"Symbols:   {len(results)} analyzed, {len(drift_violations)} violations, {len(aligned)} aligned\n\n")
+            f.write(f"Symbols:   {len(results)} analyzed\n")
+            f.write(f"Verified Violations:    {len(verified_violations)}\n")
+            f.write(f"Requires Human Review:  {len(requires_review)}\n")
+            f.write(f"Needs Investigation:    {len(needs_investigation)}\n")
+            f.write(f"Aligned:               {len(aligned)}\n\n")
             f.write("-" * 80 + "\n\n")
-            for r in results:
-                verdict = r.verdict.value
-                if verdict == 'aligned':
-                    tag = "[[V]]"
-                elif verdict in ('intent_violation', 'semantic_overload'):
-                    tag = "[[X]]"
-                else:
-                    tag = "[[!]]"
-                f.write(f"{tag} {r.symbol} [{r.verdict.value.upper().replace('_', ' ')}]\n")
+
+            def _write_result_block(f, r, tag):
+                f.write(f"{tag} {r.symbol} [{r.verdict.value.upper().replace('_', ' ')}]")
+                f.write(f" [Priority: {r.priority_score:.1f}] [{r.confidence_level}]\n")
                 f.write(f"   Location:  {getattr(r, 'file_path', 'unknown')}:{getattr(r, 'line_number', '0')}\n")
                 f.write(f"   Rationale: {r.rationale}\n")
+                if r.detected_capabilities:
+                    f.write(f"   Capabilities: {', '.join(r.detected_capabilities)}\n")
+                if r.missing_controls:
+                    f.write(f"   Missing Controls: {', '.join(r.missing_controls)}\n")
                 if r.evidence:
                     for e in r.evidence:
-                        f.write(f"   Â· {e}\n")
+                        f.write(f"   · {e}\n")
                 f.write("\n")
+
+            if verified_violations:
+                f.write("== VERIFIED FINDINGS ==\n\n")
+                for r in verified_violations:
+                    _write_result_block(f, r, "[[X]]")
+
+            if requires_review:
+                f.write("== REQUIRES HUMAN REVIEW ==\n\n")
+                for r in requires_review:
+                    _write_result_block(f, r, "[[?]]")
+
+            if needs_investigation:
+                f.write("== NEEDS INVESTIGATION ==\n\n")
+                for r in needs_investigation:
+                    _write_result_block(f, r, "[[ ]]")
+
+            if aligned:
+                f.write("== ALIGNED ==\n\n")
+                for r in aligned:
+                    _write_result_block(f, r, "[[V]]")
 
         # -- 2. Markdown report (always) --------------------------------------â”€
         with open(md_path, "w", encoding="utf-8") as f:  # anchor: ignore SEC-007
-            f.write("# Anchor Architectural Drift Audit\n\n")
-            f.write(f"**Status:** {'DRIFT DETECTED' if drift_violations else 'NO DRIFT'}  \n")
+            f.write("# Anchor Layer 1 Assessment — Architectural & Governance Drift\n\n")
+            status = "DRIFT DETECTED" if drift_violations else "NO DRIFT"
+            f.write(f"**Status:** {status}  \n")
             f.write(f"**Timestamp:** {timestamp}  \n")
             f.write(f"**Target:** `{target_path}`  \n\n")
 
             f.write("## Summary\n\n")
             f.write(f"| Category | Count |\n|---|---|\n")
-            f.write(f"| Aligned | {len(aligned)} |\n")
-            f.write(f"| Drift Violations | {len(drift_violations)} |\n")
-            f.write(f"| Total Analyzed | {len(results)} |\n\n")
+            f.write(f"| ✅ Aligned | {len(aligned)} |\n")
+            f.write(f"| 🔴 Verified Violations | {len(verified_violations)} |\n")
+            f.write(f"| 🟡 Requires Human Review | {len(requires_review)} |\n")
+            f.write(f"| ⚪ Needs Investigation | {len(needs_investigation)} |\n")
+            f.write(f"| **Total Analyzed** | **{len(results)}** |\n\n")
 
-            if drift_violations:
-                f.write("## Drift Violations\n\n")
-                f.write("| Symbol | Verdict | Rationale |\n|---|---|---|\n")
-                for r in drift_violations:
-                    f.write(f"| `{r.symbol}` | **{r.verdict.value.replace('_', ' ').title()}** | {r.rationale[:100]} |\n")
+            if verified_violations:
+                f.write("## 🔴 Verified Findings\n\n")
+                f.write("| Priority | Symbol | Verdict | Confidence | Rationale |\n|---|---|---|---|---|\n")
+                for r in verified_violations:
+                    f.write(f"| {r.priority_score:.1f} | `{r.symbol}` | **{r.verdict.value.replace('_', ' ').title()}** | {r.confidence_level} | {r.rationale[:90]} |\n")
+                f.write("\n")
+                for r in verified_violations:
+                    verdict_label = r.verdict.value.replace('_', ' ').title()
+                    f.write(f"### `{r.symbol}` — {verdict_label}\n\n")
+                    f.write(f"**Confidence:** {r.confidence_level}  \n")
+                    f.write(f"**Priority Score:** {r.priority_score:.1f}  \n")
+                    f.write(f"**Rationale:** {r.rationale}  \n")
+                    if r.anchor:
+                        f.write(f"**Anchored at:** commit `{r.anchor.commit_sha[:7]}` ({str(r.anchor.commit_date.date())})  \n")
+                        if r.anchor.commit_intent:
+                            f.write(f"**Commit Intent:** {r.anchor.commit_intent[:120]}  \n")
+                    if r.detected_capabilities:
+                        f.write(f"\n**Detected Capabilities:** {', '.join(f'`{c}`' for c in r.detected_capabilities)}  \n")
+                    if r.missing_controls:
+                        f.write(f"**Missing Controls:** {', '.join(f'`{c}`' for c in r.missing_controls)}  \n")
+                    if r.evidence:
+                        f.write("\n**Evidence:**\n")
+                        for e in r.evidence:
+                            f.write(f"- {e}\n")
+                    f.write("\n")
+
+            if requires_review:
+                f.write("## 🟡 Requires Human Review\n\n")
+                f.write("> These findings have medium or low confidence. An auditor should verify before acting.\n\n")
+                f.write("| Priority | Symbol | Verdict | Confidence |\n|---|---|---|---|\n")
+                for r in requires_review:
+                    f.write(f"| {r.priority_score:.1f} | `{r.symbol}` | {r.verdict.value.replace('_', ' ').title()} | {r.confidence_level} |\n")
                 f.write("\n")
 
-            f.write("## Detailed Findings\n\n")
-            for r in drift_violations:
-                verdict_label = r.verdict.value.replace('_', ' ').title()
-                f.write(f"### `{r.symbol}`\n\n")
-                f.write(f"**Verdict:** {verdict_label}  \n")
-                f.write(f"**Rationale:** {r.rationale}  \n")
-                if r.anchor:
-                    f.write(f"**Anchored at:** commit `{r.anchor.commit_sha[:7]}` ({str(r.anchor.commit_date.date())})  \n")
-                if r.evidence:
-                    f.write("\n**Evidence:**\n")
-                    for e in r.evidence:
-                        f.write(f"- {e}\n")
+            if needs_investigation:
+                f.write("## ⚪ Needs Investigation\n\n")
+                f.write("> Insufficient history or docstrings to produce a verdict.\n\n")
+                for r in needs_investigation:
+                    f.write(f"- `{r.symbol}` — {r.rationale}\n")
                 f.write("\n")
 
             if aligned:
-                f.write("## Aligned Symbols\n\n")
+                f.write("## ✅ Aligned Symbols\n\n")
                 f.write(", ".join(f"`{r.symbol}`" for r in aligned) + "\n\n")
 
-            f.write("> *This report was generated by Anchor. Use it for code review, release notes, or governance documentation.*\n")
+            f.write("> *Generated by Anchor vNext. Use for code review, release governance, or regulatory evidence.*\n")
 
         # -- 3. JSON (auto if CI/CD detected or --json flag) ------------------â”€
         if as_json or has_cicd:
@@ -1728,30 +1795,62 @@ def check_drift(ctx, target, repo, limit, only_violations, as_json, verbose, rep
 
     # -- Terminal summary (always) ----------------------------------------------
     click.echo("=" * 70)
-    click.secho("ANCHOR DRIFT REPORT", bold=True)
+    click.secho("ANCHOR LAYER 1 ASSESSMENT", bold=True)
     click.echo("=" * 70)
-    click.secho(f"  Aligned:    {len(aligned)}", fg='green')
-    click.secho(f"  Violations: {len(drift_violations)}", fg='red' if drift_violations else 'green')
+    click.secho(f"  Aligned:               {len(aligned)}", fg='green')
+    click.secho(f"  Verified Violations:   {len(verified_violations)}",
+                fg='red' if verified_violations else 'green')
+    click.secho(f"  Requires Human Review: {len(requires_review)}",
+                fg='yellow' if requires_review else 'green')
+    click.secho(f"  Needs Investigation:   {len(needs_investigation)}",
+                fg='white')
     click.echo("=" * 70)
     click.echo()
 
-    for result in results:
-        color, _ = VERDICT_COLORS.get(result.verdict.value, ('white', ''))
-        click.secho(
-            f"{result.symbol}  [{result.verdict.value.upper().replace('_', ' ')}]",
-            fg=color, bold=True
-        )
-        click.secho(f"   {result.rationale[:120]}", fg=color, dim=True)
-        if result.evidence:
-            for e in result.evidence[:3]:
-                click.echo(f"   Â· {e}")
-        if result.remediation and not only_violations:
-            click.secho("   Remediation available (run with single symbol for full details)",
-                        fg=color)
+    VERDICT_COLORS['governance_drift'] = ('red', '')
+
+    if verified_violations:
+        click.secho("🔴 VERIFIED FINDINGS", bold=True, fg='red')
+        click.echo()
+        for result in verified_violations:
+            color, _ = VERDICT_COLORS.get(result.verdict.value, ('white', ''))
+            click.secho(
+                f"  [{result.priority_score:.0f}] {result.symbol}  "
+                f"[{result.verdict.value.upper().replace('_', ' ')}]",
+                fg=color, bold=True
+            )
+            click.secho(f"   {result.rationale[:120]}", fg=color, dim=True)
+            if result.detected_capabilities:
+                click.secho(f"   Capabilities: {', '.join(result.detected_capabilities)}", fg='red')
+            if result.missing_controls:
+                click.secho(f"   Missing Controls: {', '.join(result.missing_controls)}", fg='yellow')
+            if result.evidence:
+                for e in result.evidence[:3]:
+                    click.echo(f"   · {e}")
+            click.echo()
+
+    if requires_review:
+        click.secho("🟡 REQUIRES HUMAN REVIEW", bold=True, fg='yellow')
+        click.echo()
+        for result in requires_review:
+            color, _ = VERDICT_COLORS.get(result.verdict.value, ('white', ''))
+            click.secho(
+                f"  [{result.priority_score:.0f}] {result.symbol}  "
+                f"[{result.verdict.value.upper().replace('_', ' ')}] [{result.confidence_level}]",
+                fg='yellow', bold=True
+            )
+            click.secho(f"   {result.rationale[:120]}", dim=True)
+            click.echo()
+
+    if needs_investigation:
+        click.secho("⚪ NEEDS INVESTIGATION", bold=True)
+        click.echo()
+        for result in needs_investigation:
+            click.secho(f"  {result.symbol}  [CONFIDENCE TOO LOW]", dim=True)
         click.echo()
 
-    # Exit non-zero if any violations found
-    if drift_violations:
+    # Exit non-zero if any verified violations found
+    if verified_violations:
         raise SystemExit(1)
 
 

@@ -10,6 +10,7 @@ class VerdictType(Enum):
     DEPENDENCY_INERTIA = "dependency_inertia"
     COMPLEXITY_DRIFT = "complexity_drift"
     CONFIDENCE_TOO_LOW = "confidence_too_low"
+    GOVERNANCE_DRIFT = "governance_drift"
 
 class AnchorConfidence(Enum):
     HIGH = "high"
@@ -25,10 +26,16 @@ class IntentAnchor:
     intent_description: str
     original_assumptions: List[str]
     source_code_snapshot: str = ""  # singular
-    
+
     # Internal metadata
     confidence: AnchorConfidence = AnchorConfidence.LOW
     confidence_reason: str = "Inferred default"
+
+    # vNext: commit-assisted intent anchoring
+    original_file_path: str = ""
+    docstring_intent: str = ""
+    commit_intent: str = ""
+    confidence_score: float = 0.0
 
 @dataclass
 class CodeSymbol:
@@ -92,5 +99,18 @@ class AuditResult:
     remediation: Optional[str] = None  # Instructions for an AI Agent
     file_path: Optional[str] = None    # Attached by drift scanner (cli.py)
     line_number: Optional[int] = None  # Attached by drift scanner (cli.py)
+
+    # vNext: priority, confidence, and governance metadata
+    priority_score: float = 0.0
+    confidence_level: str = "HIGH"          # "HIGH", "MEDIUM", "LOW"
+    requires_human_review: bool = False
+    detected_capabilities: List[str] = None  # e.g. ["subprocess", "openai"]
+    missing_controls: List[str] = None       # e.g. ["audit", "replay"]
+
+    def __post_init__(self):
+        if self.detected_capabilities is None:
+            self.detected_capabilities = []
+        if self.missing_controls is None:
+            self.missing_controls = []
 
     

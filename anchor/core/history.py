@@ -20,6 +20,30 @@ def safe_print(msg: str):
         print(msg.encode('ascii', errors='replace').decode('ascii'))
 
 
+
+def _compute_confidence_score(docstring: str, commit_message: str) -> float:
+    """
+    Returns a 0.0–1.0 confidence score for the intent anchor.
+
+    HIGH (0.90+)  — Both docstring and a descriptive commit message are present.
+    MED  (0.60)   — Only one of the two is present.
+    LOW  (0.10)   — Neither is present.
+    """
+    has_doc = bool(docstring and docstring.strip() and
+                   docstring.strip() != "No docstring found in early history.")
+    # A commit message is only meaningful if it's longer than a one-word tag
+    has_commit = bool(commit_message and len(commit_message.split()) > 3)
+
+    if has_doc and has_commit:
+        return 0.90
+    elif has_doc:
+        return 0.70
+    elif has_commit:
+        return 0.50
+    else:
+        return 0.10
+
+
 class HistoryEngine:
     def __init__(self, repo_path: str):
         self.repo = Repo(repo_path)
@@ -93,7 +117,12 @@ class HistoryEngine:
             original_assumptions=[],
             source_code_snapshot="",
             confidence=AnchorConfidence.HIGH if final_docstring else AnchorConfidence.LOW,
-            confidence_reason="Inferred from first documented appearance in git history"
+            confidence_reason="Inferred from first documented appearance in git history",
+            # vNext: commit-assisted intent anchoring
+            original_file_path=symbol.file_path,
+            docstring_intent=final_docstring,
+            commit_intent=(first_occurrence.message or "").strip(),
+            confidence_score=_compute_confidence_score(final_docstring, (first_occurrence.message or "").strip()),
         )
 
     def _symbol_exists_in_source(self, name: str, sym_type: str, source: str, file_path: str) -> bool:

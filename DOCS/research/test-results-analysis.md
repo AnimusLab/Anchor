@@ -1,4 +1,4 @@
-# Anchor Test Results Analysis
+﻿# Anchor Test Results Analysis
 
 **Date:** 2026-01-23  
 **Test Suite:** Django Validation Tests  
@@ -27,19 +27,19 @@ Status: FAILED
 
 | Symbol | Intent Anchor | Call Contexts | Status |
 |--------|---------------|---------------|---------|
-| `authenticate()` | ✓ Found (5ceed0a0) | 3 found (< 10 min) | ❌ Insufficient |
-| `login()` | ✓ Found (5ceed0a0) | 2 found (< 10 min) | ❌ Insufficient |
-| `logout()` | ✓ Found (5ceed0a0) | 2 found (< 10 min) | ❌ Insufficient |
-| `User` | ✓ Found (bcfaa735) | 0 found (< 10 min) | ❌ Insufficient |
-| `AbstractUser` | ✓ Found (c433fcb3) | 0 found (< 10 min) | ❌ Insufficient |
-| `UserManager` | ✓ Found (bcfaa735) | 2 found (< 10 min) | ❌ Insufficient |
-| `Form` | ✓ Found (7c7ad041) | 0 found (< 10 min) | ❌ Insufficient |
-| `BaseForm` | ✓ Found (7c7ad041) | 0 found (< 10 min) | ❌ Insufficient |
-| `ModelForm` | ✓ Found (29f0e818) | 3 found (< 10 min) | ❌ Insufficient |
-| `Manager` | ✓ Found (5ceed0a0) | 4 found (< 10 min) | ❌ Insufficient |
-| `BaseManager` | ✓ Found (31fadc12) | 0 found (< 10 min) | ❌ Insufficient |
+| `authenticate()` | Γ£ô Found (5ceed0a0) | 3 found (< 10 min) | Γ¥î Insufficient |
+| `login()` | Γ£ô Found (5ceed0a0) | 2 found (< 10 min) | Γ¥î Insufficient |
+| `logout()` | Γ£ô Found (5ceed0a0) | 2 found (< 10 min) | Γ¥î Insufficient |
+| `User` | Γ£ô Found (bcfaa735) | 0 found (< 10 min) | Γ¥î Insufficient |
+| `AbstractUser` | Γ£ô Found (c433fcb3) | 0 found (< 10 min) | Γ¥î Insufficient |
+| `UserManager` | Γ£ô Found (bcfaa735) | 2 found (< 10 min) | Γ¥î Insufficient |
+| `Form` | Γ£ô Found (7c7ad041) | 0 found (< 10 min) | Γ¥î Insufficient |
+| `BaseForm` | Γ£ô Found (7c7ad041) | 0 found (< 10 min) | Γ¥î Insufficient |
+| `ModelForm` | Γ£ô Found (29f0e818) | 3 found (< 10 min) | Γ¥î Insufficient |
+| `Manager` | Γ£ô Found (5ceed0a0) | 4 found (< 10 min) | Γ¥î Insufficient |
+| `BaseManager` | Γ£ô Found (31fadc12) | 0 found (< 10 min) | Γ¥î Insufficient |
 
-**Key observation:** Intent anchor extraction worked perfectly (11/11 ✓), but call context extraction failed across the board.
+**Key observation:** Intent anchor extraction worked perfectly (11/11 Γ£ô), but call context extraction failed across the board.
 
 ---
 
@@ -110,22 +110,22 @@ The manual audits succeeded because they:
 - Symbols are primarily consumed internally
 
 **This works for:**
-- ✅ Application code (self-contained usage)
-- ✅ Internal utilities (used within same codebase)
-- ✅ Microservices (bounded context)
+- Γ£à Application code (self-contained usage)
+- Γ£à Internal utilities (used within same codebase)
+- Γ£à Microservices (bounded context)
 
 **This fails for:**
-- ❌ **Framework/library code** (external consumers)
-- ❌ **Public APIs** (usage outside repository)
-- ❌ **Exported symbols** (designed for external use)
+- Γ¥î **Framework/library code** (external consumers)
+- Γ¥î **Public APIs** (usage outside repository)
+- Γ¥î **Exported symbols** (designed for external use)
 
 ### The Validation Paradox
 
 **We chose Django to validate Anchor because:**
-- Mature 15+ year codebase ✓
-- Clear intent fossils ✓
-- Known drift patterns ✓
-- Real-world complexity ✓
+- Mature 15+ year codebase Γ£ô
+- Clear intent fossils Γ£ô
+- Known drift patterns Γ£ô
+- Real-world complexity Γ£ô
 
 **But Django is precisely the type of codebase Anchor cannot analyze:**
 - Public framework (not an application)
@@ -196,7 +196,7 @@ Add capability to analyze framework usage by:
 
 ## Current State Assessment
 
-### What Works ✅
+### What Works Γ£à
 
 **Intent Anchor Extraction**
 - Successfully extracted all 11 Django symbol anchors
@@ -210,7 +210,7 @@ Add capability to analyze framework usage by:
 - Python AST parsing operational
 - Clustering algorithms ready
 
-### What Doesn't Work ❌
+### What Doesn't Work Γ¥î
 
 **Call Context Analysis for Framework Code**
 - Cannot analyze external usage
@@ -298,9 +298,9 @@ This is addressable but requires:
 ```
 Auditing {symbol} from {file}...
   [1/5] Extracting intent anchor...
-  ✓ Found anchor at commit {sha}
+  Γ£ô Found anchor at commit {sha}
   [2/5] Extracting call contexts...
-  ✗ Insufficient call contexts ({n} < 10)
+  Γ£ù Insufficient call contexts ({n} < 10)
 ```
 
 Consistent across all 11 symbols.

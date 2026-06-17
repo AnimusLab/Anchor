@@ -7,7 +7,7 @@
 # RULES:
 #   1. Can only RAISE severity (ERROR -> BLOCKER is allowed)
 #   2. Cannot LOWER severity — the floor is absolute
-#   3. Cannot suppress constitutional rules
+#   3. Inline suppressions are permitted but cryptographically audited (git blame identifies the author in reports)
   # Example: raise SEC-006 from error to blocker
   # - id: SEC-006
   #   severity: blocker
@@ -24,3 +24,4 @@ custom_rules:
   #     pattern: 'vault\.read\((?!approved_keys)'
   #   description: >
   #     Vault read operations must only access approved_keys namespace.
+

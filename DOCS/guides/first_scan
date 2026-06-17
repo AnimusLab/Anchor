@@ -1,0 +1,107 @@
+# Guide: Running Your First Scan
+
+This step-by-step tutorial walks you through setting up a repository, running a static scan, triggering a policy violation, and healing the code.
+
+---
+
+## Prerequisites
+
+Ensure you have Python 3.8+ installed on your system:
+
+```bash
+python --version
+```
+
+---
+
+## Step 1: Install Anchor-Audit
+
+Install the Anchor governance engine directly from PyPI:
+
+```bash
+pip install anchor-audit
+```
+
+Verify that the CLI is accessible:
+
+```bash
+anchor --version
+```
+
+---
+
+## Step 2: Initialize the Repository
+
+Create a temporary sandbox directory and initialize the Anchor rulesets:
+
+```bash
+mkdir anchor-tutorial && cd anchor-tutorial
+anchor init --all
+```
+
+This command creates a `.anchor/` directory containing all domain, regulator, and framework rule mappings, and generates a default `policy.anchor` template in your project root.
+
+---
+
+## Step 3: Write Unsafe Code
+
+Create a Python file named `app.py` and write an import statement that accesses low-level system subshells—a pattern flagged under rule `SEC-007` (Subprocess Injection Risk):
+
+```python
+# app.py
+import subprocess
+
+def run_backup(path):
+    # Unsafe command assembly
+    subprocess.call("tar -czf backup.tar.gz " + path, shell=True)
+```
+
+---
+
+## Step 4: Run the Compliance Check
+
+Execute the static scanning engine against the current directory:
+
+```bash
+anchor check .
+```
+
+### Expected Output:
+
+The engine will scan `app.py` using its Tree-sitter Python adapter, match the AST node structures against `SEC-007`, and fail with a non-zero exit status:
+
+```text
+[Anchor] Scanning 'app.py' for compliance...
+  [FAIL] app.py:2 - Rule SEC-007: Raw subprocess execution detected.
+         Severity: blocker
+         Message: Risk SEC-007: Subprocess calls with dynamic inputs are forbidden.
+
+Audit Failure: 1 blocker violation found.
+```
+
+---
+
+## Step 5: Heal the Violation
+
+Run `anchor heal` to inspect recommendations:
+
+```bash
+anchor heal
+```
+
+Anchor parses the violation and displays a diff-style suggestion to safely wrap the execution:
+
+```diff
+- subprocess.call("tar -czf backup.tar.gz " + path, shell=True)
++ import shlex
++ args = shlex.split("tar -czf backup.tar.gz") + [path]
++ subprocess.run(args, check=True)
+```
+
+To apply this refactoring template directly to your file:
+
+```bash
+anchor heal . --apply
+```
+
+Run `anchor check .` again. The scan will pass successfully.

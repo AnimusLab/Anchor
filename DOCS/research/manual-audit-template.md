@@ -1,4 +1,4 @@
-# Anchor Manual Audit: `[SymbolName]`
+﻿# Anchor Manual Audit: `[SymbolName]`
 
 ---
 
@@ -28,9 +28,9 @@
 
 **Confidence justification:**
 
-- [Reason 1 — e.g. Explicit docstring at creation commit]
-- [Reason 2 — e.g. Stable implementation at maturity milestone]
-- [Reason 3 — e.g. Commit message aligns with implementation]
+- [Reason 1 ΓÇö e.g. Explicit docstring at creation commit]
+- [Reason 2 ΓÇö e.g. Stable implementation at maturity milestone]
+- [Reason 3 ΓÇö e.g. Commit message aligns with implementation]
 
 ---
 
@@ -42,7 +42,7 @@
 **Derivation:**
 
 - Docstring: _"[exact quote from earliest docstring]"_
-- [Additional evidence — key methods, commit message, comments]
+- [Additional evidence ΓÇö key methods, commit message, comments]
 - [Code structure evidence]
 
 ---
@@ -51,7 +51,7 @@
 
 **Original assumptions (~YEAR):**
 
-1. **[Assumption 1 — bold title]**
+1. **[Assumption 1 ΓÇö bold title]**
    _Evidence: [specific code or doc evidence]_
 
 2. **[Assumption 2]**
@@ -60,7 +60,7 @@
 3. **[Assumption 3]**
    _Evidence: [specific code or doc evidence]_
 
-4. **[Assumption 4 — if applicable]**
+4. **[Assumption 4 ΓÇö if applicable]**
    _Evidence: ..._
 
 > These assumptions define the symbol's intent boundary.
@@ -72,11 +72,11 @@
 
 ### 2.1 Call Context Inventory
 
-#### Context 1: [Role Name] — Original Intent
+#### Context 1: [Role Name] ΓÇö Original Intent
 
 - **Usage:** [description of how callers use the symbol here]
 - **Key callers / locations:** [where this is invoked]
-- **Alignment:** ✅ Full
+- **Alignment:** Γ£à Full
 
 ---
 
@@ -84,15 +84,15 @@
 
 - **Usage:** [description]
 - **Key callers / locations:** [where this is invoked]
-- **Alignment:** ✅ Full | ⚠️ Partial | ❌ None
+- **Alignment:** Γ£à Full | ΓÜá∩╕Å Partial | Γ¥î None
 
 ---
 
-#### Context 3: [Role Name — add/remove contexts as needed]
+#### Context 3: [Role Name ΓÇö add/remove contexts as needed]
 
 - **Usage:** [description]
 - **Key callers / locations:** [...]
-- **Alignment:** ✅ Full | ⚠️ Partial | ❌ None
+- **Alignment:** Γ£à Full | ΓÜá∩╕Å Partial | Γ¥î None
 
 ---
 
@@ -102,15 +102,15 @@
 
 1. **[Role 1 Name]**
    - [Description, typical callers, platform/framework]
-   - **Estimated usage:** X–Y%
+   - **Estimated usage:** XΓÇôY%
 
 2. **[Role 2 Name]**
    - [Description]
-   - **Estimated usage:** X–Y%
+   - **Estimated usage:** XΓÇôY%
 
-3. **[Role 3 Name — if applicable]**
+3. **[Role 3 Name ΓÇö if applicable]**
    - [Description]
-   - **Estimated usage:** X–Y%
+   - **Estimated usage:** XΓÇôY%
 
 **Key observation:**
 [One sentence on which role dominates and whether it aligns with original intent.]
@@ -123,20 +123,20 @@
 
 | Role     | Compatible with Intent? | Notes                                        |
 | -------- | ----------------------- | -------------------------------------------- |
-| [Role 1] | ✅ Yes                  | [short reason]                               |
-| [Role 2] | ❌ No                   | [short reason — what assumption is violated] |
-| [Role 3] | ⚠️ Partial              | [short reason]                               |
+| [Role 1] | Γ£à Yes                  | [short reason]                               |
+| [Role 2] | Γ¥î No                   | [short reason ΓÇö what assumption is violated] |
+| [Role 3] | ΓÜá∩╕Å Partial              | [short reason]                               |
 
 ---
 
 ### 3.2 Responsibility Expansion
 
 **Has the symbol's responsibility expanded beyond its anchor?**
-✅ Yes | ❌ No | ⚠️ Partially
+Γ£à Yes | Γ¥î No | ΓÜá∩╕Å Partially
 
 **Evidence:**
 
-- [Key signal 1 — e.g. "60–70% of usage never invokes rendering methods"]
+- [Key signal 1 ΓÇö e.g. "60ΓÇô70% of usage never invokes rendering methods"]
 - [Key signal 2]
 - [Key signal 3]
 
@@ -147,12 +147,12 @@
 
 ### 3.3 Temporal Drift Narrative
 
-[Describe HOW drift occurred over time — ecosystem adoption, framework evolution, community reuse patterns, API-first trends, etc.]
+[Describe HOW drift occurred over time ΓÇö ecosystem adoption, framework evolution, community reuse patterns, API-first trends, etc.]
 
 **Result:**
 [Implicit drift through external reuse, not internal evolution.] OR
 [Explicit redesign without intent redefinition.] OR
-[No drift detected — symbol remains within its original boundary.]
+[No drift detected ΓÇö symbol remains within its original boundary.]
 
 ---
 
@@ -160,7 +160,7 @@
 
 ### Final Verdict
 
-> **[One of: ✅ Aligned | ⚠️ Semantic Overload | 🛑 Intent Violation | 📦 Dependency Inertia | 📈 Complexity Drift]**
+> **[One of: Γ£à Aligned | ΓÜá∩╕Å Semantic Overload | ≡ƒ¢æ Intent Violation | ≡ƒôª Dependency Inertia | ≡ƒôê Complexity Drift]**
 
 ---
 
@@ -169,7 +169,7 @@
 - [Key fact 1 that drives the verdict]
 - [Key fact 2]
 - [Key fact 3]
-- [Key fact 4 — the decisive point]
+- [Key fact 4 ΓÇö the decisive point]
 
 ---
 
@@ -177,9 +177,9 @@
 
 | Question            | Answer                         |
 | ------------------- | ------------------------------ |
-| Facts disputable?   | ✅ Yes / ❌ No                 |
-| Verdict disputable? | ✅ Yes / ⚠️ Reasonably / ❌ No |
-| Verdict defensible? | ✅ Yes / ❌ No                 |
+| Facts disputable?   | Γ£à Yes / Γ¥î No                 |
+| Verdict disputable? | Γ£à Yes / ΓÜá∩╕Å Reasonably / Γ¥î No |
+| Verdict defensible? | Γ£à Yes / Γ¥î No                 |
 
 [One sentence on where reasonable disagreement might exist, if applicable.]
 
@@ -194,15 +194,15 @@ Anchored to:
 [Original intent, one line] (~YEAR)
 
 Current roles:
-[Role 1] (X–Y%)
-[Role 2] (X–Y%)
-[Role 3] (X–Y%)
+[Role 1] (XΓÇôY%)
+[Role 2] (XΓÇôY%)
+[Role 3] (XΓÇôY%)
 
 Verdict:
 [Verdict name]
 
 Rationale:
-[2–3 sentence plain-English summary of the verdict rationale.
+[2ΓÇô3 sentence plain-English summary of the verdict rationale.
 Explain what the symbol was, what it became, and why that matters.]
 ```
 
@@ -214,9 +214,9 @@ Explain what the symbol was, what it became, and why that matters.]
 
 **Basis:**
 
-- [Basis point 1 — e.g. Clear, explicit intent anchor with narrow original responsibility]
-- [Basis point 2 — e.g. Quantifiable role dominance observable in ecosystem]
-- [Basis point 3 — e.g. No reasonable alternative interpretation of original intent]
+- [Basis point 1 ΓÇö e.g. Clear, explicit intent anchor with narrow original responsibility]
+- [Basis point 2 ΓÇö e.g. Quantifiable role dominance observable in ecosystem]
+- [Basis point 3 ΓÇö e.g. No reasonable alternative interpretation of original intent]
 
 ---
 

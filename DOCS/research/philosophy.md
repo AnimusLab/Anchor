@@ -1,4 +1,4 @@
-# Anchor Philosophy
+﻿# Anchor Philosophy
 
 **The foundational principles behind deterministic intent auditing.**
 
@@ -48,11 +48,11 @@ Anchor is a deterministic auditor that analyzes a codebase to determine whether 
 
 ### What Anchor Does NOT Do
 
-- ❌ Lint code
-- ❌ Check correctness
-- ❌ Optimize performance
-- ❌ Generate or refactor code
-- ❌ Rely on probabilistic judgments for verdicts
+- Γ¥î Lint code
+- Γ¥î Check correctness
+- Γ¥î Optimize performance
+- Γ¥î Generate or refactor code
+- Γ¥î Rely on probabilistic judgments for verdicts
 
 **This is an auditor, not an assistant.**
 
@@ -106,7 +106,7 @@ Symbols that serve multiple unrelated semantic roles.
 
 **Example verdict:**
 ```
-⚠ authenticate()
+ΓÜá authenticate()
   Anchored to: Validate credentials against backends
   Current roles: session auth, API tokens, OAuth
   Verdict: Semantic Overload
@@ -124,7 +124,7 @@ Symbols whose current behavior contradicts their original intent.
 
 **Example verdict:**
 ```
-⚠ Form
+ΓÜá Form
   Anchored to: Define and render HTML forms
   Current usage: 70% API validation (no HTML)
   Verdict: Intent Violation
@@ -143,7 +143,7 @@ Interfaces or modules that persist due to risk aversion rather than necessity.
 
 **Example verdict:**
 ```
-⚠ User
+ΓÜá User
   Anchored to: Username/password authentication
   Evidence: AbstractUser added as alternative (2013)
   Verdict: Dependency Inertia
@@ -161,7 +161,7 @@ Symbols that maintain their original intent.
 
 **Example verdict:**
 ```
-✓ login()
+Γ£ô login()
   Anchored to: Persist user identity in session
   Current roles: Session creation (100%)
   Verdict: Aligned
@@ -232,7 +232,7 @@ Every symbol is anchored to its **first meaningful commit**:
 
 Manual override is allowed but logged:
 ```python
-# @intent: redefine — now handles billing lifecycle
+# @intent: redefine ΓÇö now handles billing lifecycle
 def process_user(user):
     ...
 ```
@@ -274,7 +274,7 @@ Anchor outputs **opinions**, not dashboards.
 ### Good Output
 
 ```
-⚠ process_user()
+ΓÜá process_user()
 
 Anchored to:
   Authentication pipeline (commit a13f, 2012-03-15)
@@ -296,10 +296,10 @@ Rationale:
 ### Bad Output (What Anchor Avoids)
 
 ```
-❌ Code Quality Score: 67/100
-❌ Complexity: High
-❌ Maintainability: Medium
-❌ Technical Debt: 23 issues
+Γ¥î Code Quality Score: 67/100
+Γ¥î Complexity: High
+Γ¥î Maintainability: Medium
+Γ¥î Technical Debt: 23 issues
 ```
 
 **No charts. No scores. No gamification.**
@@ -315,7 +315,7 @@ Evolution is acceptable. Silent drift is not.
 When a team intentionally redefines an abstraction, they **must mark it**:
 
 ```python
-# @intent: redefine — now handles billing lifecycle
+# @intent: redefine ΓÇö now handles billing lifecycle
 def process_user(user):
     ...
 ```
@@ -390,11 +390,11 @@ AI agents forget context. After 50 messages of incremental changes:
 
 Anchor is successful if:
 
-- ✅ Engineers argue with its verdicts
-- ✅ Refactors are blocked due to intent violations
-- ✅ Deletions become easier to justify
-- ✅ AI agents are constrained by architectural meaning
-- ✅ Technical debates become evidence-based
+- Γ£à Engineers argue with its verdicts
+- Γ£à Refactors are blocked due to intent violations
+- Γ£à Deletions become easier to justify
+- Γ£à AI agents are constrained by architectural meaning
+- Γ£à Technical debates become evidence-based
 
 **Discomfort is expected.**  
 **Silence is failure.**
@@ -578,7 +578,7 @@ Anchor draws from:
 ### Phase 1 (Current): Thesis Validation
 Prove that intent drift can be detected, measured, and argued deterministically.
 
-**Status:** ✅ Validated on Django
+**Status:** Γ£à Validated on Django
 
 ### Phase 2: Automation
 Build the deterministic auditor:

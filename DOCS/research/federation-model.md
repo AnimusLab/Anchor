@@ -1,29 +1,29 @@
-# Constitution + State Law Architecture Example
+﻿# Constitution + State Law Architecture Example
 
-## 🏛️ The Federal System for AI Governance
+## ≡ƒÅ¢∩╕Å The Federal System for AI Governance
 
 ### **How It Works:**
 
 ```
 GenAI Threat Model (threat_model.md)
-         ↓
+         Γåô
 Identifies: RI-24, AI-20, BANK-001
-         ↓
+         Γåô
 RiskMapper searches in:
-├── constitution.anchor (Constitution)
-│   ├── RI-24: severity = "blocker"
-│   └── AI-20: severity = "blocker"
-└── policy.anchor (State Law)
-    └── BANK-001: severity = "error"
-         ↓
+Γö£ΓöÇΓöÇ constitution.anchor (Constitution)
+Γöé   Γö£ΓöÇΓöÇ RI-24: severity = "blocker"
+Γöé   ΓööΓöÇΓöÇ AI-20: severity = "blocker"
+ΓööΓöÇΓöÇ policy.anchor (State Law)
+    ΓööΓöÇΓöÇ BANK-001: severity = "error"
+         Γåô
 Merges all three rules
-         ↓
+         Γåô
 Enforces via PolicyEngine
 ```
 
 ---
 
-## 📋 Real-World Example
+## ≡ƒôï Real-World Example
 
 ### **Scenario: JPMorgan Chase**
 
@@ -81,14 +81,14 @@ mapper = RiskMapper()
 rules = mapper.get_rules_for_risks(['RI-24', 'JPMC-001'])
 # Returns:
 # [
-#   {id: 'RI-24', severity: 'warning'},  ← State Law override
-#   {id: 'JPMC-001', severity: 'blocker'} ← Company-specific
+#   {id: 'RI-24', severity: 'warning'},  ΓåÉ State Law override
+#   {id: 'JPMC-001', severity: 'blocker'} ΓåÉ Company-specific
 # ]
 ```
 
 ---
 
-## 🎯 Key Benefits
+## ≡ƒÄ» Key Benefits
 
 ### **1. Federal + State Flexibility:**
 
@@ -119,7 +119,7 @@ rules = mapper.get_rules_for_risks(['RI-24', 'JPMC-001'])
 
 ---
 
-## 🔍 Merge Logic
+## ≡ƒöì Merge Logic
 
 ### **Rule Priority:**
 
@@ -132,12 +132,12 @@ rules = mapper.get_rules_for_risks(['RI-24', 'JPMC-001'])
 ```python
 # Master: {id: "RI-24", severity: "blocker"}
 # Local:  {id: "RI-24", severity: "warning"}
-# Result: {id: "RI-24", severity: "warning"} ← Local wins
+# Result: {id: "RI-24", severity: "warning"} ΓåÉ Local wins
 ```
 
 ---
 
-## 🚀 Why This Matters for Anchor
+## ≡ƒÜÇ Why This Matters for Anchor
 
 ### **Problem:**
 
@@ -151,4 +151,4 @@ rules = mapper.get_rules_for_risks(['RI-24', 'JPMC-001'])
 - **State Law** = Local customization (Banks)
 - **Federated** = Best of both worlds
 
-**This is how real governance works!** 🏛️
+**This is how real governance works!** ≡ƒÅ¢∩╕Å

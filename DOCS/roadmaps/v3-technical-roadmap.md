@@ -1,4 +1,4 @@
-# Anchor v3 Technical Roadmap: "The Sovereign Scalpel" 
+﻿# Anchor v3 Technical Roadmap: "The Sovereign Scalpel" 
 
 **Version**: 3.0.0-Official-Spec
 **Phase**: Hyper-Rollout (90 Days)
@@ -208,7 +208,7 @@ Large banks struggle with **Rigid Centralization.** A global policy that works f
 2.  **Team (Department)**: Rules specific to the domain. e.g., "Retail Banking must block PII."
 3.  **Local (Repo)**: Project-level specificity. e.g., "Ignore the mock-data folder."
 
-**The Result**: The Trading Team can have low-latency rules while the Customer Service team has high-security filters—all governed by the same central hub.
+**The Result**: The Trading Team can have low-latency rules while the Customer Service team has high-security filtersΓÇöall governed by the same central hub.
 
 ---
 

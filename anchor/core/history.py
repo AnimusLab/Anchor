@@ -96,45 +96,6 @@ class HistoryEngine:
             confidence_reason="Inferred from first documented appearance in git history"
         )
 
-def extract_comments_above(source: str, start_line: int, lang_id: str) -> str:
-    lines = source.splitlines()
-    idx = start_line - 2
-    comment_lines = []
-    
-    while idx >= 0:
-        line = lines[idx].strip()
-        if not line:
-            break
-        
-        is_comment = False
-        comment_text = ""
-        if lang_id == 'python' and line.startswith('#'):
-            is_comment = True
-            comment_text = line.lstrip('#').strip()
-        elif lang_id in ('go', 'typescript', 'java', 'rust'):
-            if line.startswith('//'):
-                is_comment = True
-                comment_text = line.lstrip('/').strip()
-            elif line.startswith('/*'):
-                is_comment = True
-                comment_text = line.lstrip('/*').rstrip('*/').strip()
-            elif line.startswith('*'):
-                is_comment = True
-                comment_text = line.lstrip('*').strip()
-            elif line.endswith('*/'):
-                is_comment = True
-                comment_text = line.rstrip('*/').strip()
-        
-        if is_comment:
-            comment_lines.append(comment_text)
-            idx -= 1
-        else:
-            break
-            
-    comment_lines.reverse()
-    return "\n".join(comment_lines)
-
-
     def _symbol_exists_in_source(self, name: str, sym_type: str, source: str, file_path: str) -> bool:
         """Parses the historical source code using the correct adapter to see if the class/function is defined."""
         from anchor.core.registry import LanguageRegistry
@@ -189,3 +150,42 @@ def extract_comments_above(source: str, start_line: int, lang_id: str) -> str:
         except Exception:
             return ""
         return ""
+
+
+def extract_comments_above(source: str, start_line: int, lang_id: str) -> str:
+    lines = source.splitlines()
+    idx = start_line - 2
+    comment_lines = []
+    
+    while idx >= 0:
+        line = lines[idx].strip()
+        if not line:
+            break
+        
+        is_comment = False
+        comment_text = ""
+        if lang_id == 'python' and line.startswith('#'):
+            is_comment = True
+            comment_text = line.lstrip('#').strip()
+        elif lang_id in ('go', 'typescript', 'java', 'rust'):
+            if line.startswith('//'):
+                is_comment = True
+                comment_text = line.lstrip('/').strip()
+            elif line.startswith('/*'):
+                is_comment = True
+                comment_text = line.lstrip('/*').rstrip('*/').strip()
+            elif line.startswith('*'):
+                is_comment = True
+                comment_text = line.lstrip('*').strip()
+            elif line.endswith('*/'):
+                is_comment = True
+                comment_text = line.rstrip('*/').strip()
+        
+        if is_comment:
+            comment_lines.append(comment_text)
+            idx -= 1
+        else:
+            break
+            
+    comment_lines.reverse()
+    return "\n".join(comment_lines)

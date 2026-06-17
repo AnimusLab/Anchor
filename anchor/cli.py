@@ -1468,7 +1468,25 @@ def check_verify_sync(fix, verbose):
               help='Output results as JSON.')
 @click.option('--verbose', '-v', is_flag=True, help='Show debug output.')
 @click.option('--report', is_flag=True, help='Generate persistent audit reports in .anchor/.')
-def check_drift(target, repo, limit, only_violations, as_json, verbose, report):
+@click.option('--no-sandbox', is_flag=True, help='Disable Diamond Cage WASM sandbox.')
+@click.pass_context
+def check_drift(ctx, target, repo, limit, only_violations, as_json, verbose, report, no_sandbox):
+    # Resolve sandbox configuration from subcommand option and parent group parameters
+    parent_no_sandbox = ctx.parent.params.get('no_sandbox') if (ctx.parent and ctx.parent.params) else False
+    effective_no_sandbox = no_sandbox or parent_no_sandbox
+
+    # --- Diamond Cage activation ---
+    active_cage = None
+    if not effective_no_sandbox:
+        from anchor.core.sandbox import DiamondCage
+        _cage = DiamondCage(verbose=verbose)
+        if _cage.is_installed():
+            active_cage = _cage
+            if not as_json:
+                click.secho("Diamond Cage: ACTIVE (behavioral verification enabled)", fg="cyan")
+        else:
+            if verbose and not as_json:
+                click.secho("Diamond Cage: not installed (use 'anchor init' to enable)", fg="white", dim=True)
     """
     Scan for architectural drift across a codebase, directory, or file.
 
@@ -1564,7 +1582,7 @@ def check_drift(target, repo, limit, only_violations, as_json, verbose, report):
     results = []
     json_results = []
 
-    with click.progressbar(all_symbols, label="Analyzing Security Posture",
+    with click.progressbar(all_symbols, label="Analyzing Architectural Drift",
                            fill_char='#', empty_char='.') as bar:
         for symbol in bar:
             anchor = history_engine.find_anchor(symbol)
@@ -1700,10 +1718,10 @@ def check_drift(target, repo, limit, only_violations, as_json, verbose, report):
                 click.secho(f"JSON report: {json_path}", fg="green")
 
         click.secho(f"\nReports written to {dot_anchor}/", fg="green", bold=True)
-        if verbose:
-            click.echo(f"   * Violations: {txt_path}")
-            click.echo(f"   * Audit MD:   {md_path}")
-            if as_json or has_cicd: click.echo(f"   * JSON:       {json_path}")
+        click.echo(f"   * Violations: {txt_path}")
+        click.echo(f"   * Audit MD:   {md_path}")
+        if as_json or has_cicd or verbose:
+            click.echo(f"   * JSON:       {json_path}")
 
     except Exception as e:
         click.secho(f"WARNING: Failed to write drift reports: {e}", fg="yellow")

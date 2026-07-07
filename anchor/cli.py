@@ -1737,9 +1737,6 @@ def check_drift(ctx, target, repo, limit, only_violations, as_json, verbose, rep
         click.echo(_json.dumps([], indent=2))
         raise SystemExit(0)
 
-        click.echo(_json.dumps([], indent=2))
-        raise SystemExit(0)
-
     if not results:
         click.secho("No drift detected across the scanned codebase.", fg='green', bold=True)
         raise SystemExit(0)

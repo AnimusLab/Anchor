@@ -83,6 +83,11 @@ class GovernanceKeyManager:
         
         self.private_key_path.parent.mkdir(parents=True, exist_ok=True)
         self.private_key_path.write_bytes(pem_private)
+        try:
+            import os
+            os.chmod(self.private_key_path, 0o600)
+        except Exception:
+            pass
         self.public_key_path.write_bytes(pem_public)
         self.private_key = private_key
 

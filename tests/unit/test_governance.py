@@ -60,7 +60,13 @@ def test_event_canonical_json_and_signing():
 
 def test_key_manager(tmp_path):
     keystore_file = tmp_path / "test_governance.keystore"
-    km = GovernanceKeyManager(keystore_path=str(keystore_file))
+    private_pem_path = tmp_path / "ed25519_private.pem"
+    public_pem_path = tmp_path / "ed25519_public.pem"
+    km = GovernanceKeyManager(
+        keystore_path=str(keystore_file),
+        private_key_path=str(private_pem_path),
+        public_key_path=str(public_pem_path),
+    )
 
     # Test before generating/unlocking
     assert km.private_key is None
@@ -73,7 +79,11 @@ def test_key_manager(tmp_path):
     assert len(pub_hex) > 0
 
     # Create new manager and unlock
-    km2 = GovernanceKeyManager(keystore_path=str(keystore_file))
+    km2 = GovernanceKeyManager(
+        keystore_path=str(keystore_file),
+        private_key_path=str(private_pem_path),
+        public_key_path=str(public_pem_path),
+    )
     success = km2.unlock("test-password")  # Password currently ignored/simulated
     assert success is True
     assert km2.get_public_key_hex() == pub_hex

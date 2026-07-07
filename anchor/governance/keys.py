@@ -25,17 +25,22 @@ class GovernanceKeyManager:
         Unlocks the governance signing key. First checks for local Ed25519 PEM files.
         If not found, falls back to parsing the keystore file.
         """
-        try:
-            if self.private_key_path.exists():
+        # 1) Prefer local PEM private key if present and valid
+        if self.private_key_path.exists():
+            try:
                 pem_data = self.private_key_path.read_bytes()
-                self.private_key = serialization.load_pem_private_key(
-                    pem_data,
-                    password=None
-                )
-                return True
+                key = serialization.load_pem_private_key(pem_data, password=None)
+                if isinstance(key, ed25519.Ed25519PrivateKey):
+                    self.private_key = key
+                    return True
+            except Exception:
+                # Fall back to legacy keystore below
+                pass
 
-            if not self.keystore_path.exists():
-                return False
+        # 2) Legacy JSON keystore fallback
+        if not self.keystore_path.exists():
+            return False
+        try:
             data = json.loads(self.keystore_path.read_text(encoding="utf-8"))
             private_key_hex = data.get("private_key_hex")
             if not private_key_hex:

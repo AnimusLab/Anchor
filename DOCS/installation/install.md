@@ -59,14 +59,22 @@ Initialize governance rulesets:
 anchor init --all
 ```
 
-This creates:
+This creates the configuration directory structure along with a secure project cryptographic identity:
 
 ```text
 .anchor/
-policy.anchor
+  keys/
+    ed25519_private.pem   (private key, automatically git-ignored)
+    ed25519_public.pem    (public key, committed to repository)
+  constitution.anchor
+  policy.anchor
 ```
 
-and downloads the selected governance packs.
+During initialization, Anchor will:
+1. **Generate a Unique Cryptographic Identity:** Generate a unique Ed25519 keypair saved under `.anchor/keys/` to sign all `GovernanceEvents` locally.
+2. **Identity Registry Prompt:** Prompt you to choose whether to register this project's public governance identity with the AnimusLab Identity Registry.
+3. **Save Registration Configuration:** Store your registration preference in `.anchor/constitution.anchor` using YAML under the `metadata.identity` section.
+4. **Git Protection:** Add the private key to `.gitignore` to ensure it never leaves your machine.
 
 ---
 

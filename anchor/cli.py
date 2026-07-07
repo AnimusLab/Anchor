@@ -25,6 +25,20 @@ from anchor.core.crypto import sign_chain_hash
 from anchor import __version__
 __version__ = "5.0.8"
 
+
+def _get_code_snippet(file_path: str, line_num: int) -> str:
+    if not file_path or not os.path.exists(file_path):
+        return ""
+    try:
+        with open(file_path, "r", encoding="utf-8", errors="ignore") as sf:
+            lines = sf.readlines()
+        if 1 <= line_num <= len(lines):
+            return lines[line_num - 1].strip()
+    except Exception:
+        pass
+    return ""
+
+
 @click.group()
 @click.version_option(version=__version__)
 def cli():
@@ -367,7 +381,12 @@ custom_rules:
     # â”€â”€ Update .gitignore â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     # V4 Decision: .anchor/ should be committed, excluding cache and temp
     gitignore_path = ".gitignore"
-    gitignore_entries = [".anchor/cache/", ".anchor/logs/*.tmp", f".anchor/{policy_name}"]
+    gitignore_entries = [
+        ".anchor/cache/",
+        ".anchor/logs/*.tmp",
+        f".anchor/{policy_name}",
+        ".anchor/keys/ed25519_private.pem"
+    ]
     try:
         content = ""
         lines = []
@@ -463,6 +482,60 @@ fi
         click.secho("  Installing Diamond Cage...", fg="cyan", bold=True)
         from anchor.core.sandbox import install_diamond_cage
         install_diamond_cage()
+
+    # â”€â”€ Local Cryptographic Identity Generation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    click.echo("")
+    click.secho("  Configuring project cryptographic identity...", fg="cyan", bold=True)
+    
+    register_choice = True
+    if sys.stdin and hasattr(sys.stdin, "isatty") and sys.stdin.isatty():
+        prompt_text = (
+            "Would you like to register this project's public governance identity\n"
+            "with the AnimusLab Identity Registry?\n\n"
+            "Benefits:\n\n"
+            "✓ Public signature verification\n"
+            "✓ Identity discovery\n"
+            "✓ Key rotation\n"
+            "✓ Key revocation\n"
+            "✓ Verified project badge\n\n"
+            "Only your PUBLIC key and project metadata will be uploaded.\n"
+            "Your PRIVATE key never leaves your machine.\n"
+        )
+        click.echo(prompt_text)
+        register_choice = click.confirm("", default=True, show_default=False, prompt_suffix="[Y/n]")
+    
+    # Update manifest data with identity configuration preference
+    if os.path.exists(dot_anchor_manifest):
+        try:
+            with open(dot_anchor_manifest, "r", encoding="utf-8") as f:
+                manifest_data = yaml.safe_load(f) or {}
+            
+            if "metadata" not in manifest_data:
+                manifest_data["metadata"] = {}
+            if "identity" not in manifest_data["metadata"]:
+                manifest_data["metadata"]["identity"] = {}
+                
+            manifest_data["metadata"]["identity"]["register_identity"] = register_choice
+            
+            with open(dot_anchor_manifest, "w", encoding="utf-8") as f:
+                yaml.dump(manifest_data, f, default_flow_style=False, sort_keys=False)
+        except Exception as e:
+            click.secho(f"  WARNING: Could not update identity registration settings: {e}", fg="yellow")
+
+    from anchor.governance.keys import GovernanceKeyManager
+    key_manager = GovernanceKeyManager(
+        private_key_path=os.path.join(dot_anchor, "keys", "ed25519_private.pem"),
+        public_key_path=os.path.join(dot_anchor, "keys", "ed25519_public.pem")
+    )
+    if not key_manager.private_key_path.exists() or not key_manager.public_key_path.exists() or force:
+        try:
+            key_manager.generate_keypair_pem()
+            click.secho(f"  [{CHECK}] Generated unique Ed25519 keypair for local signing", fg="green")
+        except Exception as e:
+            click.secho(f"  {CROSS} Failed to generate cryptographic keypair: {e}", fg="red")
+            sys.exit(1)
+    else:
+        click.secho("  [SKIP] Cryptographic keypair already exists.", fg="yellow")
 
     # â”€â”€ Summary â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     click.echo("")
@@ -1147,9 +1220,18 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
     # =========================================================================
 
 
+    risk_clusters = []
     if violations or suppressed or metrics:
         from datetime import datetime
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        # Run assessment layer (Rule #9 failsafe)
+        try:
+            from anchor.core.assessment import ArchitecturalAssessmentEngine
+            risk_clusters = ArchitecturalAssessmentEngine.assess_security_compliance(violations)
+        except Exception as e:
+            if verbose:
+                click.secho(f"WARNING: Assessment layer failed: {e}", fg="yellow")
 
         # Ensure output directories exist
         for _d in [os.path.join(dot_anchor, "violations"), os.path.join(dot_anchor, "reports"), os.path.join(dot_anchor, "telemetry")]:
@@ -1159,14 +1241,19 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
         md_path   = os.path.join(dot_anchor, "reports",    "governance_audit.md")
         json_path = os.path.join(dot_anchor, "telemetry",  "governance_report.json")
 
+
         try:
-            # -- 1. Plain-text violation dump (always) ------------------------â”€
+            # -- 1. Plain-text violation dump (always) ------------------------—
             with open(txt_path, "w", encoding="utf-8") as f:  # anchor: ignore SEC-007
                 f.write("=" * 80 + "\n")
                 f.write("   ANCHOR GOVERNANCE VIOLATIONS\n")
                 f.write("=" * 80 + "\n\n")
                 f.write(f"Scan Source: {os.path.abspath(scan_targets[0])}\n")
                 f.write(f"Timestamp:   {timestamp}\n\n")
+
+                if risk_clusters:
+                    from anchor.core.assessment import generate_executive_summary_text
+                    f.write(generate_executive_summary_text(risk_clusters) + "\n\n")
 
                 f.write("--- SCAN STATISTICS ---\n")
                 f.write(f"Files Scanned: {metrics.get('scanned_files', 0)}\n")
@@ -1191,6 +1278,9 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
                     f.write(f"{tag} [{v['id']}] {v['name']} ({v['severity'].upper()})\n")
                     f.write(f"    Location: {v['file']}:{v['line']}\n")
                     f.write(f"    Message:  {v['message']}\n")
+                    snippet = _get_code_snippet(v.get('file'), v.get('line'))
+                    if snippet:
+                        f.write(f"    Snippet:  {snippet}\n")
                     # Use the rule's specific internal description or fallback
                     description = v.get('description', 'No further details.')
                     f.write(f"    Details:  {description}\n")
@@ -1221,6 +1311,10 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
                 f.write(f"**Timestamp:** {timestamp}  \n")
                 f.write(f"**Source:** `{os.path.abspath(scan_targets[0])}`  \n\n")
 
+                if risk_clusters:
+                    from anchor.core.assessment import generate_executive_summary_markdown
+                    f.write(generate_executive_summary_markdown(risk_clusters) + "\n\n")
+
                 f.write("## Summary\n\n")
                 f.write(f"| Category | Count |\n|---|---|\n")
                 f.write(f"| Blockers / Errors | {len(failures)} |\n")
@@ -1231,9 +1325,11 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
 
                 if violations:
                     f.write("## Active Violations\n\n")
-                    f.write("| ID | Severity | File | Message |\n|---|---|---|---|\n")
+                    f.write("| ID | Severity | File | Message | Snippet |\n|---|---|---|---|---|\n")
                     for v in sorted(violations, key=lambda x: severity_map.get(x['severity'].lower(), 0), reverse=True):
-                        f.write(f"| `{v['id']}` | **{v['severity'].upper()}** | `{v['file']}:{v['line']}` | {v['message']} |\n")
+                        snippet = _get_code_snippet(v.get('file'), v.get('line'))
+                        escaped_snippet = snippet.replace("|", "\\|") if snippet else ""
+                        f.write(f"| `{v['id']}` | **{v['severity'].upper()}** | `{v['file']}:{v['line']}` | {v['message']} | `{escaped_snippet}` |\n")
                     f.write("\n")
 
                 if suppressed:
@@ -1243,7 +1339,7 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
                         f.write(f"| `{s['id']}` | `{s['file']}:{s['line']}` | **{s.get('author', 'Unknown')}** |\n")
                     f.write("\n")
 
-                f.write("> *Suppressed exceptions are authorized security bypasses â€” verify authors are correct.*\n")
+                f.write("> *Suppressed exceptions are authorized security bypasses — verify authors are correct.*\n")
 
             # -- 3. JSON (auto if CI/CD detected, or --json-report) ------------
             if write_json:
@@ -1256,11 +1352,12 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
                         "violations": violations,
                         "suppressed": suppressed,
                         "metrics": metrics,
+                        "risk_clusters": [c.__dict__ for c in risk_clusters] if risk_clusters else [],
                     }, f, indent=2)
                 if verbose or has_cicd:
                     click.secho(f"JSON report: {json_path}", fg="green")
 
-            # -- 4. GitHub Step Summary (Ephemeral, CI-only) ------------------â”€
+            # -- 4. GitHub Step Summary (Ephemeral, CI-only) ------------------—
             if github_summary:
                 summary_path = "anchor-summary.md"
                 with open(summary_path, "w", encoding="utf-8") as f:  # anchor: ignore SEC-007
@@ -1269,9 +1366,11 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
                     f.write(f"**Findings:** {len(violations)} Active | {len(suppressed)} Suppressed\n\n")
                     if violations:
                         f.write("### Active Violations\n")
-                        f.write("| ID | Severity | File | Message |\n|---|---|---|---|\n")
+                        f.write("| ID | Severity | File | Message | Snippet |\n|---|---|---|---|---|\n")
                         for v in violations:
-                            f.write(f"| {v['id']} | {v['severity'].upper()} | `{v['file']}:{v['line']}` | {v['message']} |\n")
+                            snippet = _get_code_snippet(v.get('file'), v.get('line'))
+                            escaped_snippet = snippet.replace("|", "\\|") if snippet else ""
+                            f.write(f"| {v['id']} | {v['severity'].upper()} | `{v['file']}:{v['line']}` | {v['message']} | `{escaped_snippet}` |\n")
                         f.write("\n")
                     if suppressed:
                         f.write("### Suppressed Exceptions (Audited)\n")
@@ -1294,6 +1393,11 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
 
         except Exception as e:
             click.echo(f"WARNING: Failed to generate reports: {e}")
+
+        # 1.8. Print Executive Summary to Console
+        if risk_clusters:
+            from anchor.core.assessment import generate_executive_summary_text
+            click.echo(generate_executive_summary_text(risk_clusters))
 
         # 2. Terminal Summary Output (Human-First)
         active_count = len(violations)
@@ -1501,8 +1605,8 @@ def check_drift(ctx, target, repo, limit, only_violations, as_json, verbose, rep
     from pathlib import Path as _Path
     from anchor.core.history import HistoryEngine
     from anchor.core.contexts import extract_usages
-    from anchor.core.verdicts import analyze_drift
-    from anchor.core.models import CodeSymbol
+    from anchor.core.verdicts import analyze_drift, build_file_governance_map
+    from anchor.core.models import CodeSymbol, FileGovernanceResult
 
     VERDICT_COLORS = {
         'aligned':            ('green',   ''),
@@ -1546,10 +1650,8 @@ def check_drift(ctx, target, repo, limit, only_violations, as_json, verbose, rep
             adapter = LanguageRegistry.get_adapter_for_file(str(file_path))
             if not adapter:
                 return []
-            
             source_bytes = file_path.read_bytes()
             extracted = adapter.extract_symbols(source_bytes)
-            
             syms = []
             rel = os.path.relpath(str(file_path), str(repo_path))
             for item in extracted:
@@ -1577,6 +1679,10 @@ def check_drift(ctx, target, repo, limit, only_violations, as_json, verbose, rep
         )
         all_symbols = all_symbols[:limit]
 
+    # --- Build file-level governance map once (v5.2 deduplication) ---
+    click.secho("Building governance map...", fg='cyan', dim=True)
+    governance_map = build_file_governance_map(str(repo_path))
+
     # --- Run drift analysis on each symbol ---
     history_engine = HistoryEngine(str(repo_path))
     results = []
@@ -1589,7 +1695,9 @@ def check_drift(ctx, target, repo, limit, only_violations, as_json, verbose, rep
             if not anchor:
                 continue
             contexts = extract_usages(str(repo_path), symbol.name)
-            result   = analyze_drift(symbol.name, anchor, contexts, repo_path=str(repo_path))
+            result   = analyze_drift(symbol.name, anchor, contexts,
+                                     repo_path=str(repo_path),
+                                     governance_map=governance_map)
             # Attach metadata for reporting
             result.file_path = symbol.file_path
             result.line_number = symbol.line_number
@@ -1620,9 +1728,11 @@ def check_drift(ctx, target, repo, limit, only_violations, as_json, verbose, rep
                 },
             })
 
-    # --- Output ---
     click.echo()
     if as_json and not results:
+        click.echo(_json.dumps([], indent=2))
+        raise SystemExit(0)
+
         click.echo(_json.dumps([], indent=2))
         raise SystemExit(0)
 
@@ -1635,13 +1745,11 @@ def check_drift(ctx, target, repo, limit, only_violations, as_json, verbose, rep
     dot_anchor = ".anchor"
 
     # --- Partition results (vNext) ---
-    # Verified Findings: high confidence, real violations
     verified_violations = sorted(
         [r for r in results if r.verdict.value not in ('aligned', 'confidence_too_low')
          and not r.requires_human_review],
         key=lambda r: r.priority_score, reverse=True
     )
-    # Requires Human Review: medium/low confidence violations
     requires_review = sorted(
         [r for r in results if r.verdict.value not in ('aligned', 'confidence_too_low')
          and r.requires_human_review],
@@ -1649,20 +1757,68 @@ def check_drift(ctx, target, repo, limit, only_violations, as_json, verbose, rep
     )
     needs_investigation = [r for r in results if r.verdict.value == 'confidence_too_low']
     aligned             = [r for r in results if r.verdict.value == 'aligned']
-    # All non-aligned for backward-compat reporting
     drift_violations    = verified_violations + requires_review
+
+    # --- v5.2: Separate governance drift findings from symbol-level findings ---
+    # Build a file-level view of governance drift so we show ONE entry per file,
+    # not one per symbol.  governance_map already has the file-level data.
+    gov_drift_verified = {}   # rel_path -> FileGovernanceResult  (HIGH confidence)
+    gov_drift_review   = {}   # rel_path -> FileGovernanceResult  (MEDIUM/LOW)
+    non_gov_verified   = []   # all other verified violations
+    non_gov_review     = []   # all other review items
+
+    for r in verified_violations:
+        if r.verdict.value == 'governance_drift':
+            fp = (r.file_path or "").replace("\\", "/")
+            if fp not in gov_drift_verified:
+                fgr = governance_map.get(fp)
+                if fgr:
+                    from dataclasses import replace
+                    gov_drift_verified[fp] = replace(fgr, affected_symbols=[])
+            if gov_drift_verified.get(fp):
+                gov_drift_verified[fp].affected_symbols.append(r.symbol)
+        else:
+            non_gov_verified.append(r)
+
+    for r in requires_review:
+        if r.verdict.value == 'governance_drift':
+            fp = (r.file_path or "").replace("\\", "/")
+            if fp not in gov_drift_review:
+                fgr = governance_map.get(fp)
+                if fgr:
+                    from dataclasses import replace
+                    gov_drift_review[fp] = replace(fgr, affected_symbols=[])
+            if gov_drift_review.get(fp):
+                gov_drift_review[fp].affected_symbols.append(r.symbol)
+        else:
+            non_gov_review.append(r)
+
+    # Count of unique governance-drift findings (one per file)
+    gov_verified_count = len(gov_drift_verified)
+    gov_review_count   = len(gov_drift_review)
+    total_verified     = len(non_gov_verified) + gov_verified_count
+    total_review       = len(non_gov_review) + gov_review_count
+
+    risk_clusters = []
+    # Run assessment layer (Rule #9 failsafe)
+    try:
+        from anchor.core.assessment import ArchitecturalAssessmentEngine
+        risk_clusters = ArchitecturalAssessmentEngine.assess_architectural_drift(results, governance_map or {})
+    except Exception as e:
+        if verbose:
+            click.secho(f"WARNING: Assessment layer failed: {e}", fg="yellow")
 
     from datetime import datetime
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    # -- 1. Plain-text dump (always) ------------------------------------------â”€
-    txt_path = os.path.join(dot_anchor, "violations", "drift_violations.txt")
-    md_path  = os.path.join(dot_anchor, "reports", "drift_audit.md")
-    json_path = os.path.join(dot_anchor, "telemetry", "drift_report.json")
+    # -- 1. Plain-text dump (always) ------------------------------------------
+    txt_path  = os.path.join(dot_anchor, "violations", "drift_violations.txt")
+    md_path   = os.path.join(dot_anchor, "reports",    "drift_audit.md")
+    json_path = os.path.join(dot_anchor, "telemetry",  "drift_report.json")
     try:
         os.makedirs(os.path.join(dot_anchor, "violations"), exist_ok=True)
-        os.makedirs(os.path.join(dot_anchor, "reports"), exist_ok=True)
-        os.makedirs(os.path.join(dot_anchor, "telemetry"), exist_ok=True)
+        os.makedirs(os.path.join(dot_anchor, "reports"),    exist_ok=True)
+        os.makedirs(os.path.join(dot_anchor, "telemetry"),  exist_ok=True)
 
         with open(txt_path, "w", encoding="utf-8") as f:  # anchor: ignore SEC-007
             f.write("=" * 80 + "\n")
@@ -1671,11 +1827,15 @@ def check_drift(ctx, target, repo, limit, only_violations, as_json, verbose, rep
             f.write(f"Target:    {target_path}\n")
             f.write(f"Timestamp: {timestamp}\n")
             f.write(f"Symbols:   {len(results)} analyzed\n")
-            f.write(f"Verified Violations:    {len(verified_violations)}\n")
-            f.write(f"Requires Human Review:  {len(requires_review)}\n")
+            f.write(f"Verified Violations:    {total_verified}\n")
+            f.write(f"Requires Human Review:  {total_review}\n")
             f.write(f"Needs Investigation:    {len(needs_investigation)}\n")
             f.write(f"Aligned:               {len(aligned)}\n\n")
             f.write("-" * 80 + "\n\n")
+
+            if risk_clusters:
+                from anchor.core.assessment import generate_executive_summary_text
+                f.write(generate_executive_summary_text(risk_clusters) + "\n\n")
 
             def _write_result_block(f, r, tag):
                 f.write(f"{tag} {r.symbol} [{r.verdict.value.upper().replace('_', ' ')}]")
@@ -1691,14 +1851,34 @@ def check_drift(ctx, target, repo, limit, only_violations, as_json, verbose, rep
                         f.write(f"   · {e}\n")
                 f.write("\n")
 
-            if verified_violations:
+            def _write_gov_file_block(f, file_path, fgr, tag):
+                """Write a single file-level governance drift block."""
+                if not fgr:
+                    return
+                f.write(f"{tag} [GOVERNANCE DRIFT] {file_path}\n")
+                f.write(f"   Layer:           {fgr.layer}\n")
+                f.write(f"   Capabilities:    {', '.join(fgr.capabilities)}\n")
+                if fgr.controls_present:
+                    f.write(f"   Controls OK:     {', '.join(fgr.controls_present)}\n")
+                f.write(f"   Missing Controls:{', '.join(fgr.controls_missing)}\n")
+                f.write(f"   Affected Symbols ({len(fgr.affected_symbols)}): "
+                        f"{', '.join(fgr.affected_symbols[:10])}"
+                        f"{'...' if len(fgr.affected_symbols) > 10 else ''}\n\n")
+
+            if total_verified > 0:
                 f.write("== VERIFIED FINDINGS ==\n\n")
-                for r in verified_violations:
+                # Governance drift — one block per file
+                for fp, fgr in sorted(gov_drift_verified.items()):
+                    _write_gov_file_block(f, fp, fgr, "[[X]]")
+                # Other symbol-level violations
+                for r in non_gov_verified:
                     _write_result_block(f, r, "[[X]]")
 
-            if requires_review:
+            if total_review > 0:
                 f.write("== REQUIRES HUMAN REVIEW ==\n\n")
-                for r in requires_review:
+                for fp, fgr in sorted(gov_drift_review.items()):
+                    _write_gov_file_block(f, fp, fgr, "[[?]]")
+                for r in non_gov_review:
                     _write_result_block(f, r, "[[?]]")
 
             if needs_investigation:
@@ -1711,7 +1891,7 @@ def check_drift(ctx, target, repo, limit, only_violations, as_json, verbose, rep
                 for r in aligned:
                     _write_result_block(f, r, "[[V]]")
 
-        # -- 2. Markdown report (always) --------------------------------------â”€
+        # -- 2. Markdown report (always) ---------------------------------------
         with open(md_path, "w", encoding="utf-8") as f:  # anchor: ignore SEC-007
             f.write("# Anchor Layer 1 Assessment — Architectural & Governance Drift\n\n")
             status = "DRIFT DETECTED" if drift_violations else "NO DRIFT"
@@ -1719,67 +1899,121 @@ def check_drift(ctx, target, repo, limit, only_violations, as_json, verbose, rep
             f.write(f"**Timestamp:** {timestamp}  \n")
             f.write(f"**Target:** `{target_path}`  \n\n")
 
+            if risk_clusters:
+                from anchor.core.assessment import generate_executive_summary_markdown
+                f.write(generate_executive_summary_markdown(risk_clusters) + "\n\n")
+
             f.write("## Summary\n\n")
-            f.write(f"| Category | Count |\n|---|---|\n")
-            f.write(f"| ✅ Aligned | {len(aligned)} |\n")
-            f.write(f"| 🔴 Verified Violations | {len(verified_violations)} |\n")
-            f.write(f"| 🟡 Requires Human Review | {len(requires_review)} |\n")
-            f.write(f"| ⚪ Needs Investigation | {len(needs_investigation)} |\n")
+            f.write("| Category | Count |\n|---|---|\n")
+            f.write(f"| Aligned | {len(aligned)} |\n")
+            f.write(f"| Verified Violations | {total_verified} |\n")
+            f.write(f"| Requires Human Review | {total_review} |\n")
+            f.write(f"| Needs Investigation | {len(needs_investigation)} |\n")
             f.write(f"| **Total Analyzed** | **{len(results)}** |\n\n")
 
-            if verified_violations:
-                f.write("## 🔴 Verified Findings\n\n")
-                f.write("| Priority | Symbol | Verdict | Confidence | Rationale |\n|---|---|---|---|---|\n")
-                for r in verified_violations:
-                    f.write(f"| {r.priority_score:.1f} | `{r.symbol}` | **{r.verdict.value.replace('_', ' ').title()}** | {r.confidence_level} | {r.rationale[:90]} |\n")
-                f.write("\n")
-                for r in verified_violations:
-                    verdict_label = r.verdict.value.replace('_', ' ').title()
-                    f.write(f"### `{r.symbol}` — {verdict_label}\n\n")
-                    f.write(f"**Confidence:** {r.confidence_level}  \n")
-                    f.write(f"**Priority Score:** {r.priority_score:.1f}  \n")
-                    f.write(f"**Rationale:** {r.rationale}  \n")
-                    if r.anchor:
-                        f.write(f"**Anchored at:** commit `{r.anchor.commit_sha[:7]}` ({str(r.anchor.commit_date.date())})  \n")
-                        if r.anchor.commit_intent:
-                            f.write(f"**Commit Intent:** {r.anchor.commit_intent[:120]}  \n")
-                    if r.detected_capabilities:
-                        f.write(f"\n**Detected Capabilities:** {', '.join(f'`{c}`' for c in r.detected_capabilities)}  \n")
-                    if r.missing_controls:
-                        f.write(f"**Missing Controls:** {', '.join(f'`{c}`' for c in r.missing_controls)}  \n")
-                    if r.evidence:
-                        f.write("\n**Evidence:**\n")
-                        for e in r.evidence:
-                            f.write(f"- {e}\n")
+            # --- Verified Findings ---
+            if total_verified > 0:
+                f.write("## Verified Findings\n\n")
+
+                # Governance drift — one block per file
+                if gov_drift_verified:
+                    f.write("### Governance Drift (File-Level Assessment)\n\n")
+                    for fp, fgr in sorted(gov_drift_verified.items()):
+                        if not fgr:
+                            continue
+                        f.write(f"#### `{fp}` — Governance Drift\n\n")
+                        f.write(f"**Layer:** {fgr.layer}  \n")
+                        f.write(f"**Capability Class:** {fgr.capability_class}  \n")
+                        f.write(f"**Capabilities Detected:** "
+                                f"{', '.join(f'`{c}`' for c in fgr.capabilities)}  \n")
+                        if fgr.controls_present:
+                            f.write(f"**Controls Present:** "
+                                    f"{', '.join(f'`{c}`' for c in fgr.controls_present)}  \n")
+                        f.write(f"**Missing Controls:** "
+                                f"{', '.join(f'`{c}`' for c in fgr.controls_missing)}  \n")
+                        f.write(f"\n**Affected Symbols ({len(fgr.affected_symbols)}):** "
+                                f"{', '.join(f'`{s}`' for s in fgr.affected_symbols)}  \n\n")
+
+                # Non-governance symbol-level findings
+                if non_gov_verified:
+                    f.write("### Symbol-Level Findings\n\n")
+                    f.write("| Priority | Symbol | Verdict | Confidence | Rationale |\n"
+                            "|---|---|---|---|---|\n")
+                    for r in non_gov_verified:
+                        f.write(f"| {r.priority_score:.1f} | `{r.symbol}` | "
+                                f"**{r.verdict.value.replace('_', ' ').title()}** | "
+                                f"{r.confidence_level} | {r.rationale[:90]} |\n")
+                    f.write("\n")
+                    for r in non_gov_verified:
+                        verdict_label = r.verdict.value.replace('_', ' ').title()
+                        f.write(f"#### `{r.symbol}` — {verdict_label}\n\n")
+                        f.write(f"**Confidence:** {r.confidence_level}  \n")
+                        f.write(f"**Priority Score:** {r.priority_score:.1f}  \n")
+                        f.write(f"**Rationale:** {r.rationale}  \n")
+                        if r.anchor:
+                            f.write(f"**Anchored at:** commit `{r.anchor.commit_sha[:7]}` "
+                                    f"({str(r.anchor.commit_date.date())})  \n")
+                            if r.anchor.commit_intent:
+                                f.write(f"**Commit Intent:** {r.anchor.commit_intent[:120]}  \n")
+                        if r.evidence:
+                            f.write("\n**Evidence:**\n")
+                            for e in r.evidence:
+                                f.write(f"- {e}\n")
+                        f.write("\n")
+
+            # --- Requires Human Review ---
+            if total_review > 0:
+                f.write("## Requires Human Review\n\n")
+                f.write("> These findings have medium or low confidence. "
+                        "An auditor should verify before acting.\n\n")
+
+                if gov_drift_review:
+                    f.write("### Governance Drift (Low Confidence)\n\n")
+                    for fp, fgr in sorted(gov_drift_review.items()):
+                        if not fgr:
+                            continue
+                        f.write(f"#### `{fp}`\n\n")
+                        f.write(f"**Capabilities:** "
+                                f"{', '.join(f'`{c}`' for c in fgr.capabilities)}  \n")
+                        f.write(f"**Missing Controls:** "
+                                f"{', '.join(f'`{c}`' for c in fgr.controls_missing)}  \n")
+                        f.write(f"**Affected Symbols:** "
+                                f"{', '.join(f'`{s}`' for s in fgr.affected_symbols)}  \n\n")
+
+                if non_gov_review:
+                    f.write("### Symbol-Level (Low Confidence)\n\n")
+                    f.write("| Priority | Symbol | Verdict | Confidence |\n"
+                            "|---|---|---|---|\n")
+                    for r in non_gov_review:
+                        f.write(f"| {r.priority_score:.1f} | `{r.symbol}` | "
+                                f"{r.verdict.value.replace('_', ' ').title()} | "
+                                f"{r.confidence_level} |\n")
                     f.write("\n")
 
-            if requires_review:
-                f.write("## 🟡 Requires Human Review\n\n")
-                f.write("> These findings have medium or low confidence. An auditor should verify before acting.\n\n")
-                f.write("| Priority | Symbol | Verdict | Confidence |\n|---|---|---|---|\n")
-                for r in requires_review:
-                    f.write(f"| {r.priority_score:.1f} | `{r.symbol}` | {r.verdict.value.replace('_', ' ').title()} | {r.confidence_level} |\n")
-                f.write("\n")
-
             if needs_investigation:
-                f.write("## ⚪ Needs Investigation\n\n")
+                f.write("## Needs Investigation\n\n")
                 f.write("> Insufficient history or docstrings to produce a verdict.\n\n")
                 for r in needs_investigation:
                     f.write(f"- `{r.symbol}` — {r.rationale}\n")
                 f.write("\n")
 
             if aligned:
-                f.write("## ✅ Aligned Symbols\n\n")
+                f.write("## Aligned Symbols\n\n")
                 f.write(", ".join(f"`{r.symbol}`" for r in aligned) + "\n\n")
 
-            f.write("> *Generated by Anchor vNext. Use for code review, release governance, or regulatory evidence.*\n")
+            f.write("> *Generated by Anchor vNext v5.2. "
+                    "Use for code review, release governance, or regulatory evidence.*\n")
 
-        # -- 3. JSON (auto if CI/CD detected or --json flag) ------------------â”€
+        # -- 3. JSON ------------------------------------------------------
         if as_json or has_cicd:
             with open(json_path, "w", encoding="utf-8") as f:  # anchor: ignore SEC-007
-                _json.dump(json_results, f, indent=2)
+                _json.dump({
+                    "target": str(target_path),
+                    "timestamp": timestamp,
+                    "results": json_results,
+                    "risk_clusters": [c.__dict__ for c in risk_clusters] if risk_clusters else []
+                }, f, indent=2)
             if as_json:
-                # Also print to stdout for pipe-ability
                 click.echo(_json.dumps(json_results, indent=2))
             elif verbose or has_cicd:
                 click.secho(f"JSON report: {json_path}", fg="green")
@@ -1793,15 +2027,19 @@ def check_drift(ctx, target, repo, limit, only_violations, as_json, verbose, rep
     except Exception as e:
         click.secho(f"WARNING: Failed to write drift reports: {e}", fg="yellow")
 
-    # -- Terminal summary (always) ----------------------------------------------
+    if risk_clusters:
+        from anchor.core.assessment import generate_executive_summary_text
+        click.echo(generate_executive_summary_text(risk_clusters))
+
+    # -- Terminal summary -------------------------------------------------------
     click.echo("=" * 70)
     click.secho("ANCHOR LAYER 1 ASSESSMENT", bold=True)
     click.echo("=" * 70)
     click.secho(f"  Aligned:               {len(aligned)}", fg='green')
-    click.secho(f"  Verified Violations:   {len(verified_violations)}",
-                fg='red' if verified_violations else 'green')
-    click.secho(f"  Requires Human Review: {len(requires_review)}",
-                fg='yellow' if requires_review else 'green')
+    click.secho(f"  Verified Violations:   {total_verified}",
+                fg='red' if total_verified else 'green')
+    click.secho(f"  Requires Human Review: {total_review}",
+                fg='yellow' if total_review else 'green')
     click.secho(f"  Needs Investigation:   {len(needs_investigation)}",
                 fg='white')
     click.echo("=" * 70)
@@ -1809,10 +2047,25 @@ def check_drift(ctx, target, repo, limit, only_violations, as_json, verbose, rep
 
     VERDICT_COLORS['governance_drift'] = ('red', '')
 
-    if verified_violations:
-        click.secho("🔴 VERIFIED FINDINGS", bold=True, fg='red')
+    # Verified: governance drift (one per file), then other symbol-level
+    if total_verified > 0:
+        click.secho("[!!] VERIFIED FINDINGS", bold=True, fg='red')
         click.echo()
-        for result in verified_violations:
+        for fp, fgr in sorted(gov_drift_verified.items()):
+            if not fgr:
+                continue
+            click.secho(f"  [GOVERNANCE DRIFT] {fp}", fg='red', bold=True)
+            click.secho(f"   Layer:     {fgr.layer}", fg='red', dim=True)
+            click.secho(f"   Caps:      {', '.join(fgr.capabilities)}", fg='red', dim=True)
+            click.secho(f"   Missing:   {', '.join(fgr.controls_missing)}", fg='yellow')
+            click.secho(
+                f"   Symbols ({len(fgr.affected_symbols)}): "
+                + ", ".join(fgr.affected_symbols[:6])
+                + ("..." if len(fgr.affected_symbols) > 6 else ""),
+                dim=True
+            )
+            click.echo()
+        for result in non_gov_verified:
             color, _ = VERDICT_COLORS.get(result.verdict.value, ('white', ''))
             click.secho(
                 f"  [{result.priority_score:.0f}] {result.symbol}  "
@@ -1820,19 +2073,29 @@ def check_drift(ctx, target, repo, limit, only_violations, as_json, verbose, rep
                 fg=color, bold=True
             )
             click.secho(f"   {result.rationale[:120]}", fg=color, dim=True)
-            if result.detected_capabilities:
-                click.secho(f"   Capabilities: {', '.join(result.detected_capabilities)}", fg='red')
-            if result.missing_controls:
-                click.secho(f"   Missing Controls: {', '.join(result.missing_controls)}", fg='yellow')
             if result.evidence:
                 for e in result.evidence[:3]:
-                    click.echo(f"   · {e}")
+                    click.echo(f"   . {e}")
             click.echo()
 
-    if requires_review:
-        click.secho("🟡 REQUIRES HUMAN REVIEW", bold=True, fg='yellow')
+    # Review: governance drift (one per file), then other symbol-level
+    if total_review > 0:
+        click.secho("[??] REQUIRES HUMAN REVIEW", bold=True, fg='yellow')
         click.echo()
-        for result in requires_review:
+        for fp, fgr in sorted(gov_drift_review.items()):
+            if not fgr:
+                continue
+            click.secho(f"  [GOVERNANCE DRIFT] {fp}", fg='yellow', bold=True)
+            click.secho(f"   Caps:    {', '.join(fgr.capabilities)}", dim=True)
+            click.secho(f"   Missing: {', '.join(fgr.controls_missing)}", fg='yellow', dim=True)
+            click.secho(
+                f"   Symbols ({len(fgr.affected_symbols)}): "
+                + ", ".join(fgr.affected_symbols[:6])
+                + ("..." if len(fgr.affected_symbols) > 6 else ""),
+                dim=True
+            )
+            click.echo()
+        for result in non_gov_review:
             color, _ = VERDICT_COLORS.get(result.verdict.value, ('white', ''))
             click.secho(
                 f"  [{result.priority_score:.0f}] {result.symbol}  "
@@ -1843,14 +2106,13 @@ def check_drift(ctx, target, repo, limit, only_violations, as_json, verbose, rep
             click.echo()
 
     if needs_investigation:
-        click.secho("⚪ NEEDS INVESTIGATION", bold=True)
+        click.secho("[--] NEEDS INVESTIGATION", bold=True)
         click.echo()
         for result in needs_investigation:
             click.secho(f"  {result.symbol}  [CONFIDENCE TOO LOW]", dim=True)
         click.echo()
 
-    # Exit non-zero if any verified violations found
-    if verified_violations:
+    if total_verified > 0:
         raise SystemExit(1)
 
 
@@ -1965,8 +2227,68 @@ def heal(paths, apply_fixes, verbose):
         click.secho(f"  Detailed fix suggestions also in: {txt_path}", fg="white", dim=True)
 
 
+@click.command("reconstruct")
+@click.argument("checkpoint_id")
+@click.option("--policy-hash", help="Expected policy SHA-256 hash to verify binding.")
+@click.option("--password", help="Password to unlock governance keystore for signature verification.")
+def reconstruct(checkpoint_id, policy_hash, password):
+    """
+    Reconstruct and verify the decision path for a given checkpoint.
+    """
+    from anchor.governance.reconstruction import DecisionReconstructor
+    from anchor.governance.keys import GovernanceKeyManager
+    from anchor.governance.policy import PolicyRegistry
+    import json
+
+    reconstructor = DecisionReconstructor()
+    history = reconstructor.get_decision_history(checkpoint_id)
+    if not history:
+        click.secho(f"No governance events found for checkpoint: {checkpoint_id}", fg="red")
+        raise SystemExit(1)
+
+    public_key = None
+    if password:
+        km = GovernanceKeyManager()
+        if km.unlock(password):
+            public_key = km.private_key.public_key()
+        else:
+            click.secho("Failed to unlock keystore with the provided password.", fg="red")
+            raise SystemExit(1)
+
+    if not policy_hash:
+        registry = PolicyRegistry()
+        policy_hash = registry.get_current_binding().policy_hash
+
+    click.echo(f"\nReconstructing decision history for Checkpoint: {checkpoint_id}")
+    click.echo("=" * 60)
+    for event in history:
+        click.echo(f"Event ID:  {event['event_id']}")
+        click.echo(f"Timestamp: {event['timestamp']}")
+        click.echo(f"Type:      {event['event_type']}")
+        click.echo(f"Actor:     {event['actor']['principal']} ({', '.join(event['actor']['roles'])})")
+        click.echo(f"Policy:    {event['policy_binding']['policy_version']} (hash: {event['policy_binding']['policy_hash']})")
+        click.echo(f"Details:   {json.dumps(event['details'], indent=2)}")
+        if event.get('signature'):
+            click.echo(f"Signature: {event['signature']}")
+        click.echo("-" * 60)
+
+    result = reconstructor.verify_decision(checkpoint_id, policy_hash, public_key)
+    if result["valid"]:
+        click.secho(f"\n[OK] Decision path VERIFIED successfully.", fg="green", bold=True)
+        click.echo(f"  Events checked: {result['event_count']}")
+        click.echo(f"  Final verdict:  {result['final_event_type']}")
+    else:
+        click.secho(f"\n[FAIL] Decision path VERIFICATION FAILED.", fg="red", bold=True)
+        click.secho(f"  Reason: {result['reason']}", fg="red")
+        if "expected" in result:
+            click.echo(f"  Expected Policy Hash: {result['expected']}")
+            click.echo(f"  Actual Policy Hash:   {result['actual']}")
+        raise SystemExit(1)
+
+
 cli.add_command(init)
 cli.add_command(heal)
+cli.add_command(reconstruct)
 
 if __name__ == '__main__':
     cli()

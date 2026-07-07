@@ -532,12 +532,30 @@ fi
         private_key_path=os.path.join(dot_anchor, "keys", "ed25519_private.pem"),
         public_key_path=os.path.join(dot_anchor, "keys", "ed25519_public.pem")
     )
-    if not key_manager.private_key_path.exists() or not key_manager.public_key_path.exists() or force:
+
+    if force or not key_manager.private_key_path.exists():
         try:
             key_manager.generate_keypair_pem()
             click.secho(f"  [{CHECK}] Generated unique Ed25519 keypair for local signing", fg="green")
         except Exception as e:
             click.secho(f"  {CROSS} Failed to generate cryptographic keypair: {e}", fg="red")
+            sys.exit(1)
+    elif not key_manager.public_key_path.exists():
+        try:
+            if not key_manager.unlock():
+                raise RuntimeError("Failed to load existing private key")
+            from cryptography.hazmat.primitives import serialization as _serialization
+            public_key = key_manager.private_key.public_key()
+            key_manager.public_key_path.parent.mkdir(parents=True, exist_ok=True)
+            key_manager.public_key_path.write_bytes(
+                public_key.public_bytes(
+                    encoding=_serialization.Encoding.PEM,
+                    format=_serialization.PublicFormat.SubjectPublicKeyInfo,
+                )
+            )
+            click.secho(f"  [{CHECK}] Regenerated missing Ed25519 public key from existing private key", fg="green")
+        except Exception as e:
+            click.secho(f"  {CROSS} Failed to regenerate public key: {e}", fg="red")
             sys.exit(1)
     else:
         click.secho("  [SKIP] Cryptographic keypair already exists.", fg="yellow")

@@ -491,7 +491,7 @@ fi
     click.echo("")
     click.secho("  Configuring project cryptographic identity...", fg="cyan", bold=True)
     
-    register_choice = True
+    register_choice = False
     if sys.stdin and hasattr(sys.stdin, "isatty") and sys.stdin.isatty():
         prompt_text = (
             "Would you like to register this project's public governance identity\n"
@@ -503,11 +503,12 @@ fi
             "✓ Key revocation\n"
             "✓ Verified project badge\n\n"
             "Only your PUBLIC key and project metadata will be uploaded.\n"
-            "Your PRIVATE key never leaves your machine.\n"
+            "Your PRIVATE key never leaves your machine.\n\n"
         )
         click.echo(prompt_text)
-        register_choice = click.confirm("", default=True, show_default=False, prompt_suffix="[Y/n]")
-    
+        click.echo("[Y/n] ", nl=False)
+        resp = sys.stdin.readline()
+        register_choice = resp.strip().lower() not in ("n", "no")
     # Update manifest data with identity configuration preference
     if os.path.exists(dot_anchor_manifest):
         try:

@@ -11,7 +11,7 @@ class GovernanceEmitter:
     Creates, signs, and commits governance events to the append-only JSONL logs.
     """
     
-    def __init__(self, log_path: str = "therapy_logs/governance_events.jsonl"):
+    def __init__(self, log_path: str = ".anchor/logs/governance_events.jsonl"):
         self.policy_registry = PolicyRegistry()
         self.key_manager = GovernanceKeyManager()
         self.log_path = Path(log_path)

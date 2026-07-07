@@ -27,16 +27,20 @@ __version__ = "5.0.8"
 
 
 def _get_code_snippet(file_path: str, line_num: int) -> str:
-    if not file_path or not os.path.exists(file_path):
+    import linecache
+    if not file_path:
         return ""
     try:
-        with open(file_path, "r", encoding="utf-8", errors="ignore") as sf:
-            lines = sf.readlines()
-        if 1 <= line_num <= len(lines):
-            return lines[line_num - 1].strip()
+        n = int(line_num)
     except Exception:
-        pass
-    return ""
+        return ""
+    if n < 1:
+        return ""
+    try:
+        line = linecache.getline(file_path, n)
+        return line.strip() if line else ""
+    except Exception:
+        return ""
 
 
 @click.group()

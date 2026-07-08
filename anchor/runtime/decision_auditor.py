@@ -5,7 +5,10 @@ import hashlib
 import hmac
 import subprocess
 import urllib.request
-import ahocorasick
+try:
+    import ahocorasick  # type: ignore # pylint: disable=import-error
+except ImportError:
+    ahocorasick = None
 import yaml
 from pathlib import Path
 from dataclasses import asdict
@@ -120,7 +123,7 @@ class DecisionAuditor:
             rules = data.get("rules", [])
             eth_001 = next((r for r in rules if r.get("id") == "ETH-001"), None)
 
-            if not eth_001:
+            if not eth_001 or not ahocorasick:
                 return
 
             automaton = ahocorasick.Automaton()

@@ -20,9 +20,9 @@ Pass: executes commit successfully
 ```
 
 ### Git Hook Integration:
-During `anchor init`, Anchor configures `.git/hooks/pre-commit`:
+During `anchor init`, Anchor configures the standard `pre-commit` framework configuration (`.pre-commit-config.yaml`):
 *   Determines which files are staged (`git diff --cached --name-only`).
-*   Runs `anchor check --severity error --hook` over changed files only.
+*   Runs the `anchor-governance` hook from the `https://github.com/AnimusLab/Anchor` repository over changed files only.
 *   If a developer violates a rule (such as writing raw SQL concatenation or checking in an unproxied requests call), the commit is blocked.
 
 ---

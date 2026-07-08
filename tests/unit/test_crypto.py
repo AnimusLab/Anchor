@@ -45,3 +45,10 @@ def test_standardization_secret_key(monkeypatch):
     signature = sign_chain_hash(chain_hash)
     assert signature is not None
     assert verify_chain_hash(chain_hash, signature) == True
+
+def test_user_agent_format():
+    from anchor.core.config import settings
+    ua = settings.user_agent
+    assert ua.startswith("Anchor/")
+    assert "Python" in ua
+

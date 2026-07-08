@@ -113,6 +113,7 @@ def verify_remote_lockfile(anchor_dir: Path, offline_attr: str = "warn") -> bool
     lock_data = None
     try:
         req = urllib.request.Request(GOVERNANCE_LOCK_URL)
+        req.add_header("User-Agent", settings.user_agent)
         with urllib.request.urlopen(req, timeout=5) as response:
             lock_data = yaml.safe_load(response.read().decode('utf-8'))
         # Save cache for offline use

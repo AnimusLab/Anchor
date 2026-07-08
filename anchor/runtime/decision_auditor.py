@@ -5,7 +5,10 @@ import hashlib
 import hmac
 import subprocess
 import urllib.request
-import ahocorasick
+try:
+    import ahocorasick  # type: ignore # pylint: disable=import-error
+except ImportError:
+    ahocorasick = None
 import yaml
 from pathlib import Path
 from dataclasses import asdict
@@ -120,7 +123,7 @@ class DecisionAuditor:
             rules = data.get("rules", [])
             eth_001 = next((r for r in rules if r.get("id") == "ETH-001"), None)
 
-            if not eth_001:
+            if not eth_001 or not ahocorasick:
                 return
 
             automaton = ahocorasick.Automaton()
@@ -301,12 +304,16 @@ class DecisionAuditor:
         # 4. Fire the Global Whisper (The Public Ledger)
         zk_payload = json.dumps(local_entry_dict)
         try:
+            from anchor.core.config import settings
             ledger_url = os.environ.get("ANCHOR_LEDGER_URL")
             if ledger_url:
                 req = urllib.request.Request(
                     ledger_url,
                     data=zk_payload.encode("utf-8"),
-                    headers={"Content-Type": "application/json"}
+                    headers={
+                        "Content-Type": "application/json",
+                        "User-Agent": settings.user_agent
+                    }
                 )
                 urllib.request.urlopen(req, timeout=1.0)
         except Exception:

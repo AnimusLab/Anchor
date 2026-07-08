@@ -447,6 +447,7 @@ fi
             import urllib.error
             try:
                 req = urllib.request.Request(settings.governance_lock_url)
+                req.add_header("User-Agent", settings.user_agent)
                 with urllib.request.urlopen(req, timeout=5) as response:
                     remote_lock = response.read().decode('utf-8')
                 with open(lock_path, "w", encoding="utf-8") as f:
@@ -505,6 +506,7 @@ def sync(restore):
     
     try:
         req = urllib.request.Request(GOVERNANCE_LOCK_URL)
+        req.add_header("User-Agent", settings.user_agent)
         with urllib.request.urlopen(req, timeout=5) as response:
             lock_data = yaml.safe_load(response.read().decode('utf-8'))
         
@@ -534,6 +536,7 @@ def sync(restore):
                 file_url = BASE_REPO_URL + rel_path
                 try:
                     freq = urllib.request.Request(file_url)
+                    freq.add_header("User-Agent", settings.user_agent)
                     with urllib.request.urlopen(freq, timeout=5) as r2:
                         content = r2.read()
                     os.makedirs(os.path.dirname(local_path), exist_ok=True)
@@ -1121,7 +1124,7 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
             data=zk_payload.encode("utf-8"),
             headers={
                 "Content-Type": "application/json",
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                "User-Agent": settings.user_agent
             },
         )
         urllib.request.urlopen(req, timeout=5.0)  # anchor: ignore SEC-007

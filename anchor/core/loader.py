@@ -158,13 +158,10 @@ def verify_remote_lockfile(anchor_dir: Path, offline_attr: str = "warn") -> bool
 
 def load_manifest(constitution_path: Path) -> ConstitutionManifest:
     """Read and parse constitution.anchor manifest."""
+    from anchor.core.validator import AnchorFileValidator
     raw = yaml.safe_load(constitution_path.read_text(encoding="utf-8"))
 
-    if raw.get("type") != "manifest":
-        raise ValueError(
-            f"{constitution_path} is not a manifest file. "
-            f"Got type: {raw.get('type')}"
-        )
+    AnchorFileValidator.validate(constitution_path, raw)
 
     return ConstitutionManifest(
         version=raw["version"],
@@ -190,7 +187,14 @@ def load_domain_file(
     if not file_path.exists():
         raise FileNotFoundError(f"Domain file not found: {file_path}")
 
+    from anchor.core.validator import AnchorFileValidator
     raw = yaml.safe_load(file_path.read_text(encoding="utf-8"))
+    
+    file_type = AnchorFileValidator.determine_type(raw, file_path)
+    if file_type not in ("domain", "framework"):
+        raise ValueError(f"Cannot load file of type '{file_type}' as a domain/rule set file: {file_path}")
+        
+    AnchorFileValidator.validate(file_path, raw)
     namespace = raw.get("namespace", "")
 
     if namespace != expected_namespace:

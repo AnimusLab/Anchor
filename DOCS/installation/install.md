@@ -229,6 +229,18 @@ Anchor currently supports:
 
 Files outside these languages will be ignored by the scanning engine.
 
+# Network Identification (User-Agent)
+
+Anchor makes outbound HTTP requests to fetch the master constitution, sync governance locks, and optionally interact with the Sovereign Hub and AnimusLab Identity Registry. 
+
+All outbound requests identify the client transparently using the following User-Agent header format:
+
+```text
+Anchor/<version> (Python <python_version>; <os_name>)
+```
+
+This ensures transparent network identification, making it straightforward to whitelist or filter traffic and identify communications during security audits.
+
 ---
 
 # Next Step

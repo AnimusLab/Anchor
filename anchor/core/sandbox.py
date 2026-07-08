@@ -648,8 +648,10 @@ def install_diamond_cage(force: bool = False, verbose: bool = False) -> bool:
         if verbose:
             print(f"v  Downloading WasmEdge {cage.WASMEDGE_VERSION}...")
         archive_path = cage.bin_dir / "wasmedge_download"
-
-        with urllib.request.urlopen(wasmedge_url, timeout=60) as response:
+        from anchor.core.config import settings
+        req = urllib.request.Request(wasmedge_url)
+        req.add_header("User-Agent", settings.user_agent)
+        with urllib.request.urlopen(req, timeout=60) as response:
             with open(archive_path, "wb") as f:
                 f.write(response.read())
 
@@ -711,7 +713,10 @@ def install_diamond_cage(force: bool = False, verbose: bool = False) -> bool:
         if verbose:
             print(f"v  Downloading Python {cage.PYTHON_WASM_VERSION} WASM...")
 
-        with urllib.request.urlopen(cage.PYTHON_WASM_URL, timeout=120) as response:
+        from anchor.core.config import settings
+        req = urllib.request.Request(cage.PYTHON_WASM_URL)
+        req.add_header("User-Agent", settings.user_agent)
+        with urllib.request.urlopen(req, timeout=120) as response:
             with open(cage.python_wasm_path, "wb") as f:
                 f.write(response.read())
 

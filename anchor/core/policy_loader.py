@@ -64,8 +64,11 @@ class PolicyLoader:
 
     def _fetch_remote_policy(self, url: str) -> Dict[str, Any]:
         """Fetches a remote .anchor file (e.g., from Github Raw) using urllib."""
+        from anchor.core.config import settings
         try:
-            with urllib.request.urlopen(url, timeout=10) as response:
+            req = urllib.request.Request(url)
+            req.add_header("User-Agent", settings.user_agent)
+            with urllib.request.urlopen(req, timeout=10) as response:
                 content = response.read().decode('utf-8')
                 return yaml.safe_load(content) or {}
         except Exception as e:

@@ -51,6 +51,14 @@ class AnchorSettings(BaseSettings):
         description="Timeout in seconds for fetching the constitution from the cloud.",
     )
 
+    @property
+    def user_agent(self) -> str:
+        import platform
+        from anchor import __version__
+        py_ver = platform.python_version()
+        os_name = platform.system()
+        return f"Anchor/{__version__} (Python {py_ver}; {os_name})"
+
     # ── Pydantic Settings Config ──────────────────────────────────
     model_config = {
         "env_prefix": "ANCHOR_",

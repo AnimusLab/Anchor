@@ -1,0 +1,7 @@
+- id: anchor-governance
+  name: Anchor Governance
+  description: Performs deterministic compliance and governance validation before commits.
+  entry: anchor check --severity error --hook
+  language: python
+  types: [python, ts, tsx]
+  pass_filenames: true

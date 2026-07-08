@@ -56,7 +56,12 @@ class PolicyLoader:
         try:
             with open(path, 'r', encoding='utf-8') as f:
                 # We treat .anchor files exactly like YAML
-                return yaml.safe_load(f) or {}
+                raw = yaml.safe_load(f) or {}
+            
+            from anchor.core.validator import AnchorFileValidator
+            from pathlib import Path as FilePath
+            AnchorFileValidator.validate(FilePath(path), raw)
+            return raw
         except Exception as e:
             if self.verbose:
                 print(f"ERR: Error parsing {path}: {e}")
@@ -70,7 +75,12 @@ class PolicyLoader:
             req.add_header("User-Agent", settings.user_agent)
             with urllib.request.urlopen(req, timeout=10) as response:
                 content = response.read().decode('utf-8')
-                return yaml.safe_load(content) or {}
+                raw = yaml.safe_load(content) or {}
+            
+            from anchor.core.validator import AnchorFileValidator
+            from pathlib import Path as FilePath
+            AnchorFileValidator.validate(FilePath(url), raw)
+            return raw
         except Exception as e:
             if self.verbose:
                 print(f"[!]️   Warning: Could not fetch Master Policy from {url}.")

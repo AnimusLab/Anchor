@@ -382,7 +382,116 @@ custom_rules:
         click.echo("")
         click.secho(f"  [OK] Created {policy_path}", fg="green")
 
-    # â”€â”€ Update .gitignore â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # ── Standard pre-commit hook framework integration ─────────
+    enable_git = False
+    if os.path.exists(".git") and sys.stdin and hasattr(sys.stdin, "isatty") and sys.stdin.isatty():
+        click.echo("")
+        enable_git = click.confirm(
+            "Enable Git governance checks?\n\n"
+            "Anchor integrates with the standard pre-commit framework to\n"
+            "perform governance validation before every commit.",
+            default=True
+        )
+
+    if enable_git:
+        import shutil
+        pre_commit_installed = shutil.which("pre-commit") is not None
+        
+        if not pre_commit_installed:
+            click.echo("")
+            install_pre_commit = click.confirm(
+                "pre-commit was not detected.\n\n"
+                "Git integration requires the pre-commit framework.\n\n"
+                "Install it now?\n\n"
+                "pip install pre-commit",
+                default=True
+            )
+            if install_pre_commit:
+                try:
+                    click.secho("  Installing pre-commit...", fg="cyan")
+                    subprocess.check_call([sys.executable, "-m", "pip", "install", "pre-commit"])
+                    pre_commit_installed = True
+                    click.secho(f"  [{CHECK}] pre-commit installed successfully", fg="green")
+                except Exception as e:
+                    click.secho(f"  WARNING: Failed to install pre-commit: {e}", fg="yellow")
+        
+        if pre_commit_installed:
+            config_path = ".pre-commit-config.yaml"
+            configure_hook = False
+            
+            if os.path.exists(config_path):
+                click.echo("")
+                configure_hook = click.confirm(
+                    "Existing pre-commit configuration detected.\n\n"
+                    "Would you like Anchor to add its governance hook?",
+                    default=True
+                )
+                if configure_hook:
+                    try:
+                        with open(config_path, "r", encoding="utf-8") as f:
+                            config = yaml.safe_load(f) or {}
+                        if not isinstance(config, dict):
+                            config = {}
+                        if "repos" not in config or not isinstance(config["repos"], list):
+                            config["repos"] = []
+                        
+                        exists = False
+                        for repo_entry in config["repos"]:
+                            if isinstance(repo_entry, dict) and repo_entry.get("repo") == "https://github.com/AnimusLab/Anchor":
+                                exists = True
+                                break
+                        
+                        if not exists:
+                            config["repos"].append({
+                                "repo": "https://github.com/AnimusLab/Anchor",
+                                "rev": f"v{__version__}",
+                                "hooks": [
+                                    {"id": "anchor-governance"}
+                                ]
+                            })
+                            with open(config_path, "w", encoding="utf-8") as f:
+                                yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+                            click.secho(f"  [{CHECK}] Appended Anchor governance hook to .pre-commit-config.yaml", fg="green")
+                        else:
+                            click.secho("  [SKIP] Anchor governance hook already exists in .pre-commit-config.yaml", fg="yellow")
+                    except Exception as e:
+                        click.secho(f"  WARNING: Failed to update .pre-commit-config.yaml: {e}", fg="yellow")
+                        configure_hook = False
+            else:
+                click.echo("")
+                configure_hook = click.confirm(
+                    "No pre-commit configuration found.\n\n"
+                    "Create one for this project?",
+                    default=True
+                )
+                if configure_hook:
+                    try:
+                        config = {
+                            "repos": [
+                                {
+                                    "repo": "https://github.com/AnimusLab/Anchor",
+                                    "rev": f"v{__version__}",
+                                    "hooks": [
+                                        {"id": "anchor-governance"}
+                                    ]
+                                }
+                            ]
+                        }
+                        with open(config_path, "w", encoding="utf-8") as f:
+                            yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+                        click.secho(f"  [{CHECK}] Created minimal .pre-commit-config.yaml with Anchor governance hook", fg="green")
+                    except Exception as e:
+                        click.secho(f"  WARNING: Failed to create .pre-commit-config.yaml: {e}", fg="yellow")
+                        configure_hook = False
+            
+            if configure_hook:
+                try:
+                    subprocess.check_call(["pre-commit", "install"])
+                    click.secho(f"  [{CHECK}] Installed pre-commit hooks in git", fg="green")
+                except Exception as e:
+                    click.secho(f"  WARNING: Failed to install pre-commit hooks in git: {e}", fg="yellow")
+
+    # —————————————————————————————— Update .gitignore ——————————————————————————————
     # V4 Decision: .anchor/ should be committed, excluding cache and temp
     gitignore_path = ".gitignore"
     gitignore_entries = [
@@ -419,41 +528,7 @@ custom_rules:
     except Exception as e:
         click.secho(f"  WARNING: Could not update .gitignore: {e}", fg="yellow")
 
-    # â”€â”€ Install git pre-commit hook â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    if os.path.exists(".git"):
-        hooks_dir = os.path.join(".git", "hooks")
-        os.makedirs(hooks_dir, exist_ok=True)
-        pre_commit_path = os.path.join(hooks_dir, "pre-commit")
-        pre_commit_content = """#!/bin/sh
-# Anchor Git Hook: Targeted compliance scan for staged files
-echo "[Anchor] Checking staged files for compliance..."
 
-STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\\.(py|ts|tsx)$')
-
-if [ -z "$STAGED_FILES" ]; then
-  echo "No relevant files staged. Skipping Anchor scan."
-  exit 0
-fi
-
-python -m anchor check --severity error --hook $STAGED_FILES
-RESULT=$?
-
-if [ $RESULT -ne 0 ]; then
-  echo "Commit Blocked: Anchor detected compliance violations."
-  echo "  See .anchor/violations/governance_violations.txt for details."
-  exit 1
-fi
-"""
-        try:
-            with open(pre_commit_path, "w") as f:
-                f.write(pre_commit_content)
-            try:
-                os.chmod(pre_commit_path, 0o755)
-            except Exception:
-                pass
-            click.secho(f"  [{CHECK}] Git pre-commit hook installed", fg="green")
-        except Exception as e:
-            click.secho(f"  WARNING: Could not install git hook: {e}", fg="yellow")
 
     # â”€â”€ Verify Remote Integrity â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     click.echo("")

@@ -304,12 +304,16 @@ class DecisionAuditor:
         # 4. Fire the Global Whisper (The Public Ledger)
         zk_payload = json.dumps(local_entry_dict)
         try:
+            from anchor.core.config import settings
             ledger_url = os.environ.get("ANCHOR_LEDGER_URL")
             if ledger_url:
                 req = urllib.request.Request(
                     ledger_url,
                     data=zk_payload.encode("utf-8"),
-                    headers={"Content-Type": "application/json"}
+                    headers={
+                        "Content-Type": "application/json",
+                        "User-Agent": settings.user_agent
+                    }
                 )
                 urllib.request.urlopen(req, timeout=1.0)
         except Exception:

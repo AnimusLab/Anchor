@@ -1797,8 +1797,7 @@ def check_drift(ctx, target, repo, limit, only_violations, as_json, verbose, rep
                 continue
             contexts = extract_usages(str(repo_path), symbol.name)
             result   = analyze_drift(symbol.name, anchor, contexts,
-                                     repo_path=str(repo_path),
-                                     governance_map=governance_map)
+                                     repo_path=str(repo_path))
             # Attach metadata for reporting
             result.file_path = symbol.file_path
             result.line_number = symbol.line_number

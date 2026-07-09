@@ -557,7 +557,53 @@ class PolicyEngine:
                         "severity": rule.get("severity", "error")
                     })
 
-        return {"violations": violations, "suppressed": suppressed}
+        evaluated_violations = self.evaluate_candidates(violations, content, file_path)
+        return {"violations": evaluated_violations, "suppressed": suppressed}
+
+    def evaluate_candidates(self, candidates: List[Dict[str, Any]], content: bytes, file_path: str) -> List[Dict[str, Any]]:
+        """
+        Runs candidate findings through an evidence-based rule evaluation pipeline.
+        Promotes candidates to final violations only if conditions are met.
+        """
+        violations = []
+        try:
+            content_str = content.decode("utf-8", errors="ignore")
+        except Exception:
+            content_str = ""
+
+        for candidate in candidates:
+            rule_id = candidate.get("id", "")
+            
+            # Specialized evaluator for ALN-001 / MIT-003-A (LLM Output Without Validation)
+            if "ALN-001" in rule_id or "MIT-003-A" in rule_id:
+                import re
+                # Check for common validation frameworks, helper functions, and custom schemas
+                validation_patterns = [
+                    r"\bimport\s+(pydantic|instructor|guardrails|marshmallow|jsonschema)\b",
+                    r"\bfrom\s+(pydantic|instructor|guardrails|marshmallow|jsonschema)\b",
+                    r"\bBaseModel\b",
+                    r"\.validate\s*\(",
+                    r"\.parse_obj\s*\(",
+                    r"\bjson\.loads\s*\(",
+                    r"\bvalidate_\w+",
+                    r"\bcheck_\w+",
+                    r"#\s*anchor:\s*validate\b"
+                ]
+                
+                has_validation = False
+                for pat in validation_patterns:
+                    if re.search(pat, content_str):
+                        has_validation = True
+                        break
+                
+                if has_validation:
+                    if self.verbose:
+                        import click
+                        click.secho(f"    🛡️ [EVALUATOR] ALN-001 candidate at line {candidate['line']} discarded (validation markers found).", fg="green", dim=True)
+                    continue
+
+            violations.append(candidate)
+        return violations
 
     def _execute_query(self, root_node, adapter: LanguageAdapter, s_expr: str) -> List[Dict]:
         """Standardized query execution returning all capture groups for verification."""

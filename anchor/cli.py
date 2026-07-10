@@ -636,7 +636,29 @@ custom_rules:
     else:
         click.secho("  [SKIP] Cryptographic keypair already exists.", fg="yellow")
 
-    # â”€â”€ Summary â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # —— Git commit option ——
+    create_commit = False
+    if os.path.exists(".git") and sys.stdin and hasattr(sys.stdin, "isatty") and sys.stdin.isatty():
+        click.echo("")
+        create_commit = click.confirm(
+            "Anchor has finished initialization.\n\n"
+            "Would you like to create an initial governance commit?",
+            default=True
+        )
+
+    if create_commit:
+        try:
+            if os.path.exists(".gitignore"):
+                subprocess.check_call(["git", "add", ".gitignore"])  # anchor: ignore SEC-007
+            if os.path.exists(".pre-commit-config.yaml"):
+                subprocess.check_call(["git", "add", ".pre-commit-config.yaml"])  # anchor: ignore SEC-007
+            subprocess.check_call(["git", "add", ".anchor/"])  # anchor: ignore SEC-007
+            subprocess.check_call(["git", "commit", "-m", "chore: initialize Anchor governance"])  # anchor: ignore SEC-007
+            click.secho(f"  [{CHECK}] Created initial governance commit", fg="green")
+        except Exception as e:
+            click.secho(f"  WARNING: Failed to create initial governance commit: {e}", fg="yellow")
+
+    # —— Summary ——
     click.echo("")
     click.secho("  " + "-" * 40, fg="bright_black")
     click.secho(f"  {len(requested_domains)} domain(s) loaded", fg="white")
@@ -645,7 +667,10 @@ custom_rules:
     if requested_regulators:
         click.secho(f"  {len(requested_regulators)} regulator(s) loaded", fg="white")
     click.secho("  .anchor/ created", fg="white")
-    click.secho("  .anchor/ committed to repository (logs and governance state are version-controlled)", fg="white")
+    if create_commit:
+        click.secho("  .anchor/ committed to repository (logs and governance state are version-controlled)", fg="white")
+    else:
+        click.secho("  .anchor/ created (version-control pending developer action)", fg="bright_black")
     click.secho("  .anchor/cache/ added to .gitignore", fg="bright_black")
     click.echo("")
     click.secho(

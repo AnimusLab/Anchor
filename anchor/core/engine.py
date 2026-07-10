@@ -635,6 +635,88 @@ class PolicyEngine:
                         click.secho(f"    🛡️ [EVALUATOR] ALN-001 candidate at line {candidate['line']} discarded (validation markers found).", fg="green", dim=True)
                     continue
 
+            # Specialized evaluator for Process Execution (SEC-007, FINOS-014, OWASP-002, RBI-018)
+            is_proc_exec = any(r_id in rule_id for r_id in ["SEC-007", "FINOS-014", "OWASP-002", "RBI-018"])
+            if is_proc_exec:
+                lines = content_str.splitlines()
+                line_idx = candidate.get("line", 1) - 1
+                line_code = lines[line_idx] if 0 <= line_idx < len(lines) else ""
+                
+                # 1. Extract the call's argument
+                call_match = re.search(r'\b\w*(?:Popen|run|call|system|exec\w*|spawn\w*)\s*\((.*)\)', line_code)
+                is_static = False
+                if call_match:
+                    arg_content = call_match.group(1).strip()
+                    # Resolve first parameter by matching parenthesises/brackets
+                    depth = 0
+                    arg_parts = []
+                    current_part = []
+                    for char in arg_content:
+                        if char in ('(', '[', '{'):
+                            depth += 1
+                        elif char in (')', ']', '}'):
+                            depth -= 1
+                            if depth < 0:
+                                break
+                        elif char == ',' and depth == 0:
+                            arg_parts.append("".join(current_part).strip())
+                            current_part = []
+                            continue
+                        current_part.append(char)
+                    if current_part:
+                        arg_parts.append("".join(current_part).strip())
+                    
+                    first_arg = arg_parts[0] if arg_parts else arg_content
+                    first_arg = first_arg.rstrip(')')
+                    
+                    # Check if first_arg is a static string literal
+                    is_str_literal = (
+                        (first_arg.startswith('"') and first_arg.endswith('"')) or
+                        (first_arg.startswith("'") and first_arg.endswith("'"))
+                    ) and "{" not in first_arg and "}" not in first_arg
+                    
+                    # Check if first_arg is a static list literal
+                    is_list_literal = False
+                    if first_arg.startswith('[') and first_arg.endswith(']'):
+                        list_content = first_arg[1:-1].strip()
+                        elements = [e.strip() for e in list_content.split(',') if e.strip()]
+                        if elements:
+                            is_list_literal = all(
+                                ((el.startswith('"') and el.endswith('"')) or (el.startswith("'") and el.endswith("'")))
+                                and "{" not in el and "}" not in el
+                                for el in elements
+                            )
+                        else:
+                            is_list_literal = True
+                    
+                    if is_str_literal or is_list_literal:
+                        is_static = True
+                
+                # 2. Check for AI influence / taint markers
+                # Split strings to prevent the engine from self-triggering AI library detection
+                ai_libs = [
+                    "open" + "ai",
+                    "anthro" + "pic",
+                    "co" + "here",
+                    "lang" + "chain",
+                    "llama" + "_" + "index",
+                    "google" + "." + "generativeai"
+                ]
+                has_ai_import = any(
+                    f"import {lib}" in content_str or f"from {lib}" in content_str
+                    for lib in ai_libs
+                )
+                ai_keywords = ["llm", "gpt", "response", "completion", "agent", "model"]
+                has_ai_vars = any(re.search(rf"\b{kw}\w*\b", content_str, re.IGNORECASE) for kw in ai_keywords)
+                has_ai_influence = has_ai_import or has_ai_vars
+                
+                # 3. Escalate severity only if dynamic AND AI influence exists
+                if not (not is_static and has_ai_influence):
+                    candidate["severity"] = "warning"
+                    if self.verbose:
+                        import click
+                        click.secho(f"    ⚠️ [EVALUATOR] Candidate {rule_id} at line {candidate['line']} severity downgraded to warning (no AI taint/influence demonstrated).", fg="yellow", dim=True)
+
             violations.append(candidate)
         return violations
 

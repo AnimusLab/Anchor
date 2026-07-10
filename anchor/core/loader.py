@@ -49,6 +49,7 @@ class Rule:
     message: Optional[str] = None
     mitigation: Optional[str] = None
     primitives: Optional[Primitives] = None
+    min_mitigations: Optional[int] = None
 
 
 @dataclass
@@ -260,6 +261,7 @@ def load_domain_file(
             message=rule_data.get("message"),
             mitigation=rule_data.get("mitigation"),
             primitives=primitives,
+            min_mitigations=rule_data.get("min_mitigations"),
         )
         rules[rule_id] = rule
 

@@ -188,10 +188,19 @@ class DiamondCage:
         "windows_x86_64":f"https://github.com/WasmEdge/WasmEdge/releases/download/{WASMEDGE_VERSION}/WasmEdge-{WASMEDGE_VERSION}-windows.zip",
     }
 
+    WASMEDGE_SHA256 = {
+        "linux_x86_64":  "3686e0226871bf17b62ec57e1c15778c2947834b90af0dfad14f2e0202bf9284",
+        "darwin_x86_64": "b7fdfaf59805951241f47690917b501ddfa06d9b6f7e0262e44e784efe4a7b33",
+        "darwin_arm64":  "acc93721210294ced0887352f360e42e46dcc05332e6dd78c1452fb3a35d5255",
+        "windows_x86_64":"db533289ba26ec557b5193593c9ed03db75be3bc7aa737e2caa5b56b8eef888a",
+    }
+
     PYTHON_WASM_URL = (
         "https://github.com/vmware-labs/webassembly-language-runtimes/releases/"
         "download/python%2F3.11.3%2B20230428-7d1b259/python-3.11.3.wasm"
     )
+
+    PYTHON_WASM_SHA256 = "658cb6add2bbf8dfe84d67fb85430956d5a8b2b1d694d33432d654cdf048f813"
 
     def __init__(self, anchor_home: Optional[Path] = None, verbose: bool = False):
         self.anchor_home = anchor_home or (Path.home() / ".anchor")
@@ -619,6 +628,7 @@ def install_diamond_cage(force: bool = False, verbose: bool = False) -> bool:
     import urllib.request
     import tarfile
     import zipfile
+    import hashlib
 
     cage = DiamondCage(verbose=verbose)
 
@@ -654,6 +664,20 @@ def install_diamond_cage(force: bool = False, verbose: bool = False) -> bool:
         with urllib.request.urlopen(req, timeout=60) as response:
             with open(archive_path, "wb") as f:
                 f.write(response.read())
+
+        # Verify WasmEdge archive integrity
+        expected_wasmedge_hash = cage.WASMEDGE_SHA256.get(platform_key)
+        if expected_wasmedge_hash:
+            if verbose:
+                print("   Verifying WasmEdge archive integrity...")
+            hasher = hashlib.sha256()
+            with open(archive_path, "rb") as f:
+                for chunk in iter(lambda: f.read(4096), b""):
+                    hasher.update(chunk)
+            actual_hash = hasher.hexdigest()
+            if actual_hash != expected_wasmedge_hash:
+                archive_path.unlink()
+                raise ValueError(f"WasmEdge archive integrity verification failed! Hash mismatch.\nExpected: {expected_wasmedge_hash}\nActual: {actual_hash}")
 
         if verbose:
             print("PKP: Extracting WasmEdge...")
@@ -719,6 +743,18 @@ def install_diamond_cage(force: bool = False, verbose: bool = False) -> bool:
         with urllib.request.urlopen(req, timeout=120) as response:
             with open(cage.python_wasm_path, "wb") as f:
                 f.write(response.read())
+
+        # Verify Python WASM integrity
+        if verbose:
+            print("   Verifying Python WASM binary integrity...")
+        hasher = hashlib.sha256()
+        with open(cage.python_wasm_path, "rb") as f:
+            for chunk in iter(lambda: f.read(4096), b""):
+                hasher.update(chunk)
+        actual_hash = hasher.hexdigest()
+        if actual_hash != cage.PYTHON_WASM_SHA256:
+            cage.python_wasm_path.unlink()
+            raise ValueError(f"Python WASM integrity verification failed! Hash mismatch.\nExpected: {cage.PYTHON_WASM_SHA256}\nActual: {actual_hash}")
 
         if verbose:
             print("[V] Python WASM installed.")

@@ -804,17 +804,33 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
     from anchor.core.sandbox import DiamondCage, install_diamond_cage
     cage = DiamondCage()
 
-    # 0. ENSURE SANDBOX IS READY (Automatic)
+    # 0. ENSURE SANDBOX IS READY (Interactive Consent and Verification)
     ephemeral_sandbox = False
     if not no_sandbox:
         if not cage.is_installed():
-            if verbose: click.secho("Diamond Cage (WASM Sandbox) not found. Initializing...", fg="cyan")
-            success = install_diamond_cage(verbose=verbose)
-            if not success:
-                if verbose: click.secho("WARNING: Sandbox initialization failed. Falling back to host execution.", fg="yellow")
+            confirm_download = False
+            if sys.stdin and hasattr(sys.stdin, "isatty") and sys.stdin.isatty():
+                click.echo("Sandbox runtime not found.")
+                click.echo("Anchor uses WASMEdge to execute policies inside an isolated sandbox.")
+                click.echo("The runtime must be downloaded once before sandbox execution.")
+                confirm_download = click.confirm("Download and install now?", default=True)
+            
+            if confirm_download:
+                if verbose: click.secho("Diamond Cage (WASM Sandbox) not found. Initializing...", fg="cyan")
+                success = install_diamond_cage(verbose=verbose)
+                if not success:
+                    click.secho("WARNING: Sandbox initialization failed. Falling back to static analysis (no behavioral verification).", fg="yellow")
+                    no_sandbox = True
+                else:
+                    ephemeral_sandbox = True
+                    if verbose: click.secho("Sandbox Ready.", fg="green")
             else:
-                ephemeral_sandbox = True
-                if verbose: click.secho("Sandbox Ready.", fg="green")
+                click.secho("Sandbox installation declined. Disabling sandbox-based evaluation.", fg="yellow")
+                click.echo("The following capabilities will be unavailable:")
+                click.echo("  - Safe execution of untrusted code")
+                click.echo("  - Diamond Cage behavioral sandboxing for agent tools")
+                click.echo("  - Differential behavioral verification (snapshots)")
+                no_sandbox = True
         else:
             if verbose:
                 click.secho("Using Diamond Cage (WASM Sandbox) for isolation.", fg="cyan")

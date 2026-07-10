@@ -429,6 +429,10 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    # Disable remote Ledger and Relay URLs to avoid blocking HTTP/socket timeouts in benchmarks
+    os.environ.pop("ANCHOR_LEDGER_URL", None)
+    os.environ.pop("ANCHOR_RELAY_URL", None)
+
     if not args.json:
         print(DIV)
         print("  Anchor Runtime Benchmark")

@@ -563,7 +563,8 @@ class PolicyEngine:
     def evaluate_candidates(self, candidates: List[Dict[str, Any]], content: bytes, file_path: str) -> List[Dict[str, Any]]:
         """
         Runs candidate findings through an evidence-based rule evaluation pipeline.
-        Promotes candidates to final violations only if conditions are met.
+        Promotes candidates to final violations only if conditions are met, including
+        mitigation-aware checks and min_mitigations enforcement.
         """
         violations = []
         try:
@@ -571,12 +572,44 @@ class PolicyEngine:
         except Exception:
             content_str = ""
 
+        # Parse active inline mitigations in the file
+        import re
+        mitigation_pattern = r"#\s*anchor:\s*(?:mitigate|mitigation|mitigated)\s+([a-zA-Z0-9_-]+)"
+        active_mitigations = re.findall(mitigation_pattern, content_str)
+
         for candidate in candidates:
             rule_id = candidate.get("id", "")
+            candidate_ids = [cid.strip() for cid in rule_id.split(",") if cid.strip()]
             
+            # --- 1. Generic Mitigation-Aware Evaluation ---
+            # Lookup min_mitigations requirement for the candidate's rule(s)
+            min_mit = 0
+            for cid in candidate_ids:
+                rule_config = None
+                for r in getattr(self, "all_rules", self.rules):
+                    if r.get("id") == cid:
+                        rule_config = r
+                        break
+                if rule_config:
+                    m_val = rule_config.get("min_mitigations")
+                    if m_val is not None:
+                        try:
+                            min_mit = max(min_mit, int(m_val))
+                        except (ValueError, TypeError):
+                            pass
+
+            if min_mit > 0:
+                # Count matching mitigations defined in the file
+                mit_count = sum(1 for m_id in active_mitigations if m_id in candidate_ids)
+                if mit_count >= min_mit:
+                    if self.verbose:
+                        import click
+                        click.secho(f"    🛡️ [EVALUATOR] Candidate {rule_id} at line {candidate['line']} discarded ({mit_count}/{min_mit} mitigations satisfied).", fg="green", dim=True)
+                    continue
+
+            # --- 2. Specialized Rule Evaluators ---
             # Specialized evaluator for ALN-001 / MIT-003-A (LLM Output Without Validation)
             if "ALN-001" in rule_id or "MIT-003-A" in rule_id:
-                import re
                 # Check for common validation frameworks, helper functions, and custom schemas
                 validation_patterns = [
                     r"\bimport\s+(pydantic|instructor|guardrails|marshmallow|jsonschema)\b",

@@ -3,9 +3,10 @@ anchor/runtime/__init__.py
 
 Public API for the Anchor Interceptor SDK (Layer 1, V5.0.3).
 
-One import activates full runtime governance across ALL AI providers:
+Explicit activation is required to run runtime governance:
 
-    import anchor.runtime                        # auto-activates (BLOCK mode)
+    import anchor.runtime
+    anchor.runtime.activate(mode='block')        # auto-activates (BLOCK mode)
     # or:
     anchor.runtime.activate(mode='warn')         # warn but don't block
     anchor.runtime.activate(mode='audit')        # log only, no interruptions
@@ -83,6 +84,9 @@ def activate(
     if _active:
         logger.debug("[Anchor] Runtime already active, skipping re-activation.")
         return get_session_stats()
+
+    # Load custom providers from policy.anchor
+    _load_custom_providers_from_policy()
 
     mode_enum = InterceptorMode(mode.lower())
     _current_mode = mode_enum
@@ -256,13 +260,6 @@ def enforce(mode: str = "conversational", jurisdiction: str = "GLOBAL", **metada
             return result
         return wrapper
     return decorator
-
-
-# ---------------------------------------------------------------------------
-# Auto-activate on import (BLOCK mode, no verbose)
-# ---------------------------------------------------------------------------
-_load_custom_providers_from_policy()
-activate()
 
 
 # Re-export for convenience

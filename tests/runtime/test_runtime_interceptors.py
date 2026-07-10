@@ -38,9 +38,13 @@ print(f"4. http_backstop.py: OK (patched={'yes' if ok else 'no — requests/http
 from anchor.runtime.interceptors.framework import activate_framework_patches, get_active_patches
 print("5. framework.py imports: OK")
 
-# 6: full runtime (auto-activated on import)
+# 6: full runtime (explicitly activated)
 import anchor.runtime as rt
 s = rt.get_session_stats()
-print(f"6. runtime/__init__.py: OK (status={s['status']}, mode={s.get('mode', '?')})")
+assert s["status"] == "inactive", f"Expected inactive on import, got {s['status']}"
+rt.activate()
+s2 = rt.get_session_stats()
+assert s2["status"] == "active", f"Expected active after activate(), got {s2['status']}"
+print(f"6. runtime/__init__.py: OK (status={s2['status']}, mode={s2.get('mode', '?')})")
 
 print("\nALL SMOKE TESTS PASSED")

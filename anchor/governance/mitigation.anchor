@@ -82,7 +82,7 @@ mitigations:
       type: "regex"
       # Only fire on bulk access or sensitive key names
       pattern: >-
-        ^(?:[^"\'#]|(["\'])(?:(?!\1).|\\\1)*\1)*\bos\.(environ\.(copy|items)\(\)|\benviron\b\s*\[.*(?i)(TOKEN|KEY|SECRET|PASSWORD|CREDENTIAL|API).*\]|\{\*\*os\.environ)
+        (?i)^(?:[^"\'#]|(["\'])(?:(?!\1).|\\\1)*\1)*\bos\.(environ\.(copy|items)\(\)|\benviron\b\s*\[.*(TOKEN|KEY|SECRET|PASSWORD|CREDENTIAL|API).*\]|\{\*\*os\.environ)
     message: "Broad environment variable access detected. Agents may harvest secrets from env."
     severity: "error"
   # --- SEC-012: Governance Configuration Modification ---
@@ -96,3 +96,25 @@ mitigations:
         \.(write|save|update)\s*\(.*\.anchor["']
     message: "Unauthorized attempt to modify Anchor governance configuration detected. Governance state must be immutable at runtime."
     severity: "blocker"
+
+  # --- SEC-004: Hardcoded Secrets (Mitigation Catalog Extension) ---
+  - id: "MIT-004-B"
+    rule_id: "SEC-004"
+    name: "Hardcoded API Key / Secret"
+    match:
+      type: "regex"
+      pattern: >-
+        (?i)(?:[a-zA-Z0-9_]*key|[a-zA-Z0-9_]*secret|[a-zA-Z0-9_]*token|password|credential)\s*=\s*['\"][a-zA-Z0-9_\-\.\:\/]{16,}['\"]
+    message: "Hardcoded API key, secret, token or credential detected."
+    severity: "error"
+
+  # --- SEC-010: Insecure Python Execution ---
+  - id: "MIT-010-A"
+    rule_id: "SEC-010"
+    name: "Insecure Dynamic Python Execution Sinks"
+    match:
+      type: "regex"
+      pattern: >-
+        (?i)\b(?:eval|exec|pickle\.loads|pickle\.load|marshal\.loads|shelve\.open)\s*\(
+    message: "Dynamic python execution sink (eval/exec/pickle/marshal) detected."
+    severity: "error"

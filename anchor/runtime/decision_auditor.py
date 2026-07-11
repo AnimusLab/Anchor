@@ -261,7 +261,14 @@ class DecisionAuditor:
         timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         entry_id = str(uuid.uuid4())
         rule_ids = sorted([f.get("rule_id") for f in all_violations if f.get("rule_id")])
-        findings_hash = self._hash_payload(json.dumps(rule_ids))
+        
+        # Salt the findings commitment to prevent offline dictionary enumeration
+        secret_key = os.environ.get("ANCHOR_MAT", os.environ.get("ANCHOR_SECRET_KEY", "default-key")).strip()
+        findings_hash = hmac.new(
+            secret_key.encode("utf-8"),
+            (json.dumps(rule_ids) + entry_id).encode("utf-8"),
+            hashlib.sha256
+        ).hexdigest()
         
         prev_hash = self.get_last_runtime_hash()
         chain_hash = self._hash_payload(prev_hash + findings_hash)

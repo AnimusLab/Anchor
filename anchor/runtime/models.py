@@ -36,6 +36,7 @@ class AuditEntry:
     prev_chain_hash: str = ""      # Hash of previous entry (chain integrity)
     chain_hash: str = ""
     signature: str = ""
+    is_sealed: bool = True
     
     # Raw Data (Local Only)
     violations: List[Dict[str, Any]] = field(default_factory=list)
@@ -68,7 +69,8 @@ class AuditEntry:
                 "findings_hash": self.findings_hash,
                 "prev_chain_hash": self.prev_chain_hash,
                 "chain_hash": self.chain_hash,
-                "signature": self.signature
+                "signature": self.signature,
+                "is_sealed": self.is_sealed
             },
             "telemetry": self.telemetry
         }

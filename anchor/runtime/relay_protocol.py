@@ -308,7 +308,11 @@ class MockHubServer:
                     msg = json.loads(raw_msg)
                     m_type = msg.get("type")
                     if m_type == "AUDIT_HEADER":
-                        self.received_headers.append(msg.get("payload"))
+                        payload = msg.get("payload") or {}
+                        if "status" not in payload:
+                            is_compliant = payload.get("is_compliant", True)
+                            payload["status"] = "CLEAN" if is_compliant else "VIOLATION"
+                        self.received_headers.append(payload)
                     elif m_type == "FORENSIC_RESPONSE" or m_type == "pull_response":
                         payload = msg.get("payload") or msg
                         entry_id = payload.get("entry_id")

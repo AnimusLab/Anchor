@@ -710,12 +710,25 @@ class PolicyEngine:
                 has_ai_vars = any(re.search(rf"\b{kw}\w*\b", content_str, re.IGNORECASE) for kw in ai_keywords)
                 has_ai_influence = has_ai_import or has_ai_vars
                 
-                # 3. Escalate severity only if dynamic AND AI influence exists
+                # 3. Clamp severity: only downgrade if static or no AI influence exists,
+                # but NEVER below the rule's declared min_severity floor.
+                # SEC-007 (and friends) declare min_severity: "error", so a static
+                # subprocess call must floor at "error", not silently drop to "warning".
+                _SEV_ORDER = {"blocker": 3, "error": 2, "warning": 1, "ignore": 0}
                 if not (not is_static and has_ai_influence):
-                    candidate["severity"] = "warning"
+                    target_sev = "warning"
+                    # Enforce min_severity floor from each matching rule config
+                    for cid in candidate_ids:
+                        for r in getattr(self, "all_rules", self.rules):
+                            if r.get("id") == cid:
+                                floor = r.get("min_severity", "warning")
+                                if _SEV_ORDER.get(floor, 0) > _SEV_ORDER.get(target_sev, 0):
+                                    target_sev = floor
+                                break
+                    candidate["severity"] = target_sev
                     if self.verbose:
                         import click
-                        click.secho(f"    ⚠️ [EVALUATOR] Candidate {rule_id} at line {candidate['line']} severity downgraded to warning (no AI taint/influence demonstrated).", fg="yellow", dim=True)
+                        click.secho(f"    ⚠️ [EVALUATOR] Candidate {rule_id} at line {candidate['line']} severity clamped to {target_sev} (no AI taint/influence demonstrated).", fg="yellow", dim=True)
 
             violations.append(candidate)
         return violations

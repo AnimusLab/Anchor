@@ -986,13 +986,35 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
                             and existing_match.get("pattern")
                             and match_data.get("pattern")
                         ):
-                            combined = (
-                                f"(?:{existing_match['pattern']})"
-                                f"|"
-                                f"(?:{match_data['pattern']})"
-                            )
+                            p1 = existing_match['pattern']
+                            p2 = match_data['pattern']
+                            case_insensitive = False
+                            if p1.startswith("(?i)"):
+                                p1 = p1[4:]
+                                case_insensitive = True
+                            if p2.startswith("(?i)"):
+                                p2 = p2[4:]
+                                case_insensitive = True
+                            
+                            combined = f"(?:{p1})|(?:{p2})"
+                            if case_insensitive:
+                                combined = "(?i)" + combined
+                                
                             rule_dict[resolved_id]["match"] = {"type": "regex", "pattern": combined}
                             rule_dict[resolved_id]["pattern"] = combined
+                        elif (
+                            existing_match
+                            and existing_match.get("type") == "function_call"
+                            and match_data.get("type") == "function_call"
+                        ):
+                            existing_names = existing_match.get("name", [])
+                            if isinstance(existing_names, str):
+                                existing_names = [existing_names]
+                            new_names = match_data.get("name", [])
+                            if isinstance(new_names, str):
+                                new_names = [new_names]
+                            combined_names = sorted(list(set(existing_names + new_names)))
+                            rule_dict[resolved_id]["match"] = {"type": "function_call", "name": combined_names}
                         else:
                             rule_dict[resolved_id]["match"] = match_data
                             # If the match block has a top-level pattern (V3 style) or internal

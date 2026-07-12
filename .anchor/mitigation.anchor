@@ -53,24 +53,73 @@ mitigations:
   # --- SEC-007: Shell Injection (os-level) ---
   - id: "MIT-014-A"
     rule_id: "SEC-007"
-    name: "Shell Command Execution"
+    name: "Shell Command Execution (os module)"
     match:
-      type: "regex"
-      # Simplified to match os.system/popen anywhere in the line, ignoring preceding code
-      pattern: >-
-        \bos\.(system|popen|spawn)\s*\(
-    message: "Potential shell injection via os.system detects. Use subprocess with list arguments instead."
+      type: "function_call"
+      # AST: matches os.system(...), os.popen(...), os.spawn*(...) call nodes only.
+      # Regex previously matched inside string literals and comments.
+      name: "os.system"
+    message: "Potential shell injection via os.system. Use subprocess with list arguments instead."
+    severity: "blocker"
+
+  # SEC-007 supplementary — os.popen
+  - id: "MIT-014-A2"
+    rule_id: "SEC-007"
+    name: "Shell Command Execution (os.popen)"
+    match:
+      type: "function_call"
+      name: "os.popen"
+    message: "Potential shell injection via os.popen. Use subprocess with list arguments instead."
+    severity: "blocker"
+
+  # SEC-007 supplementary — os.spawn*
+  - id: "MIT-014-A3"
+    rule_id: "SEC-007"
+    name: "Shell Command Execution (os.spawn)"
+    match:
+      type: "function_call"
+      name: "os.spawnl"
+    message: "Potential shell injection via os.spawn family. Use subprocess with list arguments instead."
     severity: "blocker"
 
   # --- SEC-007: Shell Injection (subprocess-level) ---
   - id: "MIT-014-B"
     rule_id: "SEC-007"
-    name: "Unsandboxed Subprocess in Agent"
+    name: "Unsandboxed Subprocess (subprocess.run)"
     match:
-      type: "regex"
-      # Excludes occurrences inside string literals or comments
-      pattern: >-
-        ^(?:[^"\'#]|(["\'])(?:(?!\1).|\\\1)*\1)*\bsubprocess\.(run|call|Popen|check_output)\s*\(
+      type: "function_call"
+      # AST: matches only real subprocess.run() call nodes, not string mentions.
+      name: "subprocess.run"
+    message: "Native subprocess execution detected. Use Diamond Cage (WASM) sandboxing for agent tools."
+    severity: "blocker"
+
+  # SEC-007 supplementary — subprocess.call
+  - id: "MIT-014-B2"
+    rule_id: "SEC-007"
+    name: "Unsandboxed Subprocess (subprocess.call)"
+    match:
+      type: "function_call"
+      name: "subprocess.call"
+    message: "Native subprocess execution detected. Use Diamond Cage (WASM) sandboxing for agent tools."
+    severity: "blocker"
+
+  # SEC-007 supplementary — subprocess.Popen
+  - id: "MIT-014-B3"
+    rule_id: "SEC-007"
+    name: "Unsandboxed Subprocess (subprocess.Popen)"
+    match:
+      type: "function_call"
+      name: "subprocess.Popen"
+    message: "Native subprocess execution detected. Use Diamond Cage (WASM) sandboxing for agent tools."
+    severity: "blocker"
+
+  # SEC-007 supplementary — subprocess.check_output
+  - id: "MIT-014-B4"
+    rule_id: "SEC-007"
+    name: "Unsandboxed Subprocess (subprocess.check_output)"
+    match:
+      type: "function_call"
+      name: "subprocess.check_output"
     message: "Native subprocess execution detected. Use Diamond Cage (WASM) sandboxing for agent tools."
     severity: "blocker"
 
@@ -82,7 +131,7 @@ mitigations:
       type: "regex"
       # Only fire on bulk access or sensitive key names
       pattern: >-
-        ^(?:[^"\'#]|(["\'])(?:(?!\1).|\\\1)*\1)*\bos\.(environ\.(copy|items)\(\)|\benviron\b\s*\[.*(?i)(TOKEN|KEY|SECRET|PASSWORD|CREDENTIAL|API).*\]|\{\*\*os\.environ)
+        (?i)^(?:[^"\'#]|(["'])(?:(?!\1).|\\\\1)*\1)*\bos\.(environ\.(copy|items)\(\)|\benviron\b\s*\[.*(TOKEN|KEY|SECRET|PASSWORD|CREDENTIAL|API).*\]|\{\*\*os\.environ)
     message: "Broad environment variable access detected. Agents may harvest secrets from env."
     severity: "error"
   # --- SEC-012: Governance Configuration Modification ---
@@ -96,3 +145,55 @@ mitigations:
         \.(write|save|update)\s*\(.*\.anchor["']
     message: "Unauthorized attempt to modify Anchor governance configuration detected. Governance state must be immutable at runtime."
     severity: "blocker"
+
+  # --- SEC-004: Hardcoded Secrets (Mitigation Catalog Extension) ---
+  - id: "MIT-004-B"
+    rule_id: "SEC-004"
+    name: "Hardcoded API Key / Secret"
+    match:
+      type: "regex"
+      pattern: >-
+        (?i)(?:[a-zA-Z0-9_]*key|[a-zA-Z0-9_]*secret|[a-zA-Z0-9_]*token|password|credential)\s*=\s*['"][a-zA-Z0-9_\-\.\\:\/]{16,}['"]
+    message: "Hardcoded API key, secret, token or credential detected."
+    severity: "error"
+
+  # --- SEC-010: Insecure Python Execution (AST-based) ---
+  - id: "MIT-010-A"
+    rule_id: "SEC-010"
+    name: "Insecure Dynamic Execution (eval)"
+    match:
+      type: "function_call"
+      # AST: matches only real eval() call nodes, not mentions in strings/comments.
+      name: "eval"
+    message: "Dynamic python execution sink (eval) detected. Use restricted sandboxes instead."
+    severity: "error"
+
+  # SEC-010 supplementary — exec
+  - id: "MIT-010-A2"
+    rule_id: "SEC-010"
+    name: "Insecure Dynamic Execution (exec)"
+    match:
+      type: "function_call"
+      name: "exec"
+    message: "Dynamic python execution sink (exec) detected. Use restricted sandboxes instead."
+    severity: "error"
+
+  # SEC-010 supplementary — pickle.loads / pickle.load
+  - id: "MIT-010-A3"
+    rule_id: "SEC-010"
+    name: "Insecure Deserialization (pickle.loads)"
+    match:
+      type: "function_call"
+      name: "pickle.loads"
+    message: "Unsafe deserialization via pickle.loads detected. Never deserialize untrusted data with pickle."
+    severity: "error"
+
+  # SEC-010 supplementary — marshal.loads
+  - id: "MIT-010-A4"
+    rule_id: "SEC-010"
+    name: "Insecure Deserialization (marshal.loads)"
+    match:
+      type: "function_call"
+      name: "marshal.loads"
+    message: "Unsafe deserialization via marshal.loads detected."
+    severity: "error"

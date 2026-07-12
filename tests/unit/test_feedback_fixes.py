@@ -63,3 +63,27 @@ def test_static_detectors_mitigations():
     assert rx_010.search("eval(user_code)") is not None
     assert rx_010.search("pickle.loads(payload)") is not None
     assert rx_010.search("other_func()") is None
+
+def test_is_sealed_field():
+    auditor = DecisionAuditor()
+    auditor.get_last_runtime_hash = MagicMock(return_value="0".zfill(64))
+    
+    # 1. No secret configured -> is_sealed should be False
+    with patch.dict('os.environ', {}, clear=True):
+        entry_unsealed = auditor.audit(
+            provider="test-provider",
+            prompt="test prompt",
+            response="test response",
+            findings=[]
+        )
+        assert entry_unsealed["cryptography"]["is_sealed"] is False
+
+    # 2. Secret configured -> is_sealed should be True
+    with patch.dict('os.environ', {"ANCHOR_SECRET_KEY": "some-secret"}):
+        entry_sealed = auditor.audit(
+            provider="test-provider",
+            prompt="test prompt",
+            response="test response",
+            findings=[]
+        )
+        assert entry_sealed["cryptography"]["is_sealed"] is True

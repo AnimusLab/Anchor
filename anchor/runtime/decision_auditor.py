@@ -267,7 +267,8 @@ class DecisionAuditor:
         rule_ids = sorted([f.get("rule_id") for f in all_violations if f.get("rule_id")])
         
         # Salt the findings commitment to prevent offline dictionary enumeration
-        secret_key = os.environ.get("ANCHOR_MAT", os.environ.get("ANCHOR_SECRET_KEY", "default-key")).strip()
+        secret_key = os.environ.get("ANCHOR_MAT", os.environ.get("ANCHOR_SECRET_KEY", "")).strip()
+        is_sealed = bool(secret_key)
         findings_hash = hmac.new(
             secret_key.encode("utf-8"),
             (json.dumps(rule_ids) + entry_id).encode("utf-8"),
@@ -297,7 +298,8 @@ class DecisionAuditor:
                 "latency_ms": latency_ms,
                 "prompt_preview": prompt[:200] + "..." if len(prompt) > 200 else prompt,
                 "response_preview": str(response)[:200] + "..." if len(str(response)) > 200 else str(response)
-            }
+            },
+            is_sealed=is_sealed
         )
 
         local_entry_dict = entry.to_dict()

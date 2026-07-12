@@ -50,9 +50,13 @@ class DecisionAuditor:
         secret_key = os.environ.get("ANCHOR_MAT", os.environ.get("ANCHOR_SECRET_KEY", "")).strip()
         if relay_url and not DecisionAuditor._relay_client:
             try:
-                host, port = relay_url.split(":")
                 from anchor.runtime.relay_protocol import SpokeRelayClient
-                client = SpokeRelayClient(host, int(port), secret_key, audit_log_path=DecisionAuditor._audit_log or ".anchor/runtime_chain.jsonl")
+                client = SpokeRelayClient(
+                    url=relay_url,
+                    secret_key=secret_key,
+                    project_name=DecisionAuditor._project_name or os.path.basename(os.getcwd()),
+                    audit_log_path=DecisionAuditor._audit_log or ".anchor/runtime_chain.jsonl"
+                )
                 client.start()
                 DecisionAuditor._relay_client = client
             except Exception:

@@ -364,7 +364,10 @@ class PolicyEngine:
 
                     # Map High-Level Intent to Adapter Implementation
                     if rule_type == "function_call":
-                        s_expr = adapter.build_dangerous_call_query([match_config.get("name")])
+                        names = match_config.get("name", [])
+                        if isinstance(names, str):
+                            names = [names]
+                        s_expr = adapter.build_dangerous_call_query(names)
                     elif rule_type == "import":
                         s_expr = adapter.build_import_query([match_config.get("module")])
                     elif rule_type == "inheritance":
@@ -413,7 +416,7 @@ class PolicyEngine:
                         
                         matches = self._execute_query(tree.root_node, adapter, s_expr)
                         if self.verbose:
-                            click.secho(f"    🔢 Raw Matches: {len(matches)}", fg="white", dim=True)
+                            click.secho(f"    [AST] Raw Matches: {len(matches)}", fg="white", dim=True)
 
                         for match_data in matches:
                             # 1. Selection Layer: Find the violation node
@@ -443,7 +446,9 @@ class PolicyEngine:
                                 if hasattr(f_text, "decode"): f_text = f_text.decode('utf-8', errors='ignore')
                                 
                                 # Check against the exact name or list of names
-                                expected_names = [match_config.get("name")] if "name" in match_config else []
+                                expected_names = match_config.get("name", [])
+                                if isinstance(expected_names, str):
+                                    expected_names = [expected_names]
                                 if f_text not in expected_names:
                                     is_valid = False
 
@@ -457,8 +462,8 @@ class PolicyEngine:
                                     is_valid = False
 
                             if not is_valid:
-                                if self.verbose: 
-                                    click.echo(f"    ⏩ [FILTERED] False positive match for {rule['id']}")
+                                if self.verbose:
+                                    click.echo(f"    >> [FILTERED] False positive match for {rule['id']}")
                                 continue
 
                             line_num = v_node.start_point[0] + 1
@@ -480,7 +485,7 @@ class PolicyEngine:
                                             author = self._get_suppression_author(file_path, line_num)
                                             if self.verbose: 
                                                 import click
-                                                click.echo(f"    🙈 [SUPPRESSED] Rule {rule['id']} at line {line_num} (Author: {author})")
+                                                click.echo(f"    [SUPPRESSED] Rule {rule['id']} at line {line_num} (Author: {author})")
                                             
                                             suppressed.append({
                                                 "id": rule["id"],
@@ -524,7 +529,7 @@ class PolicyEngine:
                 except Exception as e:
                     if self.verbose:
                         import click
-                        click.secho(f"    [!]️  Rule Error ({rule.get('id', 'unknown')}): {e}", fg="yellow", dim=True)
+                        click.secho(f"    [!]  Rule Error ({rule.get('id', 'unknown')}): {e}", fg="yellow", dim=True)
                     pass
 
             # --- MODE B: Regex (Fallback) ---
@@ -604,7 +609,7 @@ class PolicyEngine:
                 if mit_count >= min_mit:
                     if self.verbose:
                         import click
-                        click.secho(f"    🛡️ [EVALUATOR] Candidate {rule_id} at line {candidate['line']} discarded ({mit_count}/{min_mit} mitigations satisfied).", fg="green", dim=True)
+                        click.secho(f"    [EVALUATOR] Candidate {rule_id} at line {candidate['line']} discarded ({mit_count}/{min_mit} mitigations satisfied).", fg="green", dim=True)
                     continue
 
             # --- 2. Specialized Rule Evaluators ---
@@ -632,7 +637,7 @@ class PolicyEngine:
                 if has_validation:
                     if self.verbose:
                         import click
-                        click.secho(f"    🛡️ [EVALUATOR] ALN-001 candidate at line {candidate['line']} discarded (validation markers found).", fg="green", dim=True)
+                        click.secho(f"    [EVALUATOR] ALN-001 candidate at line {candidate['line']} discarded (validation markers found).", fg="green", dim=True)
                     continue
 
             # Specialized evaluator for Process Execution (SEC-007, FINOS-014, OWASP-002, RBI-018)
@@ -728,7 +733,7 @@ class PolicyEngine:
                     candidate["severity"] = target_sev
                     if self.verbose:
                         import click
-                        click.secho(f"    ⚠️ [EVALUATOR] Candidate {rule_id} at line {candidate['line']} severity clamped to {target_sev} (no AI taint/influence demonstrated).", fg="yellow", dim=True)
+                        click.secho(f"    [EVALUATOR] Candidate {rule_id} at line {candidate['line']} severity clamped to {target_sev} (no AI taint/influence demonstrated).", fg="yellow", dim=True)
 
             violations.append(candidate)
         return violations
@@ -749,7 +754,7 @@ class PolicyEngine:
             except:
                 query_obj = Query(language, s_expr)
         except Exception as e:
-            if self.verbose: print(f"    ❗ Query Syntax Error: {e}")
+            if self.verbose: print(f"    [!] Query Syntax Error: {e}")
             return []
 
         results = []
@@ -826,7 +831,7 @@ class PolicyEngine:
                     results.append(match_data)
         except Exception as e:
             if self.verbose: 
-                print(f"    ❗ Execution Error: {e}")
+                print(f"    [!] Execution Error: {e}")
                 import traceback
                 traceback.print_exc()
         

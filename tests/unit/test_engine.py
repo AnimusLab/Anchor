@@ -142,3 +142,30 @@ def test_engine_runtime_integration_check(tmp_path):
     # No AI libraries are imported, so EU-ART12 should not trigger
     assert len(results_no_ai["violations"]) == 0
 
+def test_generic_severity_floor_clamping():
+    # Setup a dummy rule (TEST-999) with min_severity: "error"
+    config = {
+        "rules": [
+            {
+                "id": "TEST-999",
+                "name": "Custom Command Execution",
+                "pattern": "os.system\\(.*\\)",
+                "severity": "blocker",
+                "min_severity": "error",
+                "message": "Dangerous command"
+            }
+        ]
+    }
+    engine = PolicyEngine(config)
+    from anchor.adapters.python import PythonAdapter
+    adapter = PythonAdapter()
+    
+    # Static call without AI influence (should downgrade, but not below min_severity = error)
+    content = b"import os\nos.system('ls')\n"
+    results = engine.scan_file(content, "test.py", adapter)
+    
+    assert len(results["violations"]) == 1
+    assert results["violations"][0]["id"] == "TEST-999"
+    # It would normally downgrade to "warning" if no floor existed, but since min_severity is "error", it must hold at "error"
+    assert results["violations"][0]["severity"] == "error"
+

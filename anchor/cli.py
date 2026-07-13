@@ -1617,11 +1617,11 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
 
             if loaded and not loaded.verified:
                 click.echo("")
-                click.secho("  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”", fg="yellow")
-                click.secho("  â”‚  UNVERIFIED â€” Governance integrity not confirmed.   â”‚", fg="yellow", bold=True)
-                click.secho("  â”‚  Reports are NOT valid for regulatory submission.   â”‚", fg="yellow")
-                click.secho("  â”‚  Run: anchor sync --restore to verify.              â”‚", fg="yellow")
-                click.secho("  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜", fg="yellow")
+                click.secho("  ┌─────────────────────────────────────────────────────┐", fg="yellow")
+                click.secho("  │  UNVERIFIED — Governance integrity not confirmed.   │", fg="yellow", bold=True)
+                click.secho("  │  Reports are NOT valid for regulatory submission.   │", fg="yellow")
+                click.secho("  │  Run: anchor sync --restore to verify.              │", fg="yellow")
+                click.secho("  └─────────────────────────────────────────────────────┘", fg="yellow")
 
             sys.exit(1)
         else:
@@ -1632,11 +1632,12 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
 
             if loaded and not loaded.verified:
                 click.echo("")
-                click.secho("  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”", fg="yellow")
-                click.secho("  â”‚  UNVERIFIED â€” Governance integrity not confirmed.   â”‚", fg="yellow", bold=True)
-                click.secho("  â”‚  Reports are NOT valid for regulatory submission.   â”‚", fg="yellow")
-                click.secho("  â”‚  Run: anchor sync --restore to verify.              â”‚", fg="yellow")
-                click.secho("  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜", fg="yellow")
+                click.secho("  ┌─────────────────────────────────────────────────────┐", fg="yellow")
+                click.secho("  │  UNVERIFIED — Governance integrity not confirmed.   │", fg="yellow", bold=True)
+                click.secho("  │  Reports are NOT valid for regulatory submission.   │", fg="yellow")
+                click.secho("  │  Run: anchor sync --restore to verify.              │", fg="yellow")
+                click.secho("  └─────────────────────────────────────────────────────┘", fg="yellow")
+                sys.exit(1)
 
             sys.exit(0)
     else:

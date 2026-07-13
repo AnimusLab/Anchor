@@ -640,9 +640,16 @@ class PolicyEngine:
                         click.secho(f"    [EVALUATOR] ALN-001 candidate at line {candidate['line']} discarded (validation markers found).", fg="green", dim=True)
                     continue
 
-            # Specialized evaluator for Process Execution (SEC-007, FINOS-014, OWASP-002, RBI-018)
+            # Evaluate for static/dynamic downgrade and min_severity floor clamping
             is_proc_exec = any(r_id in rule_id for r_id in ["SEC-007", "FINOS-014", "OWASP-002", "RBI-018"])
-            if is_proc_exec:
+            has_min_severity = False
+            for cid in candidate_ids:
+                for r in getattr(self, "all_rules", self.rules):
+                    if r.get("id") == cid and r.get("min_severity") is not None:
+                        has_min_severity = True
+                        break
+            
+            if is_proc_exec or has_min_severity:
                 lines = content_str.splitlines()
                 line_idx = candidate.get("line", 1) - 1
                 line_code = lines[line_idx] if 0 <= line_idx < len(lines) else ""

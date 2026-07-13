@@ -74,13 +74,27 @@ class SpokeRelayClient:
 
     def _run_loop(self):
         asyncio.set_event_loop(self.loop)
-        self.loop.run_until_complete(self._connect_and_listen())
+        try:
+            self.loop.run_until_complete(self._connect_and_listen())
+        except asyncio.CancelledError:
+            pass
+        finally:
+            try:
+                pending = asyncio.all_tasks(self.loop)
+                if pending:
+                    for task in pending:
+                        task.cancel()
+                    # Run until all pending tasks are fully cancelled
+                    self.loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+            except Exception:
+                pass
+            self.loop.close()
 
     def stop(self):
         self.running = False
-        if self.loop:
+        if self.loop and self.loop.is_running():
             asyncio.run_coroutine_threadsafe(self._close(), self.loop)
-            self.thread.join(timeout=2.0)
+            self.thread.join(timeout=3.0)
 
     async def _close(self):
         if self.ws:
@@ -88,7 +102,8 @@ class SpokeRelayClient:
                 await self.ws.close()
             except:
                 pass
-        self.loop.stop()
+        for task in asyncio.all_tasks(self.loop):
+            task.cancel()
 
     async def _connect_and_listen(self):
         while self.running:
@@ -147,7 +162,11 @@ class SpokeRelayClient:
                                 "hub_id": self.hub_id
                             }
                             await ws.send(json.dumps(pong))
+            except asyncio.CancelledError:
+                raise
             except Exception as e:
+                if not self.running:
+                    break
                 logger.warning(f"[RELAY] Hub connection lost: {e} — reconnecting in 5s...")
                 self.ws = None
                 await asyncio.sleep(5)
@@ -282,7 +301,35 @@ class MockHubServer:
 
     def _run_loop(self):
         asyncio.set_event_loop(self.loop)
-        self.loop.run_until_complete(self._start_server())
+        try:
+            self.loop.run_until_complete(self._start_server())
+        except asyncio.CancelledError:
+            pass
+        finally:
+            try:
+                pending = asyncio.all_tasks(self.loop)
+                if pending:
+                    for task in pending:
+                        task.cancel()
+                    self.loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+            except Exception:
+                pass
+            self.loop.close()
+
+    async def _close(self):
+        if self.active_ws:
+            try:
+                await self.active_ws.close()
+            except:
+                pass
+        if self.server:
+            try:
+                self.server.close()
+                await self.server.wait_closed()
+            except:
+                pass
+        for task in asyncio.all_tasks(self.loop):
+            task.cancel()
 
     async def _start_server(self):
         async def handler(websocket):
@@ -336,16 +383,17 @@ class MockHubServer:
                     self.active_ws = None
 
         self.server = await websockets.serve(handler, self.host, self.port)
-        while self.running:
-            await asyncio.sleep(0.1)
-        self.server.close()
-        await self.server.wait_closed()
+        try:
+            while self.running:
+                await asyncio.sleep(0.1)
+        except asyncio.CancelledError:
+            raise
 
     def stop(self):
         self.running = False
-        if self.loop:
-            self.loop.stop()
-            self.thread.join(timeout=2.0)
+        if self.loop and self.loop.is_running():
+            asyncio.run_coroutine_threadsafe(self._close(), self.loop)
+            self.thread.join(timeout=3.0)
 
     def request_forensic_pull(self, entry_id: str, timeout: float = 3.0) -> Optional[dict]:
         if not self.active_ws or not self.loop:

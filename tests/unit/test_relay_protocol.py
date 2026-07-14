@@ -65,12 +65,20 @@ def test_relay_protocol_flow(tmp_path):
     spoke.start()
     
     try:
-        # Give connection a moment to establish
-        time.sleep(0.5)
+        # Wait for connection to establish (up to 5 seconds)
+        for _ in range(50):
+            if spoke.ws and hub.active_ws:
+                break
+            time.sleep(0.1)
         
         # 4. Dispatch lightweight ZK header from Spoke to Hub
         spoke.send_header(mock_entry)
-        time.sleep(0.5)
+        
+        # Wait for header to be received (up to 5 seconds)
+        for _ in range(50):
+            if len(hub.received_headers) == 1:
+                break
+            time.sleep(0.1)
         
         # Verify ZK header received at Hub
         assert len(hub.received_headers) == 1

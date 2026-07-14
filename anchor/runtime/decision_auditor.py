@@ -170,8 +170,20 @@ class DecisionAuditor:
         violations = []
 
         # ── ETH-002: No-Prose Rule (structured mode only) ─────────────────
+        parsed_response = response
         if mode == "structured":
             if isinstance(response, str):
+                try:
+                    import ast
+                    parsed_response = ast.literal_eval(response.strip())
+                except Exception:
+                    try:
+                        import json
+                        parsed_response = json.loads(response.strip())
+                    except Exception:
+                        pass
+            
+            if isinstance(parsed_response, str):
                 violations.append({
                     "rule_id": "ETH-002",
                     "severity": "blocker",
@@ -182,10 +194,10 @@ class DecisionAuditor:
                 # No point running ETH-001 on prose that already failed ETH-002
                 return violations
 
-            if isinstance(response, dict):
+            if isinstance(parsed_response, dict):
                 missing = [
                     f for f in ["ReasonCode", "FeatureAttribution"]
-                    if f not in response
+                    if f not in parsed_response
                 ]
                 if missing:
                     violations.append({
@@ -202,9 +214,9 @@ class DecisionAuditor:
 
         # Structured mode: scan only decision-relevant fields
         # Conversational mode: scan full response text
-        if mode == "structured" and isinstance(response, dict):
+        if mode == "structured" and isinstance(parsed_response, dict):
             scan_target = " ".join(
-                str(v) for k, v in response.items()
+                str(v) for k, v in parsed_response.items()
                 if k in ["ReasonCode", "FeatureAttribution", 
                          "DenialReason", "RiskFactors"]
             ).lower()
@@ -254,7 +266,7 @@ class DecisionAuditor:
         except Exception:
             return "0".zfill(64)
 
-    def audit(self, provider: str, prompt: str, response: str, findings: list, jurisdiction: str = "GLOBAL", latency_ms: float = 0.0, mode: str = "conversational"):
+    def audit(self, provider: str, prompt: str, response: str, findings: list, jurisdiction: str = "GLOBAL", latency_ms: float = 0.0, mode: str = "conversational", checkpoint_id: str = None):
         """
         The critical path. Must execute in < 2ms.
         """
@@ -269,6 +281,16 @@ class DecisionAuditor:
         # Salt the findings commitment to prevent offline dictionary enumeration
         secret_key = os.environ.get("ANCHOR_MAT", os.environ.get("ANCHOR_SECRET_KEY", "")).strip()
         is_sealed = bool(secret_key)
+        if not is_sealed:
+            import sys
+            sys.stderr.write("\n")
+            sys.stderr.write("  ┌─────────────────────────────────────────────────────┐\n")
+            sys.stderr.write("  │  WARNING: Audit chain is UNSEALED.                  │\n")
+            sys.stderr.write("  │  No cryptographic key (ANCHOR_SECRET_KEY) found.    │\n")
+            sys.stderr.write("  │  Decisions are susceptible to spoofing/forgery.     │\n")
+            sys.stderr.write("  └─────────────────────────────────────────────────────┘\n")
+            sys.stderr.write("\n")
+            sys.stderr.flush()
         findings_hash = hmac.new(
             secret_key.encode("utf-8"),
             (json.dumps(rule_ids) + entry_id).encode("utf-8"),
@@ -313,6 +335,36 @@ class DecisionAuditor:
                     f.write(json.dumps(local_entry_dict) + "\n")
             except Exception:
                 pass
+
+        # Connect to reconstruction: emit GovernanceEvent
+        try:
+            from anchor.governance.emitter import GovernanceEmitter
+            from anchor.governance.event import Actor
+            
+            emitter = GovernanceEmitter()
+            actor = Actor(
+                id="system-runtime",
+                principal="system",
+                roles=["runtime_agent"],
+                auth_source="runtime"
+            )
+            
+            chk_id = checkpoint_id or entry_id
+            
+            emitter.emit(
+                event_type="decision_audit",
+                actor=actor,
+                details={
+                    "entry_id": entry_id,
+                    "provider": provider,
+                    "findings_hash": findings_hash,
+                    "violations": all_violations,
+                    "is_compliant": len(all_violations) == 0
+                },
+                checkpoint_id=chk_id
+            )
+        except Exception:
+            pass
 
         # 4. Fire the Global Whisper (The Public Ledger)
         zk_payload = json.dumps(local_entry_dict)

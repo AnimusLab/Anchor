@@ -918,6 +918,7 @@ def check(ctx, policy, paths, dir, model, metadata, context, server_mode, genera
                 "message":     rule.message,
                 "mitigation":  rule.mitigation,
                 "min_mitigations": rule.min_mitigations,
+                "min_severity": rule.min_severity,
             }
 
         if verbose or not rule_dict:

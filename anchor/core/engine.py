@@ -645,7 +645,7 @@ class PolicyEngine:
             has_min_severity = False
             for cid in candidate_ids:
                 for r in getattr(self, "all_rules", self.rules):
-                    if r.get("id") == cid and r.get("min_severity") is not None:
+                    if (r.get("id") == cid or r.get("id") == rule_id or r.get("rule_id") == rule_id) and r.get("min_severity") is not None:
                         has_min_severity = True
                         break
             
@@ -732,7 +732,7 @@ class PolicyEngine:
                     # Enforce min_severity floor from each matching rule config
                     for cid in candidate_ids:
                         for r in getattr(self, "all_rules", self.rules):
-                            if r.get("id") == cid:
+                            if r.get("id") == cid or r.get("id") == rule_id or r.get("rule_id") == rule_id:
                                 floor = r.get("min_severity", "warning")
                                 if _SEV_ORDER.get(floor, 0) > _SEV_ORDER.get(target_sev, 0):
                                     target_sev = floor

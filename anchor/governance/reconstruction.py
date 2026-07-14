@@ -7,7 +7,12 @@ class DecisionReconstructor:
     Validates and reconstructs historical decisions for auditors.
     """
     
-    def __init__(self, log_path: str = "therapy_logs/governance_events.jsonl"):
+    def __init__(self, log_path: str = ".anchor/logs/governance_events.jsonl"):
+        from pathlib import Path
+        if log_path == ".anchor/logs/governance_events.jsonl":
+            old_path = Path("therapy_logs/governance_events.jsonl")
+            if not Path(log_path).exists() and old_path.exists():
+                log_path = "therapy_logs/governance_events.jsonl"
         self.emitter = GovernanceEmitter(log_path=log_path)
 
     def get_decision_history(self, checkpoint_id: str) -> List[Dict[str, Any]]:

@@ -137,8 +137,9 @@ class SpokeRelayClient:
                     raw_resp = await asyncio.wait_for(ws.recv(), timeout=10.0)
                     resp = json.loads(raw_resp)
                     if resp.get("type") == "HUB_REJECT":
-                        logger.error(f"[RELAY] Hub rejected registration: {resp.get('payload')}")
-                        return
+                        msg = f"Hub rejected registration: {resp.get('payload')}"
+                        logger.error(f"[RELAY] {msg}")
+                        raise RuntimeError(msg)
                     elif resp.get("type") == "HUB_ACK":
                         logger.info("[RELAY] Hub ACK received. Spoke is LIVE on the Grid.")
                     

@@ -164,7 +164,8 @@ def _handle_response(text: str, provider: str, prompt: str = "", latency_ms: flo
             findings=findings,
             latency_ms=latency_ms,
             jurisdiction=jurisdiction,
-            mode=mode
+            mode=mode,
+            checkpoint_id=metadata.get("checkpoint_id")
         )
     except Exception as e:
         logger.debug(f"[Anchor] Decision auditor failed: {e}")

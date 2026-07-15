@@ -207,6 +207,18 @@ class DecisionAuditor:
                                        f"Explainability contract not satisfied.",
                         "maps_to": ["RBI-014", "CFPB-REG-B", "EU-AI-ACT-ART-13"]
                     })
+                else:
+                    reason_val = str(parsed_response.get("ReasonCode") or "").strip().lower()
+                    attrib_val = parsed_response.get("FeatureAttribution")
+                    is_vacuous_reason = reason_val in {"n/a", "none", "unknown", "null", "void", "na", ""}
+                    is_vacuous_attrib = not attrib_val or (isinstance(attrib_val, (dict, list)) and len(attrib_val) == 0)
+                    if is_vacuous_reason or is_vacuous_attrib:
+                        violations.append({
+                            "rule_id": "ETH-002",
+                            "severity": "blocker",
+                            "description": "Vacuous reason codes or empty feature attributions (e.g., 'N/A' or {}) pass schema validation but fail explainability requirements.",
+                            "maps_to": ["RBI-014", "CFPB-REG-B", "EU-AI-ACT-ART-13"]
+                        })
 
         # ── ETH-001: Aho-Corasick scan ────────────────────────────────────
         if DecisionAuditor._proxy_automaton is None:

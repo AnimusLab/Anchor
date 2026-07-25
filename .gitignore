@@ -62,3 +62,6 @@ docs_framework/
 
 # Anchor governance cache/logs
 .anchor/logs/*.tmp
+
+# Anchor governance cache/logs
+.anchor/keys/ed25519_private.pem

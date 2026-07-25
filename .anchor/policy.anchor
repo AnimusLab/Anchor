@@ -1,13 +1,13 @@
 # =============================================================================
-# POLICY — Project Policy
+# POLICY â€” Project Policy
 # =============================================================================
 # This file is for YOUR project-specific rules.
 # Automatically ignored by git to protect company policies.
 #
 # RULES:
 #   1. Can only RAISE severity (ERROR -> BLOCKER is allowed)
-#   2. Cannot LOWER severity — the floor is absolute
-#   3. Inline suppressions are permitted but cryptographically audited (git blame identifies the author in reports)
+#   2. Cannot LOWER severity â€” the floor is absolute
+
   # Example: raise SEC-006 from error to blocker
   # - id: SEC-006
   #   severity: blocker
@@ -24,4 +24,3 @@ custom_rules:
   #     pattern: 'vault\.read\((?!approved_keys)'
   #   description: >
   #     Vault read operations must only access approved_keys namespace.
-

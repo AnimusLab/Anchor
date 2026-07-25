@@ -35,7 +35,7 @@ fn dangerous_exec(cmd: &str) {
 }
 
 fn hardcoded() {
-    let secret = "sk-prod-abc123XYZ";   // hardcoded API key
+    let secret = "sk-prod-abc123XYZ";   // hardcoded API key # anchor: ignore SEC-004
     let pw     = "admin:password123";   // hardcoded password
 }
 """

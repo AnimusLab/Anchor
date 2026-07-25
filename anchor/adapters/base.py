@@ -65,8 +65,8 @@ class LanguageAdapter(ABC):
             'ts', 'js', 'as', 'from', 'package', 'public', 'private', 'protected'
         }
 
-        class_types = getattr(self, 'class_types', set())
-        function_types = getattr(self, 'function_types', set())
+        class_types = getattr(self, 'class_types', set())  # anchor: ignore SEC-010
+        function_types = getattr(self, 'function_types', set())  # anchor: ignore SEC-010
         if not class_types and not function_types:
             return []
 

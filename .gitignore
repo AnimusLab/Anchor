@@ -65,3 +65,6 @@ docs_framework/
 
 # Anchor governance cache/logs
 .anchor/keys/ed25519_private.pem
+
+anchor_repo/
+

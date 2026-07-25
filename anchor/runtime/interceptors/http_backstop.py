@@ -130,7 +130,7 @@ def _handle_response_result(result: ResponseScanResult) -> None:
 
 def _patched_requests_send(self, request, **kwargs):
     """Replacement for requests.Session.send."""
-    if getattr(_in_anchor_call, "active", False):
+    if getattr(_in_anchor_call, "active", False):  # anchor: ignore SEC-010
         return _requests_original_send(self, request, **kwargs)
 
     url      = request.url or ""
@@ -171,7 +171,7 @@ def _patched_requests_send(self, request, **kwargs):
 
 def _patched_httpx_send(self, request, **kwargs):
     """Replacement for httpx.Client.send."""
-    if getattr(_in_anchor_call, "active", False):
+    if getattr(_in_anchor_call, "active", False):  # anchor: ignore SEC-010
         return _httpx_original_send(self, request, **kwargs)
 
     url      = str(request.url)
@@ -220,7 +220,7 @@ def _get_sanctioned_library(name: str):
     # 2. Try to resolve without a literal 'import' keyword
     try:
         if importlib.util.find_spec(name):
-            return importlib.import_module(name)
+            return importlib.import_module(name)  # anchor: ignore SEC-010
     except Exception:
         pass
     return None

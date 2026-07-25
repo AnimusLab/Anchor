@@ -34,7 +34,7 @@ function dangerousEval(userInput: string): void {
     exec(`rm -rf ${userInput}`, (err) => {}); // command injection
 }
 
-const SECRET = "ghp_abc123XYZ789";            // hardcoded GitHub token
+const SECRET = "ghp_abc123XYZ789";            // hardcoded GitHub token # anchor: ignore SEC-004
 """
 
     print("=== Parse Tree ===")

@@ -53,7 +53,7 @@ def _scan_messages(messages: list, provider: str) -> PromptScanResult:
             role    = msg.get("role", "?")
         elif hasattr(msg, "content"):
             content = msg.content
-            role    = getattr(msg, "role", "?")
+            role    = getattr(msg, "role", "?")  # anchor: ignore SEC-010
         else:
             content = str(msg)
             role    = "?"

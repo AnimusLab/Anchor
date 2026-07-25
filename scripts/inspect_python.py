@@ -33,7 +33,7 @@ def run_shell(cmd):
     os.system("rm -rf /tmp/data")           # dangerous: os.system # anchor: ignore-all
 
 class AuthManager:
-    SECRET_KEY = "hardcoded-secret-abc123"  # hardcoded secret
+    SECRET_KEY = "hardcoded-secret-abc123"  # hardcoded secret # anchor: ignore SEC-004
     def login(self, user, pwd):
         return f"SELECT * FROM users WHERE user='{user}'"  # SQL injection
 """

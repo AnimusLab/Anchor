@@ -197,3 +197,33 @@ mitigations:
       name: "marshal.loads"
     message: "Unsafe deserialization via marshal.loads detected."
     severity: "error"
+
+  # SEC-010 supplementary — importlib.import_module (obfuscation detection)
+  - id: "MIT-010-A5"
+    rule_id: "SEC-010"
+    name: "Dynamic Module Import (importlib.import_module)"
+    match:
+      type: "function_call"
+      name: "importlib.import_module"
+    message: "Dynamic module import via importlib.import_module detected. Dynamic imports bypass static analysis."
+    severity: "error"
+
+  # SEC-010 supplementary — __import__ (obfuscation detection)
+  - id: "MIT-010-A6"
+    rule_id: "SEC-010"
+    name: "Dynamic Module Import (__import__)"
+    match:
+      type: "function_call"
+      name: "__import__"
+    message: "Dynamic module import via __import__ detected. Dynamic imports bypass static analysis."
+    severity: "error"
+
+  # SEC-010 supplementary — getattr (obfuscation detection)
+  - id: "MIT-010-A7"
+    rule_id: "SEC-010"
+    name: "Dynamic Attribute Access (getattr)"
+    match:
+      type: "function_call"
+      name: "getattr"
+    message: "Dynamic attribute access via getattr detected. Dynamic attributes bypass static analysis."
+    severity: "error"

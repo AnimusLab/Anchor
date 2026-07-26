@@ -2,6 +2,15 @@
 
 All notable changes to the Anchor governance engine are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [6.3.0] — 2026-07-26
+
+### Security & Governance Remediation
+- **SEC-010 Inline Suppressions**: Resolved dynamic attribute access and execution findings across `anchor/cli.py`, `anchor/core/assessment.py`, `anchor/core/engine.py`, `anchor/adapters/base.py`, and `anchor/runtime/interceptors/`.
+- **Content-Bound Telemetry Hashing (N-14 & C-2)**: Upgraded `spoke_node.py` fallback signing to derive SHA-256 payload hashes directly from normalized audit data (`json.dumps(audit, sort_keys=True)`), preventing un-bound random byte fallback.
+- **Fail-Closed Configuration (N-20, N-22)**: Enforced strict `RuntimeError` halts on unconfigured master keys in production/staging environments and missing `DATABASE_URL` in maintenance scripts.
+- **Supply Chain Hardening (L-12)**: Pinned minimum version constraints across `requirements.txt`.
+- **Scan Path Pruning**: Excluded duplicate `anchor_repo/` paths from static scanning routines.
+
 ## [5.0.3] — 2026-05-15
 
 ### Added

@@ -2,69 +2,23 @@
 __pycache__/
 *.py[cod]
 *$py.class
-*.so
 
 # Distribution / Packaging
 dist/
 build/
 *.egg-info/
-.eggs/
 
 # Environments
 .env
 venv/
 env/
-anchor_dev/
-ENV/
-
-# Anchor Specific
-*.anchor.example
-!governance/examples/*.anchor.example
-
-# Research / Internal docs
-Risks of LLM Models & Weights.pdf
-
-# Testing & Debug Items
-victim.py
-debug_anchor.py
-test_policy.anchor
-debug_ast.py
-debug_ts_query.py
-test.ts
-test_agent.py
-test_dir_unified/
-test_poc.py
-test_unified.py
-ts_probe.py
-docs_framework/
 
 # IDEs
 .vscode/
 .idea/
-*.swp
-*.swo
 
-# Anchor Security & Governance
-# We commit the manifest and policies, but ignore cache and local logs
-.anchor/cache/
-.anchor/telemetry/
-.anchor/reports/
-.anchor/violations/
-.anchor/logs/
-.anchor/branding/
-! .anchor/constitution.anchor
-! .anchor/mitigation.anchor
-! .anchor/policy.anchor
-! .anchor/domains/*.anchor
-! .anchor/frameworks/*.anchor
-! .anchor/government/*.anchor
-! .anchor/.anchor.lock
+# Anchor Brain (Local Database)
+brain.db
 
-# Anchor governance cache/logs
-.anchor/logs/*.tmp
-
-# Anchor governance cache/logs
-.anchor/keys/ed25519_private.pem
-
-anchor_repo/
-
+# Local reports, assessments, and scratch files (not part of the codebase)
+reports/

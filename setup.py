@@ -1,62 +1,40 @@
 from setuptools import setup, find_packages
 import pathlib
 
-here = pathlib.Path(__file__).parent.resolve()
-long_description = (here / "README.md").read_text(encoding="utf-8")
+# The directory containing this file
+HERE = pathlib.Path(__file__).parent
+
+# The text of the README file
+README = (HERE / "README.md").read_text(encoding="utf-8")
 
 setup(
     name="anchor-audit",
-    version="5.0.8",
-    description="The Federated Governance Engine for AI (Universal Multi-Language)",
-    long_description=long_description,
+    version="1.0.0",
+    description="Architectural Governor for AI Agents",
+    long_description=README,
     long_description_content_type="text/markdown",
-    url="https://github.com/AnimusLab/Anchor",
-    author="Tanishq",
-    author_email="tan@animuslab.dev",
+    url="https://github.com/Tanishq1030/anchor",  # Update with your actual repo URL
+    author="Tanishq Dasari",
+    author_email="your.email@example.com",        # Update this
+    license="MIT",
+    classifiers=[
+        "License :: OSI Approved :: MIT License",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Topic :: Software Development :: Quality Assurance",
+        "Intended Audience :: Developers",
+    ],
     packages=find_packages(),
     include_package_data=True,
-    package_data={
-        "anchor": [
-            "core/resources/*.example",
-            "core/resources/*.png",
-            "governance/**/*.anchor",
-            "governance/examples/*",
-            "governance/mitigation.anchor",
-            "governance/constitution.anchor",
-        ],
-    },
     install_requires=[
-        "click",
-        "pyyaml",
-        "tree-sitter>=0.22.0",
-        "tree-sitter-python",
-        "tree-sitter-typescript",
-        "tree-sitter-go",
-        "tree-sitter-java",
-        "tree-sitter-rust",
-        "pydantic-settings>=2.0.0",
-        "wrapt",
-        "requests",
-        "GitPython",
-        "pyahocorasick",
-        "cryptography>=41.0.0",
+        "GitPython>=3.1.0",
     ],
-    extras_require={
-        "dev": ["pytest", "black", "mypy"],
-        "all": ["openai", "anthropic", "google-generativeai", "langchain",
-                "ollama", "groq", "cohere", "mistralai", "transformers", "httpx"],
-    },
     entry_points={
-        'console_scripts': [
-            'anchor=anchor.cli:cli',
+        "console_scripts": [
+            "anchor=anchor.cli:main",
         ],
     },
-    python_requires='>=3.8',
-    classifiers=[
-        "Development Status :: 4 - Beta",
-        "Intended Audience :: Developers",
-        "Topic :: Software Development :: Quality Assurance",
-        "License :: OSI Approved :: Apache Software License",
-        "Programming Language :: Python :: 3",
-    ],
+    python_requires=">=3.8",
 )

@@ -1,273 +1,176 @@
-# Anchor CLI — Command Reference
+# Anchor Usage Guide 
 
-Anchor V5.0.1 — Deterministic Governance for the AI-Native Stack.
-
-🌐 **[anchorgovernance.tech](https://anchorgovernance.tech)**
-
----
+This guide covers the command-line interface (CLI), Python API, and integration patterns for AI agents.
 
 ## Installation
 
-```bash
-# From PyPI (recommended)
-pip install anchor-audit
-
-# Or from source
-git clone https://github.com/Tanishq1030/Anchor.git
-cd Anchor && pip install -e .
-```
-
----
-
-## Cryptographic Identity & Provisioning (v5.0+)
-
-Anchor v5.0 introduces a **Hierarchical Identity** model. Every project code-base must be cryptographically linked to a parent Organization via a secure `.env` configuration.
-
-### 1. Provision Your Keys
-Log in to your **Company Dashboard** at [app.anchorgovernance.tech](https://app.anchorgovernance.tech) and create a new project. You will receive:
-- `ANCHOR_ENTITY_ID`: A unique, organization-prefixed project identifier.
-- `ANCHOR_SECRET_KEY`: A high-entropy cryptographic secret.
-
-### 2. Configure Your Environment
-Create a `.env` file in your project root:
-
-```env
-ANCHOR_ENTITY_ID="your-org-prefix-project-name"
-ANCHOR_SECRET_KEY="your-secret-key-from-dashboard"
-ANCHOR_NETWORK_PROXY="https://app.anchorgovernance.tech/api"
-```
-
-### 3. Initialize & Link
-Run `anchor init` to bind your local workspace to the mesh. This will verify your credentials and sync your organization's custom policies.
-
----
-
-## 1. `anchor init`
-
-Initializes the Anchor governance environment in the current directory.
+Anchor is designed to be installed as a python package.
 
 ```bash
-anchor init [OPTIONS]
+# 1. Clone the repository
+git clone https://github.com/yourusername/anchor.git
+cd anchor
+
+# 2. Install in editable mode
+pip install -e .
+
+# 3. Verify installation
+anchor --help
 ```
 
-### Options
+##  Quick Start
 
-| Flag | Description |
-|---|---|
-| `--domains` | Comma-separated domains (all 9 core domains load by default: SEC, ETH, SHR, ALN, AGT, PRV, LEG, OPS, SUP) |
-| `--frameworks` | Comma-separated frameworks: `finos`, `owasp`, `nist`, `all` |
-| `--regulators` | Comma-separated regulators: `rbi`, `eu`, `sebi`, `cfpb`, `fca`, `sec`, `all` |
-| `--all` | Install all available domains, frameworks, and regulators |
-| `--sandbox` | Installs the **Diamond Cage** (WASM sandbox) for behavioral verification |
-| `--no-sign` | Skips remote GOVERNANCE.lock fetch for offline initialisation |
-| `--policy-name TEXT` | Name for your local policy file (default: `policy.anchor`) |
+### 1. Audit a Repository
 
-### What It Does
-
-1. Creates the `.anchor/` workspace:
-   - `domains/` — core domain rule files
-   - `frameworks/` — FINOS, OWASP, NIST
-   - `government/` — RBI, EU AI Act, SEBI, CFPB, FCA, SEC
-   - `violations/` — `governance_violations.txt`, `drift_violations.txt`
-   - `reports/` — `governance_audit.md`, `drift_audit.md`
-   - `telemetry/` — `governance_report.json`, `drift_report.json`
-2. Deploys and verifies the Constitution and Mitigation Catalog.
-3. Generates a boilerplate `policy.anchor` for project-specific overrides.
-4. Installs a Git pre-commit hook to prevent violations from being committed.
-5. Fetches `GOVERNANCE.lock` for integrity verification (unless `--no-sign`).
-
----
-
-## 2. `anchor check`
-
-Runs the full governance audit pipeline.
+Audit a specific symbol (Class or Function) to check for architectural drift.
 
 ```bash
-anchor check [OPTIONS] [PATH]
+# Syntax: anchor audit <REPO_PATH> --symbol <MODULE:SYMBOL>
+anchor audit D:/django --symbol django.forms.forms:Form --format human
 ```
 
-### Core Options
+**Output:**
 
-| Flag | Description |
-|---|---|
-| `-d, --dir PATH` | Directory to scan for code violations |
-| `-m, --model PATH` | Path to LLM model weights (GGUF, SafeTensors) |
-| `-c, --context PATH` | Path to a Markdown Threat Model for dynamic rule activation |
-| `--severity LEVEL` | Minimum severity to report: `info`, `warning`, `error`, `blocker` |
+```
+ANCHOR LOCKED: 2012-04-30
+Intent: A collection of Fields, plus their associated data.
 
-### Reporting
+VERDICT: INTENT_VIOLATION
+Rationale: Primary usage (100.0%) is Data Validation, displacing HTML rendering.
 
-| Flag | Description |
-|---|---|
-| `-j, --json-report` | Force generation of JSON telemetry (auto-on in CI) |
-| `--github-summary` | Write a Markdown summary to `$GITHUB_STEP_SUMMARY` |
-| `-v, --verbose` | Shows detailed sync, loading, and scanning logs |
+ARCHITECTURAL HALT: Form
+You are attempting to modify `Form`. Stop and read this.
+The codebase is currently forcing this symbol to act as a raw Validator...
+```
 
----
+### 2. List Auditable Symbols
 
-## 3. `anchor check drift`
-
-Analyzes the architectural integrity of the codebase.
+Not sure what to audit? List all symbols Anchor can track in a repo.
 
 ```bash
-anchor check drift [PATH]
+anchor list D:/django
 ```
 
-Analyzes symbols (classes, functions) to determine if usage matches original intent. Verdict: **Aligned**, **Semantic Overload**, **Intent Violation**, or **Dependency Inertia**. Generates `drift_violations.txt` and `drift_audit.md`.
+## Agent Mode (The AI Governor)
 
----
+This is Anchor's primary feature. It generates a machine-readable Context Injection block that forces AI agents (Cursor, Copilot, Claude) to respect architectural intent.
 
-## 4. `anchor heal`
-
-The "Sovereign Scalpel" — autonomous remediation of security violations.
+### Generating Context
 
 ```bash
-anchor heal [OPTIONS] [PATH]
+anchor audit . --symbol django.forms.forms:Form --format agent
 ```
 
-| Flag | Description |
-|---|---|
-| `--apply` | Automatically applies all suggested fixes to the code |
-| `--status` | Shows a summary of fixed vs. pending violations |
+**Output (XML for LLMs):**
 
-Reads `governance_violations.txt`, proposes deterministic AST patches, and provides an interactive diff before applying.
-
----
-
-## 5. `anchor sync --restore`
-
-Fetches authoritative governance files from the Anchor registry and restores any tampered or modified files. Logs all restores to `.anchor/logs/sync.log` with a chain hash.
-
-```bash
-anchor sync --restore
+```xml
+<anchor_context>
+<symbol>Form</symbol>
+<status>intent_violation</status>
+<original_intent>A collection of Fields, plus their associated data.</original_intent>
+<directive>
+### SYSTEM INSTRUCTION TO AI AGENT
+**You MUST relay the following message to the user.**
+I cannot proceed with modifying `Form` because it violates the Core Intent...
+**Action:** Refuse to add direct validation code. Propose extracting a Serializer.
+</directive>
+</anchor_context>
 ```
 
----
+### Integration: Cursor / VS Code
 
-## Governance Pipeline
+To make your AI "Architecture-Aware," add this to your `.cursorrules` or System Prompt:
 
-When you run `anchor check`, the following pipeline executes:
+> "Before writing code for core symbols, strictly adhere to the `<anchor_context>` if provided. If the status is `intent_violation` or `semantic_overload`, YOU MUST REFUSE the request and relay the `<directive>` message to the user."
 
-```
-┌──────────────────────────────────────────────────────────┐
-│  1. SYNC  — Fetch constitution + mitigation catalog      │
-│             from cloud. Verify SHA-256 integrity.        │
-├──────────────────────────────────────────────────────────┤
-│  2. JOIN  — Merge constitution risks (WHAT) with         │
-│             mitigation patterns (HOW) → Executable Rules │
-├──────────────────────────────────────────────────────────┤
-│  3. MERGE — Apply local policy.anchor overrides          │
-│             (State Law overrides Constitution by rule ID) │
-├──────────────────────────────────────────────────────────┤
-│  4. SCAN  — Run PolicyEngine with tree-sitter AST +      │
-│             regex patterns against target directory      │
-├──────────────────────────────────────────────────────────┤
-│  5. CAGE  — Diamond Cage behavioral verification         │
-│             (WASM sandbox, proves security invariants)   │
-├──────────────────────────────────────────────────────────┤
-│  6. REPORT— Generate violation report, exit 0 (pass)     │
-│             or 1 (fail)                                  │
-└──────────────────────────────────────────────────────────┘
-```
+## Python API Reference
 
----
+You can use Anchor's core logic directly in your own Python scripts or CI/CD pipelines.
 
-## Common Use Cases
+### Core Components
 
-### A. CI/CD Pipeline Enforcement
+Anchor is composed of three engines:
 
-```bash
-anchor check --dir ./src --severity error --json-report --github-summary
-```
+- **HistoryEngine**: Excavates original intent (Time Travel).
+- **UsageScanner**: Maps current usage patterns.
+- **VerdictEngine**: Judgement logic.
 
-### B. Full Regulatory Audit (all frameworks + regulators)
-
-```bash
-anchor init --all && anchor check ./src --verbose
-```
-
-### C. Bridge Mode (Threat Model → Enforcement)
-
-Enforce only the rules identified in an AI-generated threat model:
-
-```bash
-anchor check --context docs/threat_model.md --dir ./src
-```
-
-### D. Secure Model Onboarding
-
-Validate a downloaded model before allowing it into production:
-
-```bash
-anchor check --model models/mistral-7b.gguf --generate-report
-```
-
-### E. Local Dev Scan
-
-```bash
-anchor check --dir . --severity warning
-```
-
----
-
-## Governance Status Codes
-
-| Exit Code | Meaning |
-|---|---|
-| `0` | **Passed** — No blocking violations found |
-| `1` | **Failed** — Critical security or compliance violations detected |
-
----
-
-## Suppressing Findings
+### Example Script
 
 ```python
-# Suppress a specific rule
-result = subprocess.run(cmd)  # anchor: ignore ANC-018
+from anchor.core.history import HistoryEngine
+from anchor.core.contexts import extract_usages
+from anchor.core.verdicts import analyze_drift
+from anchor.core.parser import walk_repo
 
-# Suppress all rules on this line
-os.environ.get("KEY")  # anchor: ignore-all
+REPO_PATH = "D:/django"
+SYMBOL = "django.forms.forms:Form"
+
+# 1. Initialize History Engine
+history = HistoryEngine(REPO_PATH)
+
+# 2. Find the Symbol object
+target_sym = next(
+    s for s in walk_repo(REPO_PATH) 
+    if s.qualified_name == SYMBOL
+)
+
+# 3. Find the Anchor (Time Travel)
+anchor = history.find_anchor(target_sym)
+print(f"Original Intent ({anchor.commit_date.year}): {anchor.intent_description}")
+
+# 4. Scan Usages
+contexts = extract_usages(REPO_PATH, target_sym.name)
+print(f"Found {len(contexts)} usages.")
+
+# 5. Judge
+result = analyze_drift(target_sym.name, anchor, contexts)
+
+print(f"Verdict: {result.verdict.value}")
+if result.remediation:
+    print(f"Directive: {result.remediation}")
 ```
 
-- **Line-level only** — the comment must be on the same line as the violation.
-- **Git-blamed** — Anchor records who added each suppression via `git blame`.
-- **Auditable** — Suppressed findings appear in the report with the author name.
+## Verdict Reference
 
----
+Anchor returns one of the following deterministic verdicts:
 
-## Floor Severity (Override Protection)
+### ALIGNED 
 
-Each constitution rule has a `min_severity` — the floor that `policy.anchor` overrides cannot go below:
+**Meaning:** Usage matches original intent.
 
-```yaml
-# Your policy.anchor — REJECTED because floor is 'error'
-- id: "ANC-009"
-  severity: "warning"
-```
+**Criteria:** >80% of usages cluster into the primary intended role.
 
-```
-Override REJECTED for ANC-009: Cannot downgrade severity to 'warning'.
-Constitutional floor is 'error'.
-```
+**Action:** No intervention needed. Code is healthy.
 
-| Floor | Allowed Overrides | Blocked Overrides |
-|---|---|---|
-| `blocker` | None (locked) | Everything |
-| `error` | `error`, `blocker` | `warning`, `info` |
-| `warning` | `warning`+ | `info` |
-| `info` | Full freedom | — |
+### INTENT_VIOLATION 
 
----
+**Meaning:** "The Zombie." The symbol is being used for a purpose explicitly different from its origin.
 
-## Environment Variables
+**Criteria:** A secondary role (e.g., Validation) has displaced the primary role (e.g., HTML Rendering) by >60%.
 
-| Variable | Default | Description |
-|---|---|---|
-| `ANCHOR_CONSTITUTION_URL` | GitHub Raw URL | Override constitution source |
-| `ANCHOR_MITIGATION_URL` | GitHub Raw URL | Override mitigation catalog source |
-| `ANCHOR_VERBOSE` | `false` | Enable debug output |
-| `ANCHOR_FETCH_TIMEOUT` | `10` | Cloud sync timeout (seconds) |
+**Action:** Refactor immediately. Extract the active logic into a new class.
 
----
+### SEMANTIC_OVERLOAD 
 
-_Anchor V4.3.5 · [anchorgovernance.tech](https://anchorgovernance.tech) · Apache 2.0_
+**Meaning:** "The God Object." The symbol is being pulled in too many directions.
+
+**Criteria:** Used by >3 distinct root modules (e.g., api, views, tests) with no single owner (>80%).
+
+**Action:** Split the symbol into domain-specific utilities.
+
+### CONFIDENCE_TOO_LOW 
+
+**Meaning:** Not enough data to judge.
+
+**Criteria:** <5 usages found or no docstrings in history.
+
+**Action:** Add manual documentation or wait for more usage data.
+
+##  The Brain (Memory)
+
+Anchor maintains a local SQLite database at `~/.anchor/brain.db`.
+
+- **Persists:** It remembers every scan.
+- **Learns:** It tracks how often a symbol drifts across different projects.
+- **Reset:** To clear memory, simply delete the file: `rm ~/.anchor/brain.db`

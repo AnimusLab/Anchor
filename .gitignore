@@ -17,8 +17,21 @@ env/
 .vscode/
 .idea/
 
-# Anchor Brain (Local Database)
+# Anchor runtime / local database
 brain.db
+anchor.db
+*.db
+
+# Anchor runtime directories (generated at runtime, not part of source)
+.anchor/cache/
+.anchor/keys/ed25519_private.pem
+.anchor/logs/
+.anchor/reports/
+.anchor/telemetry/
+.anchor/violations/
 
 # Local reports, assessments, and scratch files (not part of the codebase)
 reports/
+
+# pytest
+.pytest_cache/

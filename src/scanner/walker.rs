@@ -46,6 +46,15 @@ impl DirectoryScanner {
             .par_iter()
             .map(|path| {
                 if let Ok(file) = File::open(path) {
+                    if let Ok(metadata) = file.metadata() {
+                        if metadata.len() == 0 {
+                            return ScannedFileResult {
+                                path: path.clone(),
+                                line_count: 0,
+                                is_valid: true,
+                            };
+                        }
+                    }
                     if let Ok(mmap) = unsafe { Mmap::map(&file) } {
                         let line_count = mmap.split(|&b| b == b'\n').count();
                         return ScannedFileResult {

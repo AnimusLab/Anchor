@@ -1,0 +1,120 @@
+type: framework
+namespace: OECD
+version: "2024"
+anchor_version: ">=5.0.0"
+maintainer: "Anchor Core Governance Engine"
+opt_in: true
+source: "OECD AI Principles (2019, updated May 2024)"
+source_url: "https://oecd.ai/en/wonk/ai-principles-2024-update"
+credit: "Organisation for Economic Co-operation and Development (OECD)"
+description: >
+  The OECD AI Principles serve as the international benchmark for trustworthy AI,
+  adopted by 46 countries and serving as the foundational baseline for the EU AI Act,
+  NIST AI RMF, and RBI FREE-AI frameworks. This framework defines technical enforcement
+  primitives for all 5 core OECD principles.
+seal: "sha256:PENDING"
+
+rules:
+
+  - id: "OECD-P1"
+    name: "P1: Inclusive Growth & Sustainable Development"
+    original_id: "Principle 1.1"
+    maps_to: "ETH-001"
+    obligation_type: "detection"
+    anchor_mechanism: "Fairness audit & harm distribution check"
+    severity: "error"
+    min_severity: "warning"
+    description: >
+      AI systems should benefit people and the planet by driving inclusive growth,
+      sustainable development, and well-being. AI agent decisions must not concentrate
+      outcomes or financial harm disproportionately across user demographics.
+    runtime_pattern: '(?i)(exclusive_access|disproportionate_fee|demographic_override)'
+    primitives:
+      action: evaluate
+      object: benefit_harm_distribution
+      context: inclusive_growth_mandate
+      authority: oecd_ai_principles
+      flow: fairness_egress
+
+  - id: "OECD-P2"
+    name: "P2: Human-Centred Values & Fairness"
+    original_id: "Principle 1.2"
+    maps_to: ["ETH-001", "PRV-001"]
+    obligation_type: "detection"
+    anchor_mechanism: "Protected attribute bias scanner + PII guard"
+    severity: "blocker"
+    min_severity: "error"
+    description: >
+      AI systems should be designed in a way that respects the rule of law, human rights,
+      democratic values and diversity, including non-discrimination and equality.
+      AI agent decisions must not discriminate on protected attributes (race, gender, age, religion)
+      or violate fundamental human dignity in generated outputs.
+    runtime_pattern: '(?i)(protected_attribute_filter|bias_override|discriminatory_routing)'
+    primitives:
+      action: enforce
+      object: human_rights_fairness
+      context: non_discrimination_mandate
+      authority: oecd_ai_principles
+      flow: bias_prevention_flow
+
+  - id: "OECD-P3"
+    name: "P3: Transparency & Explainability"
+    original_id: "Principle 1.3"
+    maps_to: "ETH-002"
+    obligation_type: "provenance"
+    anchor_mechanism: "Reasoning trace verification + adverse action reason codes"
+    severity: "blocker"
+    min_severity: "blocker"
+    description: >
+      AI actors should commit to transparency and responsible disclosure regarding AI systems.
+      AI agents must provide meaningful, traceable, and human-understandable explanations for
+      every decision, outcome, or automated action taken.
+    runtime_pattern: '(?i)(opaque_decision|suppress_explanation|no_reasoning_trace)'
+    primitives:
+      action: disclose
+      object: decision_reasoning_chain
+      context: transparency_explainability
+      authority: oecd_ai_principles
+      flow: explainability_egress
+
+  - id: "OECD-P4"
+    name: "P4: Robustness, Security & Safety"
+    original_id: "Principle 1.4"
+    maps_to: ["SEC-001", "AGT-002"]
+    obligation_type: "detection"
+    anchor_mechanism: "Prompt injection defense + tool output sanitizer"
+    severity: "blocker"
+    min_severity: "blocker"
+    description: >
+      AI systems must function robustly, securely, and safely throughout their life cycles,
+      and potential risks should be continually assessed and managed. AI agents must degrade
+      gracefully under unexpected conditions and resist adversarial input, tool chain poisoning,
+      and prompt injection attacks.
+    runtime_pattern: '(?i)(unhandled_adversarial|unsafe_fallback|poisoned_state)'
+    primitives:
+      action: secure
+      object: system_robustness
+      context: safety_and_security
+      authority: oecd_ai_principles
+      flow: graceful_degradation_flow
+
+  - id: "OECD-P5"
+    name: "P5: Accountability"
+    original_id: "Principle 1.5"
+    maps_to: ["LEG-002", "AGT-001"]
+    obligation_type: "audit"
+    anchor_mechanism: "Ed25519 cryptographic signing + Decision Audit Chain (DAC)"
+    severity: "blocker"
+    min_severity: "blocker"
+    description: >
+      AI actors should be accountable for the proper functioning of AI systems and for the
+      respect of AI principles, based on their roles, the context, and the state of the art.
+      Every decision made by an AI agent must trace to a designated human owner/deployer
+      and be cryptographically logged in an unalterable audit chain.
+    runtime_pattern: '(?i)(anonymous_execution|unassigned_owner|orphaned_decision)'
+    primitives:
+      action: attest
+      object: human_accountability_chain
+      context: non_repudiation_audit
+      authority: oecd_ai_principles
+      flow: cryptographic_audit_flow

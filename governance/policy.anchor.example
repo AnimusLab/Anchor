@@ -1,0 +1,26 @@
+# ─────────────────────────────────────────────────────────────
+# Anchor Governance Kernel — Enterprise Project Local Policy
+# Copy to .anchor/policy.anchor to apply custom organizational overrides
+# ─────────────────────────────────────────────────────────────
+
+type: policy
+version: "1.0"
+organization: "Enterprise Hub Tenant"
+mode: "enforce"
+
+overrides:
+  # Example: Elevate AGT-001 to blocker for financial payment services
+  - rule_id: "AGT-001"
+    severity: "blocker"
+
+  # Example: Downgrade warning rules for local development builds
+  - rule_id: "OPS-001"
+    severity: "info"
+
+custom_rules:
+  - id: "INTERNAL-001"
+    name: "Unsanitized Financial Ledger Output"
+    category: "financial_integrity"
+    severity: "blocker"
+    runtime_pattern: '(?i)(ledger_bypass|raw_balance_update)'
+    description: "Raw ledger balance updates must pass through the verified TransactionAuditor pipeline."

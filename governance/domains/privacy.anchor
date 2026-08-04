@@ -1,0 +1,28 @@
+type: domain
+namespace: PRV
+version: "1.0"
+anchor_version: ">=5.0.0"
+maintainer: "Anchor Core Governance Engine"
+always_loaded: true
+description: >
+  Privacy rules enforcing DPDP Act 2023, GDPR, and PII protection across data ingestion and model outputs.
+seal: "sha256:PENDING"
+
+rules:
+  - id: "PRV-001"
+    name: "PII Ingestion & Leakage Detection"
+    source: "DPDP"
+    original_id: "DPDP-Sec8"
+    category: "privacy"
+    description: >
+      Unencrypted or unanonymized PII (Aadhaar, SSN, PAN, Email, Phone) ingested into model context or output logs.
+    severity: "error"
+    min_severity: "error"
+    runtime_pattern: '(?i)(\b[2-9]{1}[0-9]{3}\s[0-9]{4}\s[0-9]{4}\b|[a-z]{5}[0-9]{4}[a-z]{1})'
+    min_mitigations: 1
+    primitives:
+      action: expose
+      object: pii_identifier
+      context: model_context_stream
+      authority: data_pipeline
+      flow: privacy_breach

@@ -1,0 +1,16 @@
+type: framework
+namespace: NIST
+version: "1.0"
+anchor_version: ">=5.0.0"
+maintainer: "Anchor Core Governance Engine"
+source: "NIST AI Risk Management Framework (AI RMF 1.0)"
+seal: "sha256:PENDING"
+
+rules:
+  - id: "NIST-GOV"
+    name: "GOVERN: Institutional Policies"
+    original_id: "Govern 1.1"
+    maps_to: "LEG-002"
+    severity: "error"
+    description: >
+      Policies and procedures for AI risk management are established and maintained via cryptographically sealed constitution.

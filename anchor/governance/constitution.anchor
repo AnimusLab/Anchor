@@ -46,6 +46,11 @@ core_domains:
     required: true
 
 frameworks:
+  - path: frameworks/OECD_AI_Principles.anchor
+    namespace: OECD
+    source: "OECD AI Principles (2019, updated May 2024)"
+    active: true
+
   - path: frameworks/FINOS_Framework.anchor
     namespace: FINOS
     source: "FINOS AI Governance Framework"

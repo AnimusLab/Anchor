@@ -6,7 +6,7 @@ pub mod scanner;
 use analyst::{LegalMapper, RiskScorer};
 use async_engine::{AsyncAuditTask, AsyncEngineCore};
 use ledger::{DacJournalEntry, PersistentLedgerQueue};
-use scanner::{sign_dac_chain_hash, verify_dac_chain_hash, DirectoryScanner};
+use scanner::{sign_dac_chain_hash, verify_dac_chain_hash, DirectoryScanner, RuleLoader};
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict, PyList};
 use regex::RegexSet;
@@ -58,6 +58,24 @@ impl AnchorEngine {
             async_core,
             ledger_queue,
         })
+    }
+
+    /// Dynamically load and parse all .anchor rules from governance directory
+    pub fn load_rules_from_dir<'py>(
+        &self,
+        py: Python<'py>,
+        gov_dir: &str,
+    ) -> PyResult<&'py PyDict> {
+        let rules = RuleLoader::load_governance_rules(Path::new(gov_dir));
+        let dict = PyDict::new(py);
+        dict.set_item("total_rules_loaded", rules.len())?;
+        
+        let rule_ids = PyList::empty(py);
+        for id in rules.keys() {
+            rule_ids.append(id)?;
+        }
+        dict.set_item("rule_ids", rule_ids)?;
+        Ok(dict)
     }
 
     /// Synchronous zero-copy payload audit gate
@@ -120,7 +138,7 @@ impl AnchorEngine {
         })
     }
 
-    /// Enqueue signed DAC block into persistent offline journal when hub connection is down
+    /// Enqueue signed DAC block into persistent offline journal
     pub fn queue_dac_block(&self, entry_id: &str, timestamp: &str, chain_hash: &str, signature: &str) -> PyResult<bool> {
         let entry = DacJournalEntry {
             entry_id: entry_id.to_string(),

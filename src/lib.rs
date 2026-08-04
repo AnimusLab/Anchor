@@ -1,16 +1,18 @@
 pub mod analyst;
 pub mod async_engine;
+pub mod engine;
 pub mod ledger;
 pub mod scanner;
 
 use analyst::{LegalMapper, RiskScorer};
 use async_engine::{AsyncAuditTask, AsyncEngineCore};
+use engine::RemediationGraph;
 use ledger::{DacJournalEntry, PersistentLedgerQueue};
 use scanner::{sign_dac_chain_hash, verify_dac_chain_hash, DirectoryScanner, RuleLoader};
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict, PyList};
 use regex::RegexSet;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -22,6 +24,7 @@ pub struct AnchorEngine {
     legal_mapper: LegalMapper,
     async_core: Arc<AsyncEngineCore>,
     ledger_queue: PersistentLedgerQueue,
+    remediation_graph: RemediationGraph,
 }
 
 struct InternalAuditResult<'a> {
@@ -51,13 +54,37 @@ impl AnchorEngine {
         let async_core = Arc::new(AsyncEngineCore::new(Arc::clone(&regex_set)));
         let ledger_queue = PersistentLedgerQueue::new(Path::new(".anchor"));
 
+        let mitigation_path = Path::new("anchor/governance/mitigation.anchor");
+        let remediation_graph = RemediationGraph::load_from_file(mitigation_path);
+
         Ok(AnchorEngine {
             rule_set_version: "6.0.0-alpha".to_string(),
             regex_set,
             legal_mapper: LegalMapper::new(),
             async_core,
             ledger_queue,
+            remediation_graph,
         })
+    }
+
+    /// Generate dynamic domain-agnostic self-healing payload for a rule violation
+    pub fn generate_healing_payload<'py>(
+        &self,
+        py: Python<'py>,
+        rule_id: &str,
+        default_name: &str,
+        severity: &str,
+        statute_ref: &str,
+    ) -> PyResult<&'py PyDict> {
+        let payload = self.remediation_graph.generate_healing_directive(rule_id, default_name, severity, statute_ref);
+        let dict = PyDict::new(py);
+        dict.set_item("status", payload.status)?;
+        dict.set_item("violation_id", payload.violation_id)?;
+        dict.set_item("rule_name", payload.rule_name)?;
+        dict.set_item("severity", payload.severity)?;
+        dict.set_item("reroute_directive", payload.reroute_directive)?;
+        dict.set_item("statutory_reference", payload.statutory_reference)?;
+        Ok(dict)
     }
 
     /// Dynamically load and parse all .anchor rules from governance directory
@@ -97,6 +124,7 @@ impl AnchorEngine {
         response_dict.set_item("is_compliant", audit_results.is_compliant)?;
         response_dict.set_item("rule_version", &self.rule_set_version)?;
         response_dict.set_item("violations", audit_results.violations)?;
+        response_dict.set_item("matched_rule_ids", audit_results.matched_rule_ids)?;
         response_dict.set_item("risk_score", risk_score.total_score)?;
         response_dict.set_item("risk_level", risk_score.risk_level)?;
         response_dict.set_item("execution_microsec", audit_results.latency_us)?;

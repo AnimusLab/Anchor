@@ -1,7 +1,9 @@
 pub mod analyst;
+pub mod async_engine;
 pub mod scanner;
 
 use analyst::{LegalMapper, RiskScorer};
+use async_engine::{AsyncAuditTask, AsyncEngineCore};
 use scanner::{sign_dac_chain_hash, verify_dac_chain_hash, DirectoryScanner};
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict, PyList};
@@ -16,6 +18,7 @@ pub struct AnchorEngine {
     pub rule_set_version: String,
     regex_set: Arc<RegexSet>,
     legal_mapper: LegalMapper,
+    async_core: Arc<AsyncEngineCore>,
 }
 
 struct InternalAuditResult<'a> {
@@ -37,17 +40,22 @@ impl AnchorEngine {
             r#"(?i)(api[_-]?key\s*=\s*['\"][A-Za-z0-9_-]{16,}['\"]|bearer\s+[A-Za-z0-9_.-]{16,})"# // SEC-002
         ];
 
-        let regex_set = RegexSet::new(&patterns)
-            .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Invalid RegexSet compilation: {}", e)))?;
+        let regex_set = Arc::new(
+            RegexSet::new(&patterns)
+                .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Invalid RegexSet compilation: {}", e)))?
+        );
+
+        let async_core = Arc::new(AsyncEngineCore::new(Arc::clone(&regex_set)));
 
         Ok(AnchorEngine {
             rule_set_version: "6.0.0-alpha".to_string(),
-            regex_set: Arc::new(regex_set),
+            regex_set,
             legal_mapper: LegalMapper::new(),
+            async_core,
         })
     }
 
-    /// High-velocity zero-copy payload audit gate for FastAPI streams
+    /// Synchronous zero-copy payload audit gate
     pub fn audit_payload<'py>(
         &self,
         py: Python<'py>,
@@ -71,6 +79,40 @@ impl AnchorEngine {
         response_dict.set_item("execution_microsec", audit_results.latency_us)?;
 
         Ok(response_dict)
+    }
+
+    /// Asynchronous non-blocking payload audit gate for FastAPI & Tokio workers
+    pub fn audit_payload_async<'py>(
+        &self,
+        py: Python<'py>,
+        payload_bytes: &'py PyBytes,
+    ) -> PyResult<&'py PyAny> {
+        let raw_buffer: &[u8] = payload_bytes.as_bytes();
+        let payload_str = std::str::from_utf8(raw_buffer)
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Invalid UTF-8 payload: {}", e)))?
+            .to_string();
+
+        let async_core = Arc::clone(&self.async_core);
+        let version = self.rule_set_version.clone();
+
+        pyo3_asyncio::tokio::future_into_py::<_, PyObject>(py, async move {
+            let task = AsyncAuditTask { payload: payload_str };
+            let result = async_core.process_audit_async(task).await;
+
+            let blocker_count = if !result.is_compliant { result.violations.len() } else { 0 };
+            let risk_score = RiskScorer::calculate(blocker_count, 0, 0, 0);
+
+            Python::with_gil(|py| {
+                let dict = PyDict::new(py);
+                dict.set_item("is_compliant", result.is_compliant)?;
+                dict.set_item("rule_version", version)?;
+                dict.set_item("violations", result.violations)?;
+                dict.set_item("risk_score", risk_score.total_score)?;
+                dict.set_item("risk_level", risk_score.risk_level)?;
+                dict.set_item("execution_microsec", result.latency_us)?;
+                Ok(dict.into_py(py))
+            })
+        })
     }
 
     /// Parallel multi-threaded zero-copy directory scanner

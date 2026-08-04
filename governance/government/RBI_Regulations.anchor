@@ -1,0 +1,66 @@
+type: framework
+namespace: RBI
+version: "2025-08"
+anchor_version: ">=5.0.0"
+maintainer: "Anchor Core Governance Engine"
+opt_in: true
+source: "RBI Framework for Responsible and Ethical Enablement of AI (FREE-AI)"
+source_url: "https://rbidocs.rbi.org.in/rdocs/PublicationReport/Pdfs/FREEAIR130820250A24FF2D4578453F824C72ED9F5D5851.PDF"
+source_date: "August 13, 2025"
+credit: >
+  The Reserve Bank of India FREE-AI Report (August 2025) issued 26
+  mandatory recommendations for AI deployed in financial services,
+  structured around 7 sutras and 6 strategic pillars.
+seal: "sha256:PENDING"
+
+rules:
+  - id: "RBI-006"
+    name: "Board-Approved AI Policy"
+    original_id: "Recommendation 6"
+    maps_to: "LEG-002"
+    obligation_type: disclosure
+    severity: "blocker"
+    min_severity: "blocker"
+    description: >
+      Every regulated entity must formulate a board-approved AI policy
+      covering adoption areas, risk appetite, governance framework, and periodic review mechanism.
+    primitives:
+      action: formulate
+      object: board_approved_policy
+      context: regulatory_compliance
+      authority: regulated_entity
+      flow: disclosure_flow
+
+  - id: "RBI-007"
+    name: "Per-Decision Audit Trail — CIMS Reportable"
+    original_id: "Recommendation 7"
+    maps_to: "DAC-AuditEntry"
+    obligation_type: provenance
+    severity: "blocker"
+    min_severity: "blocker"
+    description: >
+      Documented audit trail per AI decision must be maintained and
+      reportable to the RBI CIMS portal on demand.
+    primitives:
+      action: maintain
+      object: audit_trail_record
+      context: credit_decision_context
+      authority: decision_audit_chain
+      flow: cims_telemetry_flow
+
+  - id: "RBI-014"
+    name: "AI Credit Decisions — Explainability Mandatory"
+    original_id: "Recommendation 14"
+    maps_to: "ETH-002"
+    obligation_type: detection
+    severity: "blocker"
+    min_severity: "blocker"
+    description: >
+      AI-assisted credit decisions must be explainable and auditable
+      through the CIMS portal. Specific reason codes are required for every adverse action.
+    primitives:
+      action: explain
+      object: adverse_action_outcome
+      context: credit_decision_context
+      authority: generative_model
+      flow: reason_code_egress

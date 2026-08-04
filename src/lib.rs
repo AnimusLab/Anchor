@@ -1,14 +1,16 @@
 pub mod analyst;
 pub mod async_engine;
+pub mod ledger;
 pub mod scanner;
 
 use analyst::{LegalMapper, RiskScorer};
 use async_engine::{AsyncAuditTask, AsyncEngineCore};
+use ledger::{DacJournalEntry, PersistentLedgerQueue};
 use scanner::{sign_dac_chain_hash, verify_dac_chain_hash, DirectoryScanner};
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict, PyList};
 use regex::RegexSet;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -19,6 +21,7 @@ pub struct AnchorEngine {
     regex_set: Arc<RegexSet>,
     legal_mapper: LegalMapper,
     async_core: Arc<AsyncEngineCore>,
+    ledger_queue: PersistentLedgerQueue,
 }
 
 struct InternalAuditResult<'a> {
@@ -46,12 +49,14 @@ impl AnchorEngine {
         );
 
         let async_core = Arc::new(AsyncEngineCore::new(Arc::clone(&regex_set)));
+        let ledger_queue = PersistentLedgerQueue::new(Path::new(".anchor"));
 
         Ok(AnchorEngine {
             rule_set_version: "6.0.0-alpha".to_string(),
             regex_set,
             legal_mapper: LegalMapper::new(),
             async_core,
+            ledger_queue,
         })
     }
 
@@ -113,6 +118,35 @@ impl AnchorEngine {
                 Ok(dict.into_py(py))
             })
         })
+    }
+
+    /// Enqueue signed DAC block into persistent offline journal when hub connection is down
+    pub fn queue_dac_block(&self, entry_id: &str, timestamp: &str, chain_hash: &str, signature: &str) -> PyResult<bool> {
+        let entry = DacJournalEntry {
+            entry_id: entry_id.to_string(),
+            timestamp_utc: timestamp.to_string(),
+            chain_hash: chain_hash.to_string(),
+            signature: signature.to_string(),
+            is_synced: false,
+        };
+
+        match self.ledger_queue.enqueue_block(&entry) {
+            Ok(_) => Ok(true),
+            Err(e) => Err(pyo3::exceptions::PyIOError::new_err(format!("Failed to write ledger journal: {}", e))),
+        }
+    }
+
+    /// Return total pending unsynced DAC blocks queued on local disk
+    pub fn get_pending_ledger_count(&self) -> usize {
+        self.ledger_queue.get_pending_entries().len()
+    }
+
+    /// Mark all queued local journal blocks as synced after hub connection recovers
+    pub fn flush_offline_queue(&self) -> PyResult<usize> {
+        match self.ledger_queue.mark_all_synced() {
+            Ok(count) => Ok(count),
+            Err(e) => Err(pyo3::exceptions::PyIOError::new_err(format!("Failed to flush ledger queue: {}", e))),
+        }
     }
 
     /// Parallel multi-threaded zero-copy directory scanner

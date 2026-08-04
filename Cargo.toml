@@ -21,3 +21,5 @@ rayon = "1.8"
 memmap2 = "0.9"
 ed25519-dalek = { version = "2.1", features = ["rand_core"] }
 sha2 = "0.10"
+hmac = "0.12"
+hex = "0.4"

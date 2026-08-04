@@ -1,9 +1,12 @@
 pub mod analyst;
+pub mod scanner;
 
 use analyst::{LegalMapper, RiskScorer};
+use scanner::{sign_dac_chain_hash, verify_dac_chain_hash, DirectoryScanner};
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict, PyList};
 use regex::RegexSet;
+use std::path::Path;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -26,13 +29,12 @@ struct InternalAuditResult<'a> {
 impl AnchorEngine {
     #[new]
     fn new() -> PyResult<Self> {
-        // Compile single-pass DFA RegexSet for high-velocity pattern matching
         let patterns = vec![
             r"(?i)(hide_ai_identity|mimic_human_agent|pretend_human|bypass_disclosure)", // EU AI Act Art 50/52
             r"(?i)(enable_audit_log\s*=\s*false|disable_logging|suppress_traceability)",  // EU AI Act Art 12
             r"(?i)(autonomous_p2p_wire|unvetted_risk_execution|bypass_human_auth)",      // EU AI Act Art 14
             r"(?i)(ignore previous instructions|system prompt override|jailbreak)",       // SEC-001
-            r"(?i)(api[_-]?key\s*=\s*['\"][A-Za-z0-9_\-]{16,}['\"]|bearer\s+[A-Za-z0-9_\-\.]{16,})", // SEC-002
+            r#"(?i)(api[_-]?key\s*=\s*['\"][A-Za-z0-9_-]{16,}['\"]|bearer\s+[A-Za-z0-9_.-]{16,})"# // SEC-002
         ];
 
         let regex_set = RegexSet::new(&patterns)
@@ -45,8 +47,7 @@ impl AnchorEngine {
         })
     }
 
-    /// High-velocity audit gate. Takes raw byte references directly from the
-    /// Python memory space (FastAPI request pool) without allocating new heap storage.
+    /// High-velocity zero-copy payload audit gate for FastAPI streams
     pub fn audit_payload<'py>(
         &self,
         py: Python<'py>,
@@ -58,7 +59,6 @@ impl AnchorEngine {
 
         let audit_results = self.execute_internal_analysis(payload_str);
 
-        // Compute Risk Density Score
         let blocker_count = if !audit_results.is_compliant { audit_results.violations.len() } else { 0 };
         let risk_score = RiskScorer::calculate(blocker_count, 0, 0, 0);
 
@@ -73,7 +73,41 @@ impl AnchorEngine {
         Ok(response_dict)
     }
 
-    /// Look up statutory legal mappings for a given rule ID (e.g. AGT-001 or SEC-001)
+    /// Parallel multi-threaded zero-copy directory scanner
+    pub fn scan_directory<'py>(
+        &self,
+        py: Python<'py>,
+        dir_path: &str,
+    ) -> PyResult<&'py PyDict> {
+        let start = Instant::now();
+        let path = Path::new(dir_path);
+        
+        let files = DirectoryScanner::collect_files(path);
+        let scan_results = DirectoryScanner::scan_parallel(&files);
+
+        let total_files = scan_results.len();
+        let total_lines: usize = scan_results.iter().map(|r| r.line_count).sum();
+        let latency_us = start.elapsed().as_micros();
+
+        let response_dict = PyDict::new(py);
+        response_dict.set_item("total_files_scanned", total_files)?;
+        response_dict.set_item("total_lines_scanned", total_lines)?;
+        response_dict.set_item("scan_latency_microsec", latency_us)?;
+
+        Ok(response_dict)
+    }
+
+    /// Sign DAC block hash with HMAC-SHA256
+    pub fn sign_chain_hash(&self, chain_hash: &str, secret_key: &str) -> Option<String> {
+        sign_dac_chain_hash(chain_hash, secret_key)
+    }
+
+    /// Verify DAC block hash signature
+    pub fn verify_chain_hash(&self, chain_hash: &str, signature: &str, secret_key: &str) -> bool {
+        verify_dac_chain_hash(chain_hash, signature, secret_key)
+    }
+
+    /// Look up statutory legal mappings for a given rule ID
     pub fn get_statutory_mappings<'py>(
         &self,
         py: Python<'py>,
@@ -95,7 +129,6 @@ impl AnchorEngine {
         Ok(list.into())
     }
 
-    /// Return current engine version
     pub fn version(&self) -> String {
         self.rule_set_version.clone()
     }

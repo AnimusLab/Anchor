@@ -104,10 +104,16 @@ def init(domains, frameworks, regulators, all_items, no_prompt, gitignore, hook,
     else:
         click.secho(f"🔑 [1/3] Using existing Ed25519 Project Identity in {keys_dir}", fg="cyan")
 
+    # 2. Consent-Driven .gitignore Handling
     add_gitignore = gitignore
     if not no_prompt and not gitignore:
-        resp = click.prompt("Would you like Anchor to add `.anchor/cache/` to your `.gitignore`?", default="Y").strip().lower()
-        add_gitignore = resp in ["y", "yes"]
+        click.echo("\n[2/3] Git Repository Hygiene")
+        click.echo("   Note: We recommend committing .anchor/ governance rules & GOVERNANCE.lock to Git,")
+        click.echo("   ignoring only local build caches and private identity keys.")
+        click.echo("   Benefit: Keeps local temporary build caches out of team pull requests.")
+        resp = click.prompt("   Add `.anchor/cache/` to `.gitignore`?", default="Y", show_choices=False).strip().lower()
+        click.echo("   Add `.anchor/cache/` to `.gitignore`? [Y/n]: " + (resp if resp else "y"))
+        add_gitignore = resp in ["", "y", "yes"]
 
     if add_gitignore:
         gitignore_path = ".gitignore"
@@ -123,9 +129,15 @@ def init(domains, frameworks, regulators, all_items, no_prompt, gitignore, hook,
     else:
         click.secho("   [SKIP] .gitignore left untouched", fg="yellow")
 
+    # 3. Consent-Driven Git Pre-Commit Hook Handling
     install_hook = hook
     if not no_prompt and not hook:
-        resp = click.prompt("Would you like to install the Anchor Git Pre-Commit Hook?", default="N").strip().lower()
+        click.echo("\n[3/3] Automated Pre-Commit Protection")
+        click.echo("   Benefit: Automatically runs `anchor check` on staged files before every commit,")
+        click.echo("   preventing security leaks or compliance violations from entering git history.")
+        click.echo("   (Existing hooks will be safely backed up to .git/hooks/pre-commit.bak)")
+        resp = click.prompt("   Install Git pre-commit hook?", default="N", show_choices=False).strip().lower()
+        click.echo("   Install Git pre-commit hook? [y/N]: " + (resp if resp else "n"))
         install_hook = resp in ["y", "yes"]
 
     if install_hook and os.path.exists(".git"):
@@ -154,6 +166,7 @@ fi
             os.chmod(pre_commit_path, 0o755)
         except Exception:
             pass
+        click.secho("   [OK] Installed Git pre-commit hook", fg="green")
     else:
         click.secho("   [SKIP] Git pre-commit hook not installed", fg="yellow")
 
@@ -162,8 +175,14 @@ fi
         register_pub = False
         if not no_prompt:
             click.echo("\n[Open-Source Privacy Safeguard]")
-            click.echo("Your private key never leaves your machine. No telemetry calls are active.")
-            resp = click.prompt("Would you like to register this project's public key with the AnimusLab Registry?", default="N").strip().lower()
+            click.echo("   Your private key never leaves your machine. No telemetry calls are active.")
+            click.echo("   Benefits of Public Identity Registration:")
+            click.echo("     ✓ Public signature verification for auditors & open-source contributors")
+            click.echo("     ✓ Identity discovery & verified project compliance badge")
+            click.echo("     ✓ Support for key rotation & revocation")
+            click.echo("   (Only your PUBLIC key is uploaded. Your PRIVATE key NEVER leaves your machine.)")
+            resp = click.prompt("   Register public identity with AnimusLab Registry?", default="N", show_choices=False).strip().lower()
+            click.echo("   Register public identity with AnimusLab Registry? [y/N]: " + (resp if resp else "n"))
             register_pub = resp in ["y", "yes"]
 
         if register_pub:

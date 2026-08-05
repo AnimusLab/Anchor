@@ -293,10 +293,13 @@ def check(ctx, paths, fmt, severity):
         click.secho("CODE VIOLATIONS DETECTED:", fg="red", bold=True)
         click.echo("----------------------------------------------------------------------")
         for v in filtered_violations:
-            click.secho(f"  ❌ {v['file']}:{v['line']}", fg="red", bold=True)
-            click.echo(f"     Rules:    [{v['aggregated_rule_ids']}]")
-            click.echo(f"     Statutes: {v['statutory_references']}")
-            click.echo(f"     Code:     {v['line_content']}")
+            norm_path = v['file'].replace('\\', '/')
+            file_uri = f"file:///{norm_path}"
+            click.secho(f"  ❌ [{norm_path}:{v['line']}]({file_uri})", fg="red", bold=True)
+            click.echo(f"     File Location: {norm_path}:{v['line']}")
+            click.echo(f"     Rules:         [{v['aggregated_rule_ids']}]")
+            click.echo(f"     Statutes:      {v['statutory_references']}")
+            click.echo(f"     Code:          {v['line_content']}")
             click.echo("")
     else:
         click.secho("SUMMARY OF AUDIT CHECKS:", bold=True)

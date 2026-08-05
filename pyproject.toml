@@ -1,0 +1,29 @@
+[build-system]
+requires = ["maturin>=1.4,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "anchor-audit"
+version = "6.0.0a1"
+description = "The Federated Governance Engine for AI (Universal Multi-Language)"
+readme = "README.md"
+authors = [
+    { name = "Tanishq", email = "tan@animuslab.dev" }
+]
+license = { text = "Apache-2.0" }
+requires-python = ">=3.8"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Rust",
+    "Topic :: Software Development :: Quality Assurance"
+]
+
+[tool.maturin]
+features = ["pyo3/extension-module"]
+module-name = "anchor_core_rs"
+python-packages = ["anchor"]
+
+

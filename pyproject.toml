@@ -23,5 +23,7 @@ classifiers = [
 
 [tool.maturin]
 features = ["pyo3/extension-module"]
-python-source = "."
 module-name = "anchor_core_rs"
+python-packages = ["anchor"]
+
+

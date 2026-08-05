@@ -1,0 +1,6 @@
+# .anchorignore — Anchor Engine Exclusions
+build/
+target/
+tests/
+.venv/
+node_modules/

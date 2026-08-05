@@ -1,0 +1,52 @@
+# ─────────────────────────────────────────────────────────────
+# Anchor v4.3.5 — Project-Specific Governance Policy
+# type: policy
+# ─────────────────────────────────────────────────────────────
+
+type: policy
+version: "4.3.5"
+name: "Local Project Compliance Floor"
+
+# ── DOMAIN ACTIVATION ────────────────────────────────────────
+# These namespaces are imported from the Constitutional engine.
+# We explicitly set the severity and detection overrides here.
+
+rules:
+
+  # --- ETHICS (ETH) ---
+  ETH-001: 
+    severity: "blocker"
+    mode: "aho_corasick"   # Enable the high-speed trie detection
+    active: true
+
+  ETH-002: 
+    severity: "blocker"
+    mode: "structural"     # Enable the JSON explainability check
+    active: true
+
+  ETH-003: "blocker"
+  ETH-004: "error"
+
+  # --- SECURITY (SEC) ---
+  SEC-001: "blocker"
+  SEC-002: "blocker"
+  SEC-003: "blocker"
+  SEC-004: "blocker"
+  SEC-007: "error"
+
+  # --- PRIVACY (PRV) ---
+  PRV-001: "blocker"
+  PRV-002: "blocker"
+
+# ── FRAMEWORK MAPPINGS ──────────────────────────────────────
+# Explicitly activate the regulatory dialects for the Auditor Portal.
+
+dialects:
+  - RBI-AUG-2025
+  - EU-AI-ACT-2024
+  - SEC-EXAM-2026
+
+# ── ENFORCEMENT ──────────────────────────────────────────────
+enforcement:
+  fail_on: [BLOCKER, ERROR]
+  allow_suppression: false  # v4.3.5 Master Node strictly forbids ad-hoc suppression

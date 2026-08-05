@@ -33,5 +33,9 @@ anchor.db
 # Local reports, assessments, and scratch files (not part of the codebase)
 reports/
 
+# Rust build target
+target/
+
 # pytest
 .pytest_cache/
+

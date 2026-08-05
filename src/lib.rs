@@ -8,7 +8,10 @@ use analyst::{LegalMapper, RiskScorer};
 use async_engine::{AsyncAuditTask, AsyncEngineCore};
 use engine::RemediationGraph;
 use ledger::{DacJournalEntry, PersistentLedgerQueue};
-use scanner::{sign_dac_chain_hash, verify_dac_chain_hash, DirectoryScanner, RuleLoader};
+use scanner::{
+    generate_ed25519_keypair, sign_dac_block_ed25519, sign_dac_chain_hash,
+    verify_dac_block_ed25519, verify_dac_chain_hash, DirectoryScanner, RuleLoader,
+};
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict, PyList};
 use regex::RegexSet;
@@ -39,11 +42,11 @@ impl AnchorEngine {
     #[new]
     fn new() -> PyResult<Self> {
         let patterns = vec![
-            r"(?i)(hide_ai_identity|mimic_human_agent|pretend_human|bypass_disclosure)", // EU AI Act Art 50/52
-            r"(?i)(enable_audit_log\s*=\s*false|disable_logging|suppress_traceability)",  // EU AI Act Art 12
-            r"(?i)(autonomous_p2p_wire|unvetted_risk_execution|bypass_human_auth)",      // EU AI Act Art 14
-            r"(?i)(ignore previous instructions|system prompt override|jailbreak)",       // SEC-001
-            r#"(?i)(api[_-]?key\s*=\s*['\"][A-Za-z0-9_-]{16,}['\"]|bearer\s+[A-Za-z0-9_.-]{16,})"# // SEC-002
+            r"(?i)(hide_ai_identity|mimic_human_agent|pretend_human|bypass_disclosure)", // index 0: AGT-001 / EU-ART52
+            r"(?i)(enable_audit_log\s*=\s*false|disable_logging|suppress_traceability)",  // index 1: RBI-007 / EU-ART12
+            r"(?i)(autonomous_p2p_wire|unvetted_risk_execution|bypass_human_auth)",      // index 2: AGT-001 / EU-ART14
+            r"(?i)(ignore previous instructions|system prompt override|jailbreak)",       // index 3: SEC-001
+            r#"(?i)(api[_-]?key\s*=\s*['\"][A-Za-z0-9_-]{16,}['\"]|bearer\s+[A-Za-z0-9_.-]{16,})"# // index 4: SEC-002
         ];
 
         let regex_set = Arc::new(
@@ -65,6 +68,95 @@ impl AnchorEngine {
             ledger_queue,
             remediation_graph,
         })
+    }
+
+    /// Detailed code scanner returning file_path:line_number findings and multi-jurisdiction rule IDs
+    pub fn scan_directory_detailed<'py>(
+        &self,
+        py: Python<'py>,
+        dir_path: &str,
+    ) -> PyResult<&'py PyDict> {
+        let start = Instant::now();
+        let path = Path::new(dir_path);
+
+        let files = DirectoryScanner::collect_files(path);
+        let scan_results = DirectoryScanner::scan_parallel_with_regex(&files, &self.regex_set);
+
+        let total_files = scan_results.len();
+        let total_lines: usize = scan_results.iter().map(|r| r.line_count).sum();
+
+        let violations_list = PyList::empty(py);
+        let mut total_violations_count = 0;
+
+        let rule_id_map = vec![
+            ("AGT-001", "EU-ART52", "Transparency Disclosure Gate"),
+            ("RBI-007", "EU-ART12", "Audit Traceability Logging Gate"),
+            ("AGT-001", "EU-ART14", "Autonomous Action Human Oversight Gate"),
+            ("SEC-001", "OWASP-LLM01", "Prompt Injection Defense Gate"),
+            ("SEC-002", "OWASP-LLM06", "Hardcoded Secret Leak Gate"),
+        ];
+
+        for res in scan_results {
+            for m in res.matches {
+                total_violations_count += 1;
+                let dict = PyDict::new(py);
+                dict.set_item("file", &res.file_path)?;
+                dict.set_item("line", m.line_number)?;
+                dict.set_item("line_content", &m.line_content)?;
+
+                let mut matched_rules = Vec::new();
+                let mut matched_statutes = Vec::new();
+
+                for idx in m.matched_rule_indices {
+                    if idx < rule_id_map.len() {
+                        let (r_id, stat_ref, name) = rule_id_map[idx];
+                        if !matched_rules.contains(&r_id) {
+                            matched_rules.push(r_id);
+                        }
+                        if !matched_statutes.contains(&stat_ref) {
+                            matched_statutes.push(stat_ref);
+                        }
+                        dict.set_item("name", name)?;
+                    }
+                }
+
+                dict.set_item("aggregated_rule_ids", matched_rules.join(", "))?;
+                dict.set_item("statutory_references", matched_statutes.join(", "))?;
+                dict.set_item("severity", "error")?;
+
+                violations_list.append(dict)?;
+            }
+        }
+
+        let latency_us = start.elapsed().as_micros();
+        let response_dict = PyDict::new(py);
+        response_dict.set_item("total_files_scanned", total_files)?;
+        response_dict.set_item("total_lines_scanned", total_lines)?;
+        response_dict.set_item("scan_latency_microsec", latency_us)?;
+        response_dict.set_item("total_violations", total_violations_count)?;
+        response_dict.set_item("violations", violations_list)?;
+
+        Ok(response_dict)
+    }
+
+    /// Generate fresh Ed25519 keypair for local identity
+    pub fn generate_keypair<'py>(&self, py: Python<'py>) -> PyResult<&'py PyDict> {
+        let pair = generate_ed25519_keypair();
+        let dict = PyDict::new(py);
+        dict.set_item("private_key_pem", pair.private_key_pem)?;
+        dict.set_item("public_key_pem", pair.public_key_pem)?;
+        dict.set_item("fingerprint", pair.fingerprint)?;
+        Ok(dict)
+    }
+
+    /// Asymmetrically sign DAC block hash with local Ed25519 private key
+    pub fn sign_ed25519(&self, chain_hash: &str, private_key_hex: &str) -> Option<String> {
+        sign_dac_block_ed25519(chain_hash, private_key_hex)
+    }
+
+    /// Verify Ed25519 signature in constant time with public key
+    pub fn verify_ed25519(&self, chain_hash: &str, signature_hex: &str, public_key_hex: &str) -> bool {
+        verify_dac_block_ed25519(chain_hash, signature_hex, public_key_hex)
     }
 
     /// Generate dynamic domain-agnostic self-healing payload for a rule violation
@@ -219,12 +311,12 @@ impl AnchorEngine {
         Ok(response_dict)
     }
 
-    /// Sign DAC block hash with HMAC-SHA256
+    /// Sign DAC block hash with HMAC-SHA256 (Enterprise Hub mode)
     pub fn sign_chain_hash(&self, chain_hash: &str, secret_key: &str) -> Option<String> {
         sign_dac_chain_hash(chain_hash, secret_key)
     }
 
-    /// Verify DAC block hash signature
+    /// Verify HMAC-SHA256 DAC block hash signature
     pub fn verify_chain_hash(&self, chain_hash: &str, signature: &str, secret_key: &str) -> bool {
         verify_dac_chain_hash(chain_hash, signature, secret_key)
     }

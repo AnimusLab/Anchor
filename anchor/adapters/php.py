@@ -10,6 +10,10 @@ class PHPAdapter(LanguageAdapter):
     def extensions(self) -> List[str]:
         return [".php"]
 
+    def get_grammar(self):
+        return None
+
+
     def build_import_query(self, modules: List[str]) -> str:
         names_str = " ".join([f'"{m}"' for m in modules])
         return f"""

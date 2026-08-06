@@ -1,0 +1,105 @@
+type: domain
+namespace: ETH
+version: "1.0"
+anchor_version: ">=4.0.0"
+maintainer: "Anchor Core"
+always_loaded: true
+description: >
+  Ethics violations in AI systems. Covers bias and discrimination,
+  explainability absence, human oversight removal, and toxic output.
+seal: "sha256:PENDING"
+
+rules:
+
+  - id: "ETH-001"
+    name: "Bias and Discrimination"
+    source: "FINOS"
+    original_id: "Ri-009"
+    category: "fairness"
+    description: >
+      AI models produce systematically biased or discriminatory outcomes
+      against protected groups defined by race, gender, age, religion,
+      national origin, or other protected characteristics. In financial
+      AI, bias manifests most critically in credit scoring, loan
+      underwriting, and fraud detection — where biased models produce
+      disparate impact on protected classes even without discriminatory
+      intent. This violates ECOA, the Fair Housing Act, RBI FREE-AI
+      Recommendation 19, and EU AI Act Article 10. Bias is not always
+      detectable in outputs — it can be embedded in feature engineering
+      that uses proxies for protected attributes such as zip code,
+      browsing behavior, or social network connections.
+    severity: "error"
+    min_severity: "warning"
+    min_mitigations: 1
+    detection: ~
+    primitives: ~
+
+  - id: "ETH-002"
+    name: "Explainability Absence"
+    source: "FINOS"
+    original_id: "Ri-010"
+    category: "transparency"
+    description: >
+      AI systems make decisions that cannot be explained to affected
+      individuals, regulators, or auditors in terms of the specific
+      factors that drove the outcome. Black-box models deployed in
+      high-stakes contexts — credit decisions, fraud flags, customer
+      service routing — fail the explainability requirements of RBI
+      FREE-AI Recommendation 14, CFPB Regulation B adverse action
+      notices, EU AI Act Article 13, and SEBI AI/ML requirements.
+      Explainability absence is not merely a transparency gap — it
+      is a structural compliance failure. Goldman Sachs paid $45M
+      to the CFPB in October 2024 specifically because their AI
+      credit model could not explain its decisions at the individual
+      decision level.
+    severity: "error"
+    min_severity: "warning"
+    min_mitigations: 1
+    detection: ~
+    primitives: ~
+
+  - id: "ETH-003"
+    name: "Human Oversight Removal"
+    source: "FINOS"
+    original_id: "Ri-020"
+    category: "safety"
+    description: >
+      AI systems make consequential decisions autonomously without any
+      mechanism for human review, intervention, or override. EU AI Act
+      Article 14 requires that high-risk AI systems — including credit
+      scoring, AML monitoring, and fraud detection — be designed to
+      allow human oversight with the ability to interrupt, disregard,
+      or override AI outputs. FCA 2024 guidance requires documented
+      evidence of human oversight for every AI-assisted decision
+      submitted for supervisory review. Removing human oversight does
+      not merely create a compliance gap — it creates a single point
+      of failure where model errors, adversarial attacks, or behavioral
+      drift propagate unchecked across every decision in the pipeline.
+    severity: "blocker"
+    min_severity: "blocker"
+    min_mitigations: 1
+    detection: ~
+    primitives: ~
+
+  - id: "ETH-004"
+    name: "Toxic Output"
+    source: "FINOS"
+    original_id: "Ri-023"
+    category: "safety"
+    description: >
+      AI models generate harmful, abusive, threatening, or otherwise
+      toxic content in customer-facing or internal communications.
+      In financial services, toxic output risk includes models generating
+      discriminatory rejection language, threatening debt collection
+      communications, or manipulative sales content that violates
+      consumer protection standards. Toxic output is particularly
+      dangerous in automated pipelines where model outputs reach
+      customers without human review — a single prompt injection
+      or model failure can cause toxic content to be sent at scale
+      before detection. RBI FREE-AI Pillar 2 and FCA Consumer Duty
+      require that customer-facing AI outputs meet conduct standards.
+    severity: "error"
+    min_severity: "warning"
+    min_mitigations: 1
+    detection: ~
+    primitives: ~

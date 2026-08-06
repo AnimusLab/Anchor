@@ -1,74 +1,120 @@
+use memmap2::MmapOptions;
+use rayon::prelude::*;
+use regex::RegexSet;
 use std::fs::File;
 use std::path::{Path, PathBuf};
-use rayon::prelude::*;
-use memmap2::Mmap;
+use walkdir::WalkDir;
 
-#[derive(Debug, Clone)]
 pub struct ScannedFileResult {
-    pub path: PathBuf,
+    pub file_path: String,
     pub line_count: usize,
-    pub is_valid: bool,
+    pub matches: Vec<LineViolationMatch>,
+}
+
+pub struct LineViolationMatch {
+    pub line_number: usize,
+    pub line_content: String,
+    pub matched_rule_indices: Vec<usize>,
 }
 
 pub struct DirectoryScanner;
 
 impl DirectoryScanner {
-    /// Walk directory and collect all target source code paths (.py, .ts, .js)
+    /// Recursively collect all relevant code files (.py, .ts, .tsx, .js, .go, .rs)
     pub fn collect_files(root: &Path) -> Vec<PathBuf> {
-        let mut files = Vec::new();
-        if let Ok(entries) = std::fs::read_dir(root) {
-            for entry in entries.flatten() {
-                let path = entry.path();
-                let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-                
-                // Skip ignored directories
-                if name.starts_with('.') || name == "node_modules" || name == "__pycache__" || name == "target" || name == "build" {
-                    continue;
+        WalkDir::new(root)
+            .into_iter()
+            .filter_map(|e| e.ok())
+            .filter(|e| e.file_type().is_file())
+            .filter(|e| {
+                let p = e.path();
+                // Exclude .git, .anchor, node_modules, and build dirs
+                let p_str = p.to_string_lossy();
+                if p_str.contains(".git") || p_str.contains(".anchor") || p_str.contains("node_modules") || p_str.contains("__pycache__") || p_str.contains("target") {
+                    return false;
+                }
+                if let Some(ext) = p.extension() {
+                    let s = ext.to_string_lossy().to_lowercase();
+                    matches!(
+                        s.as_str(),
+                        "py" | "ts" | "tsx" | "js" | "jsx" | "go" | "rs" | "c" | "cpp" | "cc" | "cxx" | "h" | "hpp" | "cs" | "rb" | "php" | "swift" | "kt" | "kts" | "scala" | "sh" | "bash" | "zsh" | "anchor" | "yaml" | "yml" | "json"
+                    )
+                } else {
+                    false
                 }
 
-                if path.is_dir() {
-                    files.extend(Self::collect_files(&path));
-                } else if path.is_file() {
-                    if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
-                        if matches!(ext, "py" | "ts" | "tsx" | "js" | "jsx" | "mjs" | "anchor") {
-                            files.push(path);
-                        }
-                    }
-                }
-            }
-        }
-        files
+            })
+            .map(|e| e.path().to_path_buf())
+            .collect()
     }
 
-    /// Parallel zero-copy scan of all collected source files
-    pub fn scan_parallel(file_paths: &[PathBuf]) -> Vec<ScannedFileResult> {
-        file_paths
+    /// Parallel scan across files using rayon and memmap2 line-by-line matching
+    pub fn scan_parallel_with_regex(files: &[PathBuf], regex_set: &RegexSet) -> Vec<ScannedFileResult> {
+        files
             .par_iter()
-            .map(|path| {
-                if let Ok(file) = File::open(path) {
-                    if let Ok(metadata) = file.metadata() {
-                        if metadata.len() == 0 {
-                            return ScannedFileResult {
-                                path: path.clone(),
-                                line_count: 0,
-                                is_valid: true,
-                            };
-                        }
-                    }
-                    if let Ok(mmap) = unsafe { Mmap::map(&file) } {
-                        let line_count = mmap.split(|&b| b == b'\n').count();
-                        return ScannedFileResult {
-                            path: path.clone(),
-                            line_count,
-                            is_valid: true,
-                        };
+            .filter_map(|path| {
+                let file = File::open(path).ok()?;
+                let metadata = file.metadata().ok()?;
+                
+                // Safe 0-byte check to prevent memmap2 panics
+                if metadata.len() == 0 {
+                    return Some(ScannedFileResult {
+                        file_path: path.to_string_lossy().to_string(),
+                        line_count: 0,
+                        matches: Vec::new(),
+                    });
+                }
+
+                let mmap = unsafe { MmapOptions::new().map(&file).ok()? };
+                let content_str = std::str::from_utf8(&mmap).ok()?;
+
+                let mut line_matches = Vec::new();
+                let mut line_count = 0;
+
+                for (idx, line) in content_str.lines().enumerate() {
+                    line_count += 1;
+                    let matches = regex_set.matches(line);
+                    if matches.matched_any() {
+                        let matched_indices: Vec<usize> = matches.into_iter().collect();
+                        line_matches.push(LineViolationMatch {
+                            line_number: idx + 1,
+                            line_content: line.trim().to_string(),
+                            matched_rule_indices: matched_indices,
+                        });
                     }
                 }
-                ScannedFileResult {
-                    path: path.clone(),
-                    line_count: 0,
-                    is_valid: false,
+
+                Some(ScannedFileResult {
+                    file_path: path.to_string_lossy().to_string(),
+                    line_count,
+                    matches: line_matches,
+                })
+            })
+            .collect()
+    }
+
+    /// Backwards compatible simple scan
+    pub fn scan_parallel(files: &[PathBuf]) -> Vec<ScannedFileResult> {
+        files
+            .par_iter()
+            .filter_map(|path| {
+                let file = File::open(path).ok()?;
+                let metadata = file.metadata().ok()?;
+                if metadata.len() == 0 {
+                    return Some(ScannedFileResult {
+                        file_path: path.to_string_lossy().to_string(),
+                        line_count: 0,
+                        matches: Vec::new(),
+                    });
                 }
+                let mmap = unsafe { MmapOptions::new().map(&file).ok()? };
+                let content_str = std::str::from_utf8(&mmap).ok()?;
+                let line_count = content_str.lines().count();
+                Some(ScannedFileResult {
+                    file_path: path.to_string_lossy().to_string(),
+                    line_count,
+                    matches: Vec::new(),
+                })
             })
             .collect()
     }

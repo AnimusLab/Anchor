@@ -64,7 +64,8 @@ impl AnchorEngine {
         let remediation_graph = RemediationGraph::load_from_file(mitigation_path);
 
         Ok(AnchorEngine {
-            rule_set_version: "6.0.0-alpha".to_string(),
+            rule_set_version: "6.0.0".to_string(),
+
             regex_set,
             legal_mapper: LegalMapper::new(),
             async_core,

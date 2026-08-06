@@ -10,6 +10,10 @@ class CCppAdapter(LanguageAdapter):
     def extensions(self) -> List[str]:
         return [".c", ".cpp", ".cc", ".cxx", ".h", ".hpp"]
 
+    def get_grammar(self):
+        return None
+
+
     def build_import_query(self, modules: List[str]) -> str:
         names_str = " ".join([f'"{m}"' for m in modules])
         return f"""

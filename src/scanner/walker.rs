@@ -34,11 +34,15 @@ impl DirectoryScanner {
                     return false;
                 }
                 if let Some(ext) = p.extension() {
-                    let s = ext.to_string_lossy();
-                    s == "py" || s == "ts" || s == "tsx" || s == "js" || s == "go" || s == "rs" || s == "anchor"
+                    let s = ext.to_string_lossy().to_lowercase();
+                    matches!(
+                        s.as_str(),
+                        "py" | "ts" | "tsx" | "js" | "jsx" | "go" | "rs" | "c" | "cpp" | "cc" | "cxx" | "h" | "hpp" | "cs" | "rb" | "php" | "swift" | "kt" | "kts" | "scala" | "sh" | "bash" | "zsh" | "anchor" | "yaml" | "yml" | "json"
+                    )
                 } else {
                     false
                 }
+
             })
             .map(|e| e.path().to_path_buf())
             .collect()

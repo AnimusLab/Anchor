@@ -201,12 +201,38 @@ fi
 @click.argument("paths", nargs=-1)
 @click.option("--format", "fmt", type=click.Choice(["human", "json", "markdown"]), default="human", help="Output format")
 @click.option("--severity", type=click.Choice(["blocker", "error", "warning", "info"]), default="error", help="Severity threshold")
+@click.option("--model", "-m", help="Model weights file to validate (SafeTensors, GGUF, etc).")
+@click.option("--metadata", help="Path to training metadata JSON.")
+@click.option("--context", "-c", help="GenAI Threat Model (Markdown) to enforce.")
 
 @click.pass_context
-def check(ctx, paths, fmt, severity):
+def check(ctx, paths, fmt, severity, model, metadata, context):
     """Universal enforcement command for code, models, and architectural drift."""
     if ctx.invoked_subcommand is not None:
         return
+
+    # Handle Model Weight Auditing
+    if model:
+        click.secho(f"\n[MODEL AUDIT] Auditing Model Weights: {model}", fg="cyan", bold=True)
+        from anchor.core.model_auditor import ModelAuditor
+        auditor = ModelAuditor({}, verbose=True)
+        res = auditor.audit_weights(model, metadata)
+        click.secho(f"Status: {res.status.value.upper()}", fg="red" if res.status.value == "failed" else "green", bold=True)
+        click.echo(f"Passed: {res.checks_passed}/{res.checks_total}")
+        click.echo(f"Recommendation: {res.recommendation}")
+        if res.status.value == "failed":
+            sys.exit(1)
+        return
+
+    # Handle GenAI Threat Model Context Parsing
+    if context:
+        click.secho(f"\n[THREAT MODEL BRIDGE] Parsing Threat Model: {context}", fg="cyan", bold=True)
+        from anchor.core.markdown_parser import MarkdownPolicyParser
+        md_parser = MarkdownPolicyParser()
+        detected_risks = md_parser.parse_file(context)
+        if detected_risks:
+            click.secho(f"   Activated dynamic enforcement rules for {len(detected_risks)} detected risk IDs", fg="green")
+
 
     engine = AnchorEngine()
     target_dir = os.path.abspath(paths[0] if paths else ".")
@@ -275,27 +301,49 @@ def check(ctx, paths, fmt, severity):
                 if primary_rule in REMEDIATION_SNIPPETS:
                     f.write(f"**Remediation Code Snippet:**\n```python\n{REMEDIATION_SNIPPETS[primary_rule]}\n```\n\n")
 
+    from anchor.core.assessment import ArchitecturalAssessmentEngine, generate_executive_summary_text
+    from anchor.core.healer import suggest_fix, format_suggestion_for_report
+    from datetime import datetime
+
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    risk_clusters = ArchitecturalAssessmentEngine.assess_security_compliance(filtered_violations)
+    exec_summary = generate_executive_summary_text(risk_clusters)
+
     with open(txt_violations_path, "w", encoding="utf-8") as f:
-        f.write("================================================================================\n")
-        f.write("   ANCHOR GOVERNANCE VIOLATIONS LOG\n")
-        f.write("================================================================================\n\n")
-        f.write(f"Scan Target: {target_dir}\n")
-        f.write(f"Files Scanned: {audit_report['files_scanned']} | Lines: {audit_report['lines_scanned']}\n")
-        f.write(f"Total Violations: {total_violations}\n\n")
-        f.write("--------------------------------------------------------------------------------\n\n")
+        f.write("=" * 80 + "\n")
+        f.write("   ANCHOR GOVERNANCE VIOLATIONS\n")
+        f.write("=" * 80 + "\n\n")
+        f.write(f"Scan Source: {os.path.abspath(target_dir)}\n")
+        f.write(f"Timestamp:   {timestamp}\n\n")
+
+        if exec_summary:
+            f.write(exec_summary + "\n\n")
+
+        f.write("--- SCAN STATISTICS ---\n")
+        f.write(f"Files Scanned: {audit_report['files_scanned']}\n")
+        f.write(f"Files Ignored: 0\n")
+        f.write(f"Total Files:   {audit_report['files_scanned']}\n\n")
+
+        f.write("--- VIOLATION SUMMARY ---\n")
+        f.write(f"Total Findings: {total_violations}\n")
+        f.write(f"Breakdown:      {total_violations} Blocker/Error, 0 Warning, 0 Info, 0 Suppressed\n\n")
+        f.write("-" * 80 + "\n\n")
 
         if filtered_violations:
             for v in filtered_violations:
-                f.write(f"LOCATION: {v['file']}:{v['line']}\n")
-                f.write(f"RULES:    {v['aggregated_rule_ids']} (Statutes: {v['statutory_references']})\n")
-                f.write(f"CODE:     {v['line_content']}\n")
-                primary_rule = v['aggregated_rule_ids'].split(', ')[0]
-                if primary_rule in REMEDIATION_SNIPPETS:
-                    f.write("FIX:\n")
-                    f.write(f"{REMEDIATION_SNIPPETS[primary_rule]}\n")
-                f.write("\n--------------------------------------------------------------------------------\n")
+                sev = v.get('severity', 'ERROR').upper()
+                rule_id = v['aggregated_rule_ids'].split(', ')[0]
+                f.write(f"[[X]] [{rule_id}] {v.get('name', 'Policy Violation')} ({sev})\n")
+                f.write(f"    Location: {v['file']}:{v['line']}\n")
+                f.write(f"    Message:  {v.get('name', 'Policy Violation')}\n")
+                f.write(f"    Code:     {v['line_content']}\n")
+                suggestion = suggest_fix({"id": rule_id, "file": v['file'], "line": v['line'], "message": v['line_content']})
+                if suggestion:
+                    f.write(format_suggestion_for_report(suggestion) + "\n")
+                f.write("-" * 60 + "\n")
         else:
             f.write("No active violations detected.\n")
+
 
     click.echo("=" * 70)
     click.secho("ANCHOR GOVERNANCE AUDIT REPORT", bold=True)

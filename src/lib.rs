@@ -46,7 +46,10 @@ impl AnchorEngine {
             r"(?i)(enable_audit_log\s*=\s*false|disable_logging|suppress_traceability)",  // index 1: RBI-007 / EU-ART12
             r"(?i)(autonomous_p2p_wire|unvetted_risk_execution|bypass_human_auth)",      // index 2: AGT-001 / EU-ART14
             r"(?i)(ignore previous instructions|system prompt override|jailbreak)",       // index 3: SEC-001
-            r#"(?i)(api[_-]?key\s*=\s*['\"][A-Za-z0-9_-]{16,}['\"]|bearer\s+[A-Za-z0-9_.-]{16,})"# // index 4: SEC-002
+            r#"(?i)(api[_-]?key\s*=\s*['\"][A-Za-z0-9_-]{8,}['\"]|bearer\s+[A-Za-z0-9_.-]{8,}|api_key\s*=\s*['\"][^'"]+['\"]|authorization['"]\s*==\s*['\"]Bearer)"#, // index 4: SEC-002
+            r"(?i)(subprocess\.(run|call|Popen|check_output)|os\.(system|popen|spawn))\s*\(", // index 5: SEC-007 / Shell Injection / Unsandboxed Subprocess
+            r"(?i)(\.(completions|messages|chat)\.(create|send)|agents\.messages\.create)\s*\(", // index 6: ALN-001 / Hallucination (LLM Output Validation)
+            r"(?i)\.(upsert|add_texts|add_documents)\s*\(", // index 7: SEC-002 / Data Poisoning (Unencrypted Vector Store Write)
         ];
 
         let regex_set = Arc::new(
@@ -94,7 +97,11 @@ impl AnchorEngine {
             ("AGT-001", "EU-ART14", "Autonomous Action Human Oversight Gate"),
             ("SEC-001", "OWASP-LLM01", "Prompt Injection Defense Gate"),
             ("SEC-002", "OWASP-LLM06", "Hardcoded Secret Leak Gate"),
+            ("SEC-007", "OWASP-LLM07", "Shell Injection (Unsandboxed Subprocess in Agent)"),
+            ("ALN-001", "OWASP-LLM09", "Hallucination (LLM Output Without Validation)"),
+            ("SEC-002", "OWASP-LLM03", "Data Poisoning (Unencrypted Vector Store Upsert)"),
         ];
+
 
         for res in scan_results {
             for m in res.matches {

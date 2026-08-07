@@ -4,7 +4,8 @@ from anchor.cli import AnchorEngine
 
 def test_rust_engine_instantiation():
     engine = AnchorEngine()
-    assert engine.version() == "6.0.0-alpha"
+    assert engine.version() == "6.0.0"
+
 
 def test_ed25519_keypair_generation_and_signing():
     engine = AnchorEngine()

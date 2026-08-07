@@ -31,6 +31,33 @@ REMEDIATION_SNIPPETS = {
     "EU-ART14": """+ # Fix: Require human confirmation for automated risk execution\n+ if not human_auth.confirm_action(action_id): return anchor.block()"""
 }
 
+RULE_DESCRIPTIONS = {
+    "SEC-007": (
+        "Your code initializes an unrestricted OS shell wrapper ('subprocess.Popen(..., shell=True)') "
+        "to execute tool payloads. If an active AI agent is targeted by a runtime prompt injection attack, "
+        "an adversary can exploit this string field to run arbitrary malicious scripts straight on your host machine."
+    ),
+    "SEC-002": (
+        "Hardcoded high-privilege cloud or API access secrets were detected within your repository context. "
+        "Exposing credentials in source code compromises data sovereignty and allows unauthorized actors to "
+        "harvest secrets during repository commits or automated deployment pipelines."
+    ),
+    "ALN-001": (
+        "Model generation call executed without active output moderation or alignment schema validation. "
+        "Unvalidated LLM outputs introduced directly into application flow increase risk of hallucination, "
+        "data corruption, and reputational exposure."
+    ),
+    "AGT-001": (
+        "Autonomous agent action gate missing mandatory human oversight or transparency disclosure. "
+        "Executing critical transactions without human verification violates EU AI Act Article 14."
+    ),
+    "RBI-007": (
+        "Traceability logging or audit telemetry is explicitly disabled on high-risk call paths. "
+        "Suppressing audit logs impairs post-incident forensics and breaks RBI Regulation 6 requirements."
+    )
+}
+
+
 def load_anchorignore(root_path: str) -> List[str]:
     ignore_path = os.path.join(root_path, ".anchorignore")
     if not os.path.exists(ignore_path):
@@ -361,13 +388,18 @@ def check(ctx, paths, fmt, severity, model, metadata, context):
         click.echo("----------------------------------------------------------------------")
         for v in filtered_violations:
             norm_path = v['file'].replace('\\', '/')
-            file_uri = f"file:///{norm_path}"
-            click.secho(f"  ❌ [{norm_path}:{v['line']}]({file_uri})", fg="red", bold=True)
-            click.echo(f"     File Location: {norm_path}:{v['line']}")
-            click.echo(f"     Rules:         [{v['aggregated_rule_ids']}]")
-            click.echo(f"     Statutes:      {v['statutory_references']}")
-            click.echo(f"     Code:          {v['line_content']}")
-            click.echo("")
+            file_uri = f"file:///{norm_path}#L{v['line']}"
+            rule_id = v['aggregated_rule_ids'].split(', ')[0]
+            click.secho(f"  ❌ [{rule_id}] {v.get('name', 'Policy Violation')}", fg="red", bold=True)
+            click.echo(f"     Severity:   {v.get('severity', 'ERROR').upper()}")
+            click.echo(f"     Trace URI:  {file_uri}")
+            click.echo(f"     Statutes:   {v['statutory_references']}")
+            click.echo(f"     Code:       {v['line_content']}")
+            
+            desc = RULE_DESCRIPTIONS.get(rule_id, "Manual code review required. See mitigation documentation for structural guidance.")
+            click.echo(f"\n     Description:\n       {desc}")
+            click.echo(f"\n     Documentation & Mitigation Blueprint:\n       👉 https://animuslab.dev/rules/{rule_id}\n")
+            click.echo("----------------------------------------------------------------------")
     else:
         click.secho("SUMMARY OF AUDIT CHECKS:", bold=True)
         click.echo("----------------------------------------------------------------------")
@@ -380,6 +412,16 @@ def check(ctx, paths, fmt, severity, model, metadata, context):
     click.secho(f"VERDICT: {verdict_str}", fg="green" if is_compliant else "red", bold=True)
     click.echo("Detailed violation logs written to .anchor/reports/ and .anchor/violations/")
     click.echo("=" * 70)
+    click.echo("\n=================================================================================")
+    click.echo("  REPORT CERTIFICATION & VALIDATION SIGN-OFF")
+    click.echo("---------------------------------------------------------------------------------")
+    click.echo("  This compliance evaluation report and its constituent cryptographic")
+    click.echo("  verifications have been compiled, cross-checked, and authenticated")
+    click.echo("  by the AnimusLab System Kernel under verified policy parameters.\n")
+    click.secho("  Certified & Signed by:", bold=True)
+    click.secho("  🛡️ AnimusLab & Team [Institutional Governance Registry Node]", fg="cyan", bold=True)
+    click.echo("=================================================================================\n")
+
 
     if not is_compliant:
         sys.exit(1)

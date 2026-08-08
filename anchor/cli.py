@@ -98,8 +98,36 @@ RULE_DESCRIPTIONS = {
     ),
     "EU-ART99": (
         "Critical non-compliance detected. Maximum administrative penalty threshold triggered (up to €35M or 7% turnover)."
+    ),
+    "SEC-REG-SCI": (
+        "Your code contains an unbounded execution loop or unthrottled API call stream within a high-frequency trading pipeline. "
+        "Under structural stress, these uncontrolled iterations risk causing host cluster capacity failure or exchange rate spam, "
+        "directly violating SEC Regulation SCI mandates."
+    ),
+    "SEC-RULE-15C3": (
+        "An active order routing or trading function is executing without pre-trade credit verification parameters. "
+        "The SEC Market Access Rule strictly mandates that automated market orders pass through pre-trade financial limits "
+        "and capital verification checks before exiting the network layer."
+    ),
+    "SEC-PDA-CONFLICT": (
+        "The agent's optimization prompt or behavioral template is configured to maximize broker commissions or firm revenue over investor interest. "
+        "Proposed SEC guidelines explicitly prohibit deployment of manipulative behavioral nudges that conflict with primary fiduciary duties."
+    ),
+    "SEC-RULE-206": (
+        "Your trading execution script is configured to trigger financial order volumes based entirely on unverified social web scraping. "
+        "This creates severe corporate vulnerability to artificial market rumor manipulation, violating SEC Anti-Fraud Rule 206(4)-1."
+    ),
+
+    "SEC-FORM-8K": (
+        "An outbound network payload or logging telemetry stream is attempting to export critical environment secrets or topology maps. "
+        "Exposing access infrastructure parameters leaks sensitive firm boundaries, triggering mandatory SEC Form 8-K disclosure vulnerabilities."
+    ),
+    "SEC-FINRA-3110": (
+        "The local transaction logging protocol does not attach an immutable, Ed25519-signed verification signature block to model inputs. "
+        "FINRA rules mandate tamper-evident ledger preservation for all algorithmic prompts and trading decisions for post-hoc regulatory inspection."
     )
 }
+
 
 
 

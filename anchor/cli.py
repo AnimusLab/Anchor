@@ -397,9 +397,9 @@ def check(ctx, paths, fmt, severity, model, metadata, context):
             click.echo(f"     Code:       {v['line_content']}")
             
             desc = RULE_DESCRIPTIONS.get(rule_id, "Manual code review required. See mitigation documentation for structural guidance.")
-            click.echo(f"\n     Description:\n       {desc}")
-            click.echo(f"\n     Documentation & Mitigation Blueprint:\n       👉 https://animuslab.dev/rules/{rule_id}\n")
+            click.echo(f"\n     Description:\n       {desc}\n")
             click.echo("----------------------------------------------------------------------")
+
     else:
         click.secho("SUMMARY OF AUDIT CHECKS:", bold=True)
         click.echo("----------------------------------------------------------------------")

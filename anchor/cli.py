@@ -54,8 +54,53 @@ RULE_DESCRIPTIONS = {
     "RBI-007": (
         "Traceability logging or audit telemetry is explicitly disabled on high-risk call paths. "
         "Suppressing audit logs impairs post-incident forensics and breaks RBI Regulation 6 requirements."
+    ),
+    "EU-ART05-A": (
+        "Subliminal behavioral deception technique detected in agent prompt sequence or conversational logic. "
+        "Purposefully manipulating user behavior to impair informed decision-making violates Article 5(1)(a) "
+        "and carries mandatory statutory fines up to €35M or 7% of global turnover."
+    ),
+    "EU-ART05-E": (
+        "Untargeted facial image ingestion stream detected without consent or data rights filtration. "
+        "Expanding facial recognition databases via public web or CCTV scraping violates Article 5(1)(e)."
+    ),
+    "EU-ART06": (
+        "Autonomous agent profiling loop detected. Under Article 6(3), any AI system performing user "
+        "profiling is automatically classified as High-Risk, revoking all narrow-task derogation exemptions."
+    ),
+    "EU-ART09": (
+        "Continuous risk management lifecycle testing is unconfigured for this high-risk deployment. "
+        "Article 9 requires continuous risk identification, evaluation, and CI/CD testing throughout system lifespan."
+    ),
+    "EU-ART10": (
+        "Data governance gap detected in model training or retrieval context. Article 10 mandates dataset "
+        "error mitigation, bias testing, and documented provenance for all high-risk AI data pipelines."
+    ),
+    "EU-ART12": (
+        "Automated event logging disabled or non-tamper-evident on high-risk execution path. "
+        "Article 12 mandates automatic event logging enabling post-hoc operational review and incident reconstruction."
+    ),
+    "EU-ART14": (
+        "High-risk autonomous decision path lacks mandatory human oversight checkpoint. "
+        "Article 14 requires effective human intervention levers and kill-switch override capabilities."
+    ),
+    "EU-ART15": (
+        "Adversarial vulnerability or prompt injection path left un-sandboxed. Article 15 requires appropriate "
+        "levels of accuracy, structural robustness, and cybersecurity resilience against adversarial attacks."
+    ),
+    "EU-ART19": (
+        "Automatic logging retention policy configured below 6 months. Article 19 strictly mandates a minimum "
+        "6-month log preservation period for post-market monitoring and forensic authority audits."
+    ),
+    "EU-ART50": (
+        "Generative synthetic AI content output missing machine-readable watermark or deepfake disclosure. "
+        "Article 50 requires artificially generated text, image, audio, or video to be clearly labeled."
+    ),
+    "EU-ART99": (
+        "Critical non-compliance detected. Maximum administrative penalty threshold triggered (up to €35M or 7% turnover)."
     )
 }
+
 
 
 def load_anchorignore(root_path: str) -> List[str]:

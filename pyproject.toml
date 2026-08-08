@@ -4,8 +4,9 @@ build-backend = "maturin"
 
 [project]
 name = "anchor-audit"
-version = "6.0.0"
-description = "The Federated Governance Engine for AI (Universal Multi-Language)"
+version = "6.0.1"
+description = "The Deterministic Runtime Governance & Compliance Kernel for Autonomous AI Systems"
+
 readme = "README.md"
 authors = [
     { name = "Tanishq", email = "tan@animuslab.dev" }

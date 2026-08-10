@@ -9,7 +9,7 @@ README = (HERE / "README.md").read_text(encoding="utf-8")
 
 setup(
     name="anchor-audit",
-    version="1.0.0",
+    version="6.0.1",
     description="Architectural Governor for AI Agents",
     long_description=README,
     long_description_content_type="text/markdown",

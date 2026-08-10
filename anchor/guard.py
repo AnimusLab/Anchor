@@ -6,7 +6,12 @@ Intersects runtime prompts/actions and emits dynamic BLOCKED_BY_ANCHOR self-heal
 
 import functools
 import json
+import logging
 from typing import Callable, Any, Dict
+from anchor.core.telemetry import SpokeTelemetryClient
+
+logger = logging.getLogger("anchor.guard")
+_telemetry_client = SpokeTelemetryClient()
 
 try:
     from anchor_core_rs import AnchorEngine
@@ -57,6 +62,28 @@ def guard(domain: str = "general", raise_on_violation: bool = False):
                     statute_ref="EU AI Act Art 14 / RBI Recommendation 6"
                 )
 
+                # Dispatch non-blocking telemetry payload to Hub endpoint
+                try:
+                    formatted_violations = [
+                        {
+                            "rule_id": rule_id,
+                            "statute": healing_directive.get("statutory_reference", "EU AI Act Regulation"),
+                            "severity": audit_report.get("risk_level", "BLOCKER"),
+                            "trace_uri": f"file:///{func.__module__}.py#func={func.__name__}",
+                            "summary": healing_directive.get("reroute_directive", "Invariant violation intercepted by Anchor Guard.")
+                        }
+                    ]
+                    _telemetry_client.dispatch_state_event(
+                        event_id=f"evt_{rule_id.lower()}_breach",
+                        project_name=func.__module__ or "agentic-execution-node",
+                        silo_id=domain.upper(),
+                        verdict="NON_COMPLIANT",
+                        risk_score=audit_report.get("risk_score", 8.5),
+                        violations=formatted_violations
+                    )
+                except Exception as tel_err:
+                    logger.warning(f"Telemetry dispatch warning: {tel_err}")
+
                 if raise_on_violation:
                     raise PermissionError(f"Anchor Invariant Breach: {healing_directive['reroute_directive']}")
 
@@ -67,3 +94,4 @@ def guard(domain: str = "general", raise_on_violation: bool = False):
 
         return wrapper
     return decorator
+

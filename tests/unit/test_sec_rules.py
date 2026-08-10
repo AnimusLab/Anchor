@@ -5,7 +5,7 @@ from anchor.cli import RULE_DESCRIPTIONS
 
 def test_sec_anchor_file_loading():
     """Verify that sec.anchor is correctly loaded and parsed."""
-    sec_file = Path("governance/domains/sec.anchor")
+    sec_file = Path("anchor/governance/domains/sec.anchor")
     assert sec_file.exists()
     
     rules = load_domain_file(sec_file, expected_namespace="SEC", seal_check="development")

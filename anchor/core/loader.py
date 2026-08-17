@@ -1,9 +1,15 @@
 # ─────────────────────────────────────────────────────────────
-# V4 Constitution Loader
+# V6 Constitution Loader
 # Reads constitution.anchor and loads all domains and frameworks
 # in the defined sequence. Validates seals, resolves aliases,
 # applies policy overrides.
 # ─────────────────────────────────────────────────────────────
+
+# Canonical version of this client — used in version-skew detection
+# so old clients connecting to a newer backend emit a clear upgrade
+# prompt rather than a misleading security alarm.
+CLIENT_VERSION = "6.0.1"
+CLIENT_MAJOR = 6
 
 from __future__ import annotations
 
@@ -87,20 +93,62 @@ def verify_seal(file_path: Path, seal: str) -> bool:
 
 
 def verify_remote_lockfile(anchor_dir: Path, offline_attr: str = "warn") -> bool:
-    """Verifies directory hashes against remote GOVERNANCE.lock or local .anchor.lock. Returns True if verified."""
+    """
+    Verifies directory hashes against remote GOVERNANCE.lock or local .anchor.lock.
+    Returns True if verified.
+
+    Version-skew handling: if the remote lock was generated for a different major
+    version of the client, we emit a clear upgrade prompt rather than a
+    misleading security alarm. These are different failure modes:
+      - Version mismatch  → routine during migrations, fix = pip install --upgrade
+      - Actual tampering  → security event, fix = anchor sync --restore
+    """
     import urllib.request
     import urllib.error
-    
-    GOVERNANCE_LOCK_URL = "https://raw.githubusercontent.com/Tanishq1030/anchor/main/GOVERNANCE.lock"
+
+    GOVERNANCE_LOCK_URL = "https://raw.githubusercontent.com/Tanishq1030/anchor/main/anchor/governance/GOVERNANCE.lock"
     local_lock_path = anchor_dir / ".anchor.lock"
-    
+
     lock_data = None
     try:
-        req = urllib.request.Request(GOVERNANCE_LOCK_URL)
+        req = urllib.request.Request(
+            GOVERNANCE_LOCK_URL,
+            headers={"User-Agent": f"anchor-audit/{CLIENT_VERSION}"}
+        )
         with urllib.request.urlopen(req, timeout=5) as response:
             lock_data = yaml.safe_load(response.read().decode('utf-8'))
-        # Save cache for offline use
+        # Cache for offline use
         local_lock_path.write_text(yaml.dump(lock_data, default_flow_style=False, sort_keys=False))
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            # The sync endpoint for this client version may no longer exist on the
+            # backend (common during major-version migrations). Emit a clear,
+            # calm message — not a generic HTTP error.
+            if offline_attr == "abort":
+                raise RuntimeError(
+                    f"\nThis Anchor client (v{CLIENT_VERSION}) could not reach the governance sync endpoint.\n"
+                    f"The backend may have been updated beyond this client version.\n"
+                    f"Run: pip install --upgrade anchor-audit\n"
+                    f"to update to the latest version and restore connectivity."
+                )
+            elif local_lock_path.exists():
+                print(f"WARNING: Remote governance sync endpoint not found (HTTP 404). "
+                      f"Using cached .anchor.lock. Consider running: "
+                      f"pip install --upgrade anchor-audit")
+                lock_data = yaml.safe_load(local_lock_path.read_text())
+            else:
+                print(f"NOTE: Remote governance sync endpoint not found (HTTP 404). "
+                      f"Run: pip install --upgrade anchor-audit to update the client.")
+                return False
+        else:
+            if offline_attr == "abort":
+                raise RuntimeError(f"Cannot verify governance integrity — remote error: {e}")
+            elif local_lock_path.exists():
+                print(f"WARNING: Governance integrity could not be verified remotely ({e}) — using local .anchor.lock")
+                lock_data = yaml.safe_load(local_lock_path.read_text())
+            else:
+                print(f"NOTE: No GOVERNANCE.lock found. Run anchor sync --restore to initialise governance integrity verification.")
+                return False
     except Exception as e:
         if offline_attr == "abort":
             raise RuntimeError(f"Cannot verify governance integrity — remote unreachable: {e}")
@@ -114,11 +162,38 @@ def verify_remote_lockfile(anchor_dir: Path, offline_attr: str = "warn") -> bool
     if not lock_data or "files" not in lock_data:
         return False
 
+    # ── VERSION-SKEW CHECK ────────────────────────────────────────────────────
+    # If the remote lock was generated for a different major version, we are in
+    # a version-mismatch situation — NOT a tampering situation. Emit a calm,
+    # actionable message and bail out before any hash comparison.
+    remote_client_version = lock_data.get("client_version", "")
+    if remote_client_version:
+        try:
+            remote_major = int(str(remote_client_version).split(".")[0])
+            if remote_major != CLIENT_MAJOR:
+                msg = (
+                    f"\nAnchor client version mismatch.\n"
+                    f"  This client: v{CLIENT_VERSION}\n"
+                    f"  Backend expects: v{remote_client_version}\n"
+                    f"\nThis is a version-compatibility issue, not a security event.\n"
+                    f"Run: pip install --upgrade anchor-audit\n"
+                    f"to update to the latest version."
+                )
+                if offline_attr == "abort":
+                    raise RuntimeError(msg)
+                else:
+                    print(f"WARNING:{msg}")
+                    return False
+        except (ValueError, IndexError):
+            pass  # Unparseable version — proceed with hash check
+
     remote_files = lock_data["files"]
-    target_dirs = [(anchor_dir / "domains", "domains"), 
-                   (anchor_dir / "frameworks", "frameworks"), 
-                   (anchor_dir / "government", "government")]
-    
+    target_dirs = [
+        (anchor_dir / "domains", "domains"),
+        (anchor_dir / "frameworks", "frameworks"),
+        (anchor_dir / "government", "government"),
+    ]
+
     for folder, prefix in target_dirs:
         if folder.exists():
             for f in folder.rglob("*.anchor"):
@@ -127,11 +202,12 @@ def verify_remote_lockfile(anchor_dir: Path, offline_attr: str = "warn") -> bool
                     local_hash = hashlib.sha256(f.read_bytes()).hexdigest()
                     if local_hash != remote_files[rel_path]:
                         raise RuntimeError(
-                            f"\nANCHOR INTEGRITY VIOLATION\n"
-                            f"{rel_path} has been modified.\n"
-                            f"Local hash:  {local_hash}\n"
-                            f"Remote hash: {remote_files[rel_path]}\n"
-                            f"Run: anchor sync --restore to restore the authoritative version."
+                            f"\nGovernance file tampered or out of sync: {rel_path}\n"
+                            f"  Local hash:   {local_hash[:16]}...\n"
+                            f"  Expected hash: {remote_files[rel_path][:16]}...\n"
+                            f"\nIf you have not modified this file, run:\n"
+                            f"  anchor sync --restore\n"
+                            f"to restore the authoritative version from the registry."
                         )
 
 

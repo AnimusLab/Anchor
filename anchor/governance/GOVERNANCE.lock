@@ -1,6 +1,8 @@
-# Anchor Governance Integrity Baseline (v4.3.5)
-# Generated: 2026-04-02T12:17:15Z
+# Anchor Governance Integrity Baseline (v6.0.1)
+# Generated: 2026-08-17T07:00:00Z
 # This file ensures that governance policies cannot be modified without detection.
+# client_version is used by older clients to detect version-skew before hash checks.
+client_version: "6.0.1"
 
 # Root Policy Files
 constitution.anchor: dc99041ec4dfd737847a0180c624ffea0359a11a299638fce681eb2a52e8fd0e

@@ -4,8 +4,8 @@
 # ─────────────────────────────────────────────────────────────
 
 type: manifest
-version: "4.1"
-anchor_version: ">=4.0.0"
+version: "6.0.2"
+anchor_version: ">=6.0.0"
 name: "Anchor Constitutional Root"
 
 core_domains:

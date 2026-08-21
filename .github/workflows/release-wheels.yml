@@ -11,6 +11,9 @@ name: Build & Publish Wheels
 on:
   release:
     types: [published]
+  push:
+    tags:
+      - 'v*'
   workflow_dispatch: # allow manual trigger for testing
 
 permissions:

@@ -1,5 +1,5 @@
 {
-  "signature": "PWhd8/4u3KjmBiV+LeesR8ZFMvzS3J6bbcaBix4vmsi5a9OOuC1j2cQE3Ib8t+EBMMBiPuE48wzfmZic4KODCw==",
+  "signature": "bp35dFj2w+Vpm0DZnogL99ZzfcvBWJ4mw1exI6hKCf8bupjiwyxUYObAcNneCmduHLEjlNjOkz2lEQOxEpBrBQ==",
   "algorithm": "ed25519",
   "signed_file": "GOVERNANCE.lock"
 }

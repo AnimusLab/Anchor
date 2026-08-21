@@ -44,7 +44,12 @@ rules:
     runtime_pattern: '(?i)(bypass|override|admin|root|sudo|unauthorized|permissions)'
     min_mitigations: 1
     detection: ~
-    primitives: ~
+    primitives:
+      action: modify
+      object: governance_configuration
+      context: unrestricted
+      authority: unauthorised_actor
+      flow: direct_mutation
 
   - id: "AGT-002"
     name: "Tool Chain Manipulation and Injection"

@@ -27,8 +27,7 @@ classifiers = [
 anchor = "anchor.cli:main"
 
 [tool.maturin]
-
-features = ["pyo3/extension-module"]
+features = ["pyo3/extension-module", "pyo3/abi3-py310"]
 module-name = "anchor_core_rs"
 python-packages = ["anchor"]
 

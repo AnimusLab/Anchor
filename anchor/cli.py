@@ -488,11 +488,16 @@ def check(ctx, paths, fmt, severity, model, metadata, context):
     click.echo("\n=================================================================================")
     click.echo("  REPORT CERTIFICATION & VALIDATION SIGN-OFF")
     click.echo("---------------------------------------------------------------------------------")
-    click.echo("  This compliance evaluation report and its constituent cryptographic")
-    click.echo("  verifications have been compiled, cross-checked, and authenticated")
-    click.echo("  by the AnimusLab System Kernel under verified policy parameters.\n")
-    click.secho("  Certified & Signed by:", bold=True)
-    click.secho("  🛡️ AnimusLab & Team [Institutional Governance Registry Node]", fg="cyan", bold=True)
+    if engine and getattr(engine, "verified", True):
+        click.echo("  This compliance evaluation report and its constituent cryptographic")
+        click.echo("  verifications have been compiled, cross-checked, and authenticated")
+        click.echo("  by the AnimusLab System Kernel under verified policy parameters.\n")
+        click.secho("  Certified & Signed by:", bold=True)
+        click.secho("  🛡️ AnimusLab & Team [Institutional Governance Registry Node]", fg="cyan", bold=True)
+    else:
+        click.secho("  ⚠️ UNVERIFIED LOCAL GOVERNANCE / SIGNATURE NOT VALIDATED", fg="yellow", bold=True)
+        click.echo("  Local rule parameters could not be cryptographically authenticated.")
+        click.echo("  Run `anchor sync --restore` to restore signed governance baseline.\n")
     click.echo("=================================================================================\n")
 
 

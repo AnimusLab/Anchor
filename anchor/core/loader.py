@@ -159,6 +159,15 @@ def verify_remote_lockfile(anchor_dir: Path, offline_attr: str = "warn") -> bool
             print("NOTE: No GOVERNANCE.lock found. Run anchor sync --restore to initialise governance integrity verification.")
             return False
 
+    # Enforce Ed25519 signature verification on lockfile before checking per-file hashes
+    local_sig_path = anchor_dir / ".anchor.lock.sig"
+    if local_lock_path.exists():
+        from anchor.core.governance_signature import verify_lock_signature, GovernanceSignatureError
+        try:
+            verify_lock_signature(local_lock_path, local_sig_path if local_sig_path.exists() else None)
+        except GovernanceSignatureError as sig_err:
+            raise RuntimeError(f"\nGOVERNANCE INTEGRITY VIOLATION / SIGNATURE INVALID\n{sig_err}")
+
     if not lock_data or "files" not in lock_data:
         return False
 

@@ -1,19 +1,64 @@
 type: framework
 namespace: SEBI
-version: "2025-06"
-anchor_version: ">=4.0.0"
+version: "2026-08"
+anchor_version: ">=6.0.0"
 maintainer: "Anchor Core"
 opt_in: true
-source: "SEBI Consultation Papers on AI/ML in Securities Markets"
-source_url: "https://www.sebi.gov.in/reports-and-statistics/reports/jun-2025/consultation-paper-on-guidelines-for-responsible-usage-of-ai-ml-in-indian-securities-markets_94687.html"
-source_date: "June 2025"
+source: >
+  SEBI (Intermediaries) (Amendment) Regulations, 2025 [Regulation 16C];
+  parallel SECC and DP Regulations amendments; SEBI AI/ML reporting
+  circulars (Jan-May 2019); SEBI Consultation Paper on AI/ML Guidelines
+  (June 2025).
+source_url: "https://www.sebi.gov.in/sebi_data/meetingfiles/dec-2024/1735042007618_1.pdf"
+source_date: "2019-2026"
 credit: >
-  Securities and Exchange Board of India consultation papers on
-  AI/ML governance (November 2024 and June 2025). SEBI requires
-  all market participants using AI/ML tools to be responsible for
-  compliance with all applicable laws regardless of the method or
-  degree of AI adoption. Third-party vendor liability does not
-  transfer to SEBI-regulated entities.
+  Securities and Exchange Board of India. Three distinct instruments,
+  three distinct legal weights — see verification_note.
+verification_note: >
+  MAJOR CORRECTION from prior version: the previous file cited ONLY the
+  June 2025 consultation paper (not yet binding, comments closed July
+  11, 2025) as its source. It omitted two ALREADY-BINDING instruments
+  entirely:
+    (1) Regulation 16C, inserted by the SEBI (Intermediaries) (Amendment)
+        Regulations, 2025, notified February 10, 2025, in effect
+        immediately. Verified against the primary Board memorandum
+        (SEBI meeting files, Dec 2024) — not a secondary summary.
+    (2) Three 2019 AI/ML reporting circulars (brokers/DPs — Jan 4, 2019;
+        MIIs — Jan 31, 2019; mutual funds/AMCs — May 9, 2019), still in
+        force and actively enforced — harmonised into a cross-exchange
+        filing mechanism as recently as October 2025 (MSE Circular
+        MSE/MEM/17921/2025).
+  Both are added below as SEBI-REG16C and SEBI-CIR2019. These are
+  legally stronger than SEBI-001 through SEBI-010, which derive from
+  the still-non-binding June 2025 consultation paper — despite the
+  lower rule IDs suggesting otherwise at a glance. Read legal_status
+  below before citing any SEBI-* rule's obligation strength to a client
+  or auditor.
+legal_status: >
+  SEBI-REG16C and SEBI-CIR2019 are BINDING LAW, in force now.
+  Non-compliance with Reg 16C triggers SEBI Act 1992 enforcement
+  (monetary sanctions, cease-and-desist, suspension). SEBI-001 through
+  SEBI-010 derive from the June 2025 consultation paper, which is
+  PROPOSED GUIDANCE ONLY as of this version's date — comments closed
+  July 11, 2025, not yet finalized into binding regulation. Do not
+  describe SEBI-001 through SEBI-010 as "SEBI-mandated" in binding-law
+  terms in client-facing material; SEBI-REG16C and SEBI-CIR2019 are the
+  rules that can accurately be described that way today.
+content_verification_note: >
+  SEBI-001 through SEBI-010 below are retained from the prior version
+  of this file, substantively unchanged except for legal_status framing
+  and added primitives. Their content was cross-checked against
+  multiple secondary legal-commentary summaries of the June 2025
+  paper (consistent across sources) but NOT against the consultation
+  paper's own verbatim text, which was not independently fetched for
+  this revision. Treat as reliable but not yet primary-source-verified
+  to the same standard as RBI-* or SEBI-REG16C/CIR2019 below.
+id_gap_note: >
+  SEBI-009 does not exist in either this or the prior version of this
+  file (the sequence goes 008 to 010) — not corrected here since there
+  was no way to verify what, if anything, was intended for that slot
+  without the consultation paper's verbatim numbered list. Worth
+  checking against the actual paper if/when it's obtained.
 layer_2_status: >
   Rules marked obligation_type: provenance or audit depend on
   AnchorRuntime (Layer 2) and the Decision Audit Chain (DAC).
@@ -22,174 +67,289 @@ seal: "sha256:PENDING"
 
 rules:
 
+  - id: "SEBI-REG16C"
+    name: "Sole AI/ML Liability — Regulation 16C (BINDING)"
+    original_id: "Regulation 16C, SEBI (Intermediaries) (Amendment) Regulations, 2025; parallel amendments to SECC and DP Regulations"
+    maps_to: "DAC-AuditEntry"
+    obligation_type: provenance
+    primitives:
+      action: assign_liability
+      object: ai_ml_tool_usage_consequences
+      context: in_house_or_third_party_procured
+      authority: sebi_act_1992_enforcement
+      flow: ai_output_and_data_handling_to_sole_responsibility
+    anchor_mechanism: >
+      chain_hash + signature in AuditEntry provides the non-repudiation
+      proof establishing which regulated entity's key signed off on a
+      given AI decision — directly relevant since Reg 16C makes
+      liability non-transferable to vendors regardless of who built the
+      tool. Layer 2 in development.
+    severity: "blocker"
+    min_severity: "blocker"
+    description: >
+      Verified against the primary SEBI Board memorandum (Dec 2024
+      meeting files): any person regulated by SEBI using AI/ML tools —
+      whether designed in-house or procured from a third-party
+      technology provider, irrespective of scale of adoption — is
+      SOLELY responsible for: (1) the privacy, security, and integrity
+      of investor/stakeholder data, including data held in a fiduciary
+      capacity, throughout all processes involved; (2) the output
+      arising from usage of the AI/ML tool or technique; and (3)
+      compliance with all applicable laws in force. Notified February
+      10, 2025, in effect immediately — this is currently the single
+      most legally significant AI-related obligation any SEBI-regulated
+      entity faces, and it was entirely absent from the prior version
+      of this file.
+
+  - id: "SEBI-CIR2019"
+    name: "Quarterly AI/ML Inventory Reporting (BINDING, ongoing)"
+    original_id: >
+      SEBI/HO/MIRSD/DOS2/CIR/P/2019/10 (Jan 4, 2019, brokers/DPs);
+      SEBI/HO/MRD/DOP1/CIR/P/2019/24 (Jan 31, 2019, MIIs);
+      SEBI/HO/IMD/DF5/CIR/P/2019/63 (May 9, 2019, mutual funds/AMCs);
+      harmonised via NSE cross-exchange filing (Jul 2025) and MSE
+      Circular MSE/MEM/17921/2025 (Oct 7, 2025)
+    maps_to: "DAC-AuditEntry"
+    obligation_type: disclosure
+    primitives:
+      action: report
+      object: ai_ml_application_inventory
+      context: quarterly_recurring_filing
+      authority: sebi_regulator
+      flow: internal_ai_inventory_to_regulator_filing
+    anchor_mechanism: >
+      model_id + model_version per AuditEntry constitutes the technical
+      inventory record. anchor audit --report could be extended to
+      export directly in whatever format the harmonised NSE/MSE
+      cross-exchange filing expects — not yet built as a dedicated
+      export target, flagged as a real scope item given this is a
+      recurring, currently-enforced filing obligation, not a
+      theoretical one.
+    severity: "error"
+    min_severity: "error"
+    description: >
+      Verified against the primary Board memorandum: since 2019, stock
+      brokers/DPs, market infrastructure institutions (exchanges,
+      clearing corporations, depositories), and mutual funds/AMCs/
+      trustees must report AI/ML applications and systems to SEBI on a
+      quarterly basis (within 15 days of quarter-end), including NIL
+      submissions when no AI/ML tool is in use. Confirmed real-world use
+      categories from the Board memo: brokers/DPs use AI/ML for
+      surveillance, order execution, and KYC/AML; MIIs for surveillance,
+      risk management, generative AI document/order review, cybersecurity,
+      and chatbots; mutual funds for surveillance, chatbot-based customer
+      service, cybersecurity, and customer segmentation. This is a
+      live, recurring compliance obligation happening today — the
+      October 2025 MSE circular confirms it was still being actively
+      harmonised and enforced as of last year, not a dormant rule.
+
   - id: "SEBI-001"
     name: "Senior Management Oversight — Designated Responsibility"
-    original_id: "SEBI AI/ML Requirement 1"
+    original_id: "June 2025 Consultation Paper — Governance principle (not yet binding)"
     maps_to: "ETH-003"
     obligation_type: disclosure
+    primitives:
+      action: designate
+      object: senior_management_ai_oversight_role
+      context: proposed_not_yet_binding
+      authority: regulated_entity_board
+      flow: policy_to_governance_artifact
     anchor_mechanism: >
       Board-approved policy.anchor with sealed constitution.anchor
       constitutes the governance policy artifact. anchor audit
       --report generates the oversight documentation for senior
       management sign-off.
-    severity: "blocker"
-    min_severity: "error"
+    severity: "error"
+    min_severity: "warning"
     description: >
-      Market participants using AI/ML must designate senior management
-      with technical expertise to oversee AI tool performance and
-      control. Board-level oversight with named accountability is
-      mandatory and cannot be delegated to vendors or technical teams.
-      SEBI requires that senior management understand and be
-      accountable for every AI tool deployed in trading, advisory,
-      and compliance functions.
+      PROPOSED (not yet binding): market participants using AI/ML
+      would be required to designate senior management with technical
+      expertise to oversee AI tool performance and control, with
+      board-level oversight and named accountability. Severity lowered
+      from prior version's "blocker" to "error" to reflect this rule's
+      actual current legal status — see legal_status field above.
 
   - id: "SEBI-002"
     name: "Model Validation, Documentation and Interpretability"
-    original_id: "SEBI AI/ML Requirement 2"
+    original_id: "June 2025 Consultation Paper — Model governance principle (not yet binding)"
     maps_to: "ETH-002"
     obligation_type: detection
+    primitives:
+      action: document_validate
+      object: ai_model_logic_and_outcomes
+      context: proposed_not_yet_binding
+      authority: regulated_entity
+      flow: model_behavior_to_explainable_documentation
     anchor_mechanism: >
       ETH-002 explainability absence fires on black-box model usage.
       TRANS-* violation category covers transparency and documentation
       gaps. PROV-001 fires on AI output without model version.
       Layer 1 detection active now.
-    severity: "error"
-    min_severity: "error"
+    severity: "warning"
+    min_severity: "warning"
     description: >
-      Market participants must maintain validation documentation and
-      ensure interpretability of AI models. Outcomes must be
-      explainable, traceable, and repeatable. Documentation explaining
-      the logic of AI/ML models is mandatory — not optional. SEBI
-      specifically requires that AI model decisions be capable of
-      being explained to the regulator, the firm's board, and
-      affected investors.
+      PROPOSED (not yet binding): market participants would be
+      required to maintain validation documentation and ensure AI
+      model interpretability, with outcomes explainable, traceable,
+      and repeatable. Severity lowered from prior version to reflect
+      non-binding status.
 
   - id: "SEBI-003"
     name: "Periodic Accuracy Reporting to SEBI"
-    original_id: "SEBI AI/ML Requirement 3"
+    original_id: "June 2025 Consultation Paper — Reporting principle (not yet binding)"
     maps_to: "DAC-AuditLog"
     obligation_type: audit
+    primitives:
+      action: report
+      object: ai_ml_accuracy_and_audit_findings
+      context: proposed_not_yet_binding
+      authority: sebi_regulator
+      flow: internal_audit_to_periodic_regulator_disclosure
     anchor_mechanism: >
       anchor audit --report generates JSON and Markdown accuracy
       and compliance reports. /audit endpoint exposes the full
       audit chain for regulator access. Layer 2 in development
       for full continuous reporting support.
-    severity: "error"
-    min_severity: "error"
+    severity: "warning"
+    min_severity: "warning"
     description: >
-      Market participants must share AI/ML accuracy results and
-      audit findings with SEBI on a periodic basis. These are not
-      internal records — they must be shareable with the regulator
-      in a structured format. Anchor's audit report output provides
-      the structured compliance evidence that satisfies this periodic
-      reporting obligation.
+      PROPOSED (not yet binding): market participants would be
+      required to share AI/ML accuracy results and audit findings with
+      SEBI periodically, in structured form. Distinct from SEBI-CIR2019
+      above, which is the already-binding quarterly inventory filing —
+      this proposed rule would add accuracy/performance reporting on
+      top of the existing inventory disclosure.
 
   - id: "SEBI-004"
     name: "5-Year Input and Output Data Retention"
-    original_id: "SEBI AI/ML Requirement 4"
+    original_id: "June 2025 Consultation Paper — Data retention principle (not yet binding)"
     maps_to: "DAC-AuditEntry"
     obligation_type: provenance
+    primitives:
+      action: retain
+      object: ai_input_and_output_data
+      context: five_year_statutory_limitation_alignment
+      authority: regulated_entity
+      flow: decision_data_to_long_term_retention
     anchor_mechanism: >
       DAC AuditEntry records input_hash + output_hash per decision
       with ISO 8601 timestamp. Append-only log provides 5-year
       retention with tamper-evident integrity. Layer 2 in development.
-    severity: "blocker"
-    min_severity: "blocker"
+    severity: "warning"
+    min_severity: "warning"
     description: >
-      Market participants must maintain documentation of all models
-      and store input and output data for at least 5 years. This
-      applies to all AI systems used in trading, advisory, and
-      compliance functions. Five years is the statutory limitation
-      period for most SEBI enforcement actions — data retention for
-      this period ensures that the firm can defend against any
-      regulatory inquiry within that window.
+      PROPOSED (not yet binding): market participants would be
+      required to maintain model documentation and retain input/output
+      data for at least 5 years, aligning with the statutory limitation
+      period for most SEBI enforcement actions. Severity lowered from
+      prior version's "blocker" to reflect non-binding status.
 
   - id: "SEBI-005"
     name: "Segregated Testing Environment Before Deployment"
-    original_id: "SEBI AI/ML Requirement 5"
+    original_id: "June 2025 Consultation Paper — Testing principle (not yet binding)"
     maps_to: "LEG-002"
     obligation_type: detection
+    primitives:
+      action: test_isolate
+      object: ai_model_pre_deployment
+      context: stressed_and_unstressed_market_conditions
+      authority: regulated_entity
+      flow: shadow_testing_to_deployment_gate
     anchor_mechanism: >
       anchor check in CI/CD acts as the pre-deployment governance
       gate. Diamond Cage WASM sandbox provides the segregated
       runtime testing environment for high-risk operations.
       Layer 1 active now.
-    severity: "blocker"
-    min_severity: "error"
+    severity: "warning"
+    min_severity: "warning"
     description: >
-      AI/ML models must be tested in a segregated environment before
-      deployment. Shadow testing with live traffic is required.
-      Models must be validated in both stressed and unstressed
-      market conditions before going live. SEBI explicitly requires
-      this because live market conditions — volatility spikes,
-      liquidity crises, unusual order patterns — may expose model
-      failures that standard testing environments do not surface.
+      PROPOSED (not yet binding): AI/ML models would need to be tested
+      in a segregated environment before deployment, with shadow
+      testing against live traffic and validation under both stressed
+      and unstressed market conditions.
 
   - id: "SEBI-006"
     name: "Continuous Monitoring as AI Models Evolve"
-    original_id: "SEBI AI/ML Requirement 6"
+    original_id: "June 2025 Consultation Paper — Monitoring principle (not yet binding)"
     maps_to: "SUP-003"
     obligation_type: provenance
+    primitives:
+      action: monitor
+      object: ai_model_behavioral_drift
+      context: post_deployment_continuous
+      authority: regulated_entity
+      flow: version_change_to_drift_detection
     anchor_mechanism: >
       SUP-003 versioning drift violation fires on undeclared model
       version changes. AnchorRuntime continuous eval provides
       post-deployment monitoring. model_version in AuditEntry
       per decision enables drift detection. Layer 2 in development.
-    severity: "error"
-    min_severity: "error"
+    severity: "warning"
+    min_severity: "warning"
     description: >
-      SEBI explicitly notes that AI models may change behavior over
-      time. Continuous monitoring systems are required beyond
-      traditional one-time testing. Model drift detection is a
-      regulatory expectation — not a best practice. A model that
-      was validated at deployment is not necessarily the same model
-      six months later, and SEBI requires that organizations have
-      systems in place to detect and respond to that drift.
+      PROPOSED (not yet binding): continuous monitoring systems would
+      be required beyond one-time testing, since AI models may change
+      behavior over time — model drift detection positioned as an
+      ongoing regulatory expectation rather than a best practice.
 
   - id: "SEBI-007"
     name: "Investor Disclosures for AI-Driven Decisions"
-    original_id: "SEBI AI/ML Requirement 7"
+    original_id: "June 2025 Consultation Paper — Disclosure principle (not yet binding)"
     maps_to: "ETH-002"
     obligation_type: disclosure
+    primitives:
+      action: disclose
+      object: ai_product_features_risks_and_accuracy
+      context: investor_comprehensible_language
+      authority: consumer_investor
+      flow: model_characteristics_to_investor_notice
     anchor_mechanism: >
       ETH-002 explainability absence detection. adverse_action_reasons()
       provides investor-facing reason codes. anchor audit --report
       generates disclosure artifacts. Layer 1 active now.
-    severity: "error"
+    severity: "warning"
     min_severity: "warning"
     description: >
-      Market participants using AI in customer-facing decisions must
-      disclose product features, purpose, risks, model accuracy,
-      fees, and data quality used for decisions. Language must be
-      comprehensible to investors, not just technical staff. Investor
-      grievance mechanisms for AI-driven decisions must be established
-      and documented.
+      PROPOSED (not yet binding): market participants using AI in
+      customer-facing decisions would need to disclose product
+      features, purpose, risks, model accuracy, fees, and data quality
+      in investor-comprehensible (not just technical) language, plus
+      establish AI-specific grievance redressal mechanisms.
 
   - id: "SEBI-008"
-    name: "No Discriminatory AI Outputs — Fairness Mandatory"
-    original_id: "SEBI AI/ML Requirement 8"
+    name: "No Discriminatory AI Outputs — Fairness"
+    original_id: "June 2025 Consultation Paper — Fairness principle (not yet binding)"
     maps_to: "ETH-001"
     obligation_type: detection
+    primitives:
+      action: detect_bias
+      object: ai_model_output_disparity
+      context: client_customer_group_fairness
+      authority: internal_data_science_function
+      flow: dataset_bias_to_fairness_control
     anchor_mechanism: >
       ETH-001 bias and discrimination detection active in Layer 1.
       BIAS-* violation category fires on protected attribute usage
       in feature vectors and decision outputs.
-    severity: "error"
-    min_severity: "error"
+    severity: "warning"
+    min_severity: "warning"
     description: >
-      AI/ML models must not favor or discriminate against any group
-      of clients or customers. Data quality must be sufficiently
-      broad, relevant, and complete to support fair outcomes.
-      Processes to identify and remove biases from datasets are
-      required. Training courses on data bias are mandatory for
-      data scientists developing AI systems for SEBI-regulated
-      market participants.
+      PROPOSED (not yet binding): AI/ML models would need processes
+      to identify and remove dataset bias, with mandatory bias-awareness
+      training for data scientists developing AI systems for
+      SEBI-regulated market participants.
 
   - id: "SEBI-010"
     name: "Third-Party AI Vendor Accountability — No Transfer"
-    original_id: "SEBI AI/ML Requirement 10"
+    original_id: "June 2025 Consultation Paper principle — NOTE: this specific liability position is now ALSO binding law via SEBI-REG16C above, independent of the consultation paper's eventual finalization"
     maps_to: "DAC-AuditEntry"
     obligation_type: provenance
+    primitives:
+      action: retain_liability
+      object: third_party_ai_vendor_output
+      context: contractual_sla_notwithstanding
+      authority: regulated_entity
+      flow: vendor_model_output_to_non_transferable_liability
     anchor_mechanism: >
       Non-repudiation chain — the deploying firm's AuditEntry
       signed with their key proves ownership of every AI decision
@@ -198,10 +358,11 @@ rules:
     severity: "blocker"
     min_severity: "blocker"
     description: >
-      Using a third-party AI tool does not transfer regulatory
-      liability to the vendor. Market participants are solely
-      responsible for the consequences of deploying any AI tool
-      regardless of who built it. SLAs with AI vendors must include
-      regulatory compliance obligations — but even contractual
-      protections do not transfer the regulatory liability that
-      SEBI places on the market participant.
+      Severity kept at "blocker" (unlike SEBI-001 through 008) because
+      this specific position — vendor liability does not transfer to
+      SEBI-regulated entities — is independently and currently binding
+      via Regulation 16C (SEBI-REG16C above), regardless of whether the
+      broader June 2025 consultation paper is ever finalized. SLAs with
+      AI vendors may include regulatory-compliance obligations
+      contractually, but that does not shift the regulatory liability
+      SEBI places on the market participant itself.

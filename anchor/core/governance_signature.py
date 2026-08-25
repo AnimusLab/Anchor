@@ -8,7 +8,7 @@ from cryptography.exceptions import InvalidSignature
 
 # Production Ed25519 Public Key for Anchor Governance Baseline Validation.
 # This key is embedded in the client and verifies GOVERNANCE.lock authenticity offline.
-GOVERNANCE_PUBLIC_KEY_HEX = "726822b1d38835d54e3630909105798c2bf9a5d3ab9664cb317e9d5bd4e28d54"
+GOVERNANCE_PUBLIC_KEY_HEX = "89c039bc81616c6f2ed19b852e98f97e099069ec3f76e86203b87d36b7d1e27b"
 
 
 class GovernanceSignatureError(Exception):

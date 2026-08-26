@@ -1,17 +1,32 @@
 type: framework
 namespace: OECD
-version: "2024"
-anchor_version: ">=5.0.0"
+version: "2026-08"
+anchor_version: ">=6.0.0"
 maintainer: "Anchor Core Governance Engine"
 opt_in: true
-source: "OECD AI Principles (2019, updated May 2024)"
-source_url: "https://oecd.ai/en/wonk/ai-principles-2024-update"
-credit: "Organisation for Economic Co-operation and Development (OECD)"
+source: "OECD Recommendation on Artificial Intelligence, OECD/LEGAL/0449 (2019, revised May 3, 2024)"
+source_url: "https://oecd.ai/en/wonk/evolving-with-innovation-the-2024-oecd-ai-principles-update"
+credit: "Organisation for Economic Co-operation and Development (OECD), now 47 adherents including the EU"
+verification_note: >
+  CORRECTION from prior version: the file claimed to be "updated May
+  2024" and the principle numbering (1.1-1.5) was in fact correct, but
+  the actual SUBSTANCE of the 2024 revision was not reflected in any
+  rule's description — confirmed against the OECD's own press release
+  and six independent corroborating legal-commentary sources. The 2024
+  update was driven specifically by generative and general-purpose AI
+  and added three concrete elements previously absent: (1) explicit
+  environmental sustainability language in Principle 1.1, (2) explicit
+  "addressing misinformation and disinformation amplified by AI" added
+  to Principle 1.2 — the single most-cited change in the entire 2024
+  revision, and previously completely unrepresented in this file, and
+  (3) sharpened safety language in Principle 1.4 on the ability to
+  override, repair, or safely decommission a misbehaving system.
+  Corrected in OECD-P1, OECD-P2, and OECD-P4 below.
 description: >
   The OECD AI Principles serve as the international benchmark for trustworthy AI,
-  adopted by 46 countries and serving as the foundational baseline for the EU AI Act,
+  adopted by 47 jurisdictions (as of the 2024 revision) and serving as the foundational baseline for the EU AI Act,
   NIST AI RMF, and RBI FREE-AI frameworks. This framework defines technical enforcement
-  primitives for all 5 core OECD principles.
+  primitives for all 5 core OECD principles, incorporating the May 2024 generative-AI-driven revisions.
 seal: "sha256:PENDING"
 
 rules:
@@ -27,7 +42,12 @@ rules:
     description: >
       AI systems should benefit people and the planet by driving inclusive growth,
       sustainable development, and well-being. AI agent decisions must not concentrate
-      outcomes or financial harm disproportionately across user demographics.
+      outcomes or financial harm disproportionately across user demographics. The 2024
+      revision explicitly added environmental sustainability to this principle,
+      acknowledging the environmental footprint of large-scale AI systems (compute
+      and energy consumption) as part of the "planet" half of the mandate — not
+      yet reflected in a dedicated Anchor detection mechanism; flagged as a real
+      gap alongside the fairness/harm-distribution check already in place.
     runtime_pattern: '(?i)(exclusive_access|disproportionate_fee|demographic_override)'
     primitives:
       action: evaluate
@@ -41,15 +61,31 @@ rules:
     original_id: "Principle 1.2"
     maps_to: ["ETH-001", "PRV-001"]
     obligation_type: "detection"
-    anchor_mechanism: "Protected attribute bias scanner + PII guard"
+    anchor_mechanism: >
+      Protected attribute bias scanner + PII guard. The 2024-added
+      misinformation/disinformation element has no dedicated Anchor
+      mechanism yet — no MISINFO-* rule category currently exists.
+      Flagged as a real gap: a rule checking for AI-generated content
+      output without provenance/watermarking metadata, or without a
+      synthetic-content disclosure, would be the natural technical
+      home for this — not yet built.
     severity: "blocker"
     min_severity: "error"
     description: >
       AI systems should be designed in a way that respects the rule of law, human rights,
       democratic values and diversity, including non-discrimination and equality.
       AI agent decisions must not discriminate on protected attributes (race, gender, age, religion)
-      or violate fundamental human dignity in generated outputs.
-    runtime_pattern: '(?i)(protected_attribute_filter|bias_override|discriminatory_routing)'
+      or violate fundamental human dignity in generated outputs. IMPORTANT 2024 ADDITION,
+      previously missing from this rule entirely: the revised principle explicitly
+      added "addressing misinformation and disinformation amplified by AI" while
+      respecting freedom of expression — this is the single most-cited substantive
+      change in the entire 2024 OECD revision, driven directly by generative AI's
+      capacity to produce synthetic content at scale. Directly relevant to India's
+      2026 IT Amendment Rules on synthetic-content labeling (flagged separately in
+      the RBI/India governance review) — a strong candidate for a shared detection
+      rule across both frameworks, similar to the chatbot-disclosure convergence
+      already noted between RBI-018 and CFPB-005.
+    runtime_pattern: '(?i)(protected_attribute_filter|bias_override|discriminatory_routing|synthetic_content_undisclosed|no_provenance_watermark)'
     primitives:
       action: enforce
       object: human_rights_fairness
@@ -89,7 +125,13 @@ rules:
       AI systems must function robustly, securely, and safely throughout their life cycles,
       and potential risks should be continually assessed and managed. AI agents must degrade
       gracefully under unexpected conditions and resist adversarial input, tool chain poisoning,
-      and prompt injection attacks.
+      and prompt injection attacks. The 2024 revision sharpened this principle's safety
+      language specifically around the ability to override, repair, or safely decommission
+      a system found to be misbehaving — a more explicit "kill switch" expectation than the
+      2019 text carried. Anchor's graceful-degradation detection covers resistance to bad
+      input; the override/decommission side is closer to OPS-001's availability/circuit-breaker
+      mechanism and RBI-021's business continuity rule than to this file's current
+      anchor_mechanism — worth cross-referencing rather than treating as fully covered here.
     runtime_pattern: '(?i)(unhandled_adversarial|unsafe_fallback|poisoned_state)'
     primitives:
       action: secure

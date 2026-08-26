@@ -1,66 +1,337 @@
 type: framework
 namespace: NIST
-version: "1.0"
-anchor_version: ">=4.0.0"
+version: "2026-08"
+anchor_version: ">=6.0.0"
 maintainer: "Anchor Core"
-source: "NIST AI Risk Management Framework (AI RMF 1.0)"
-source_url: "https://www.nist.gov/itl/ai-rmf"
+opt_in: true
+source: "NIST AI Risk Management Framework (NIST AI 100-1, AI RMF 1.0)"
+source_url: "https://nvlpubs.nist.gov/nistpubs/ai/nist.ai.100-1.pdf"
+source_date: "January 2023"
 credit: "National Institute of Standards and Technology (NIST)"
+verification_note: >
+  CORRECTED from prior version, against the complete verbatim primary
+  text (all four Core tables, 72 subcategories total). All four
+  original rules had the same class of error: each cited a specific
+  subcategory number (e.g. "Govern 1.1") but used descriptive text that
+  actually belongs to that subcategory's PARENT CATEGORY (e.g. Govern 1
+  generally), not the specific subcategory's real text. NIST-MAN was
+  additionally mismatched to the wrong subcategory entirely (its text
+  is closer to the real Manage 1.2 than Manage 1.1). All four corrected
+  below with verified real subcategory text, and expanded with
+  additional subcategories chosen for how cleanly they map to Anchor's
+  actual detection/audit capabilities, since the framework has 72
+  subcategories total and mapping all of them would dilute rather than
+  strengthen the file.
 description: >
-  The NIST AI RMF provides a high-level framework for managing
-  risks associated with AI systems. Unlike risk taxonomies,
-  NIST RMF defines governance functions—Govern, Map, Measure,
-  Manage. This framework file maps these functions to Anchor's
-  operational primitives and enforcement mechanisms.
+  The NIST AI RMF provides a high-level framework for managing risks
+  associated with AI systems. Unlike risk taxonomies, NIST RMF defines
+  four governance functions — Govern, Map, Measure, Manage — each
+  broken into categories and further into subcategories (72 total).
+  This framework file maps a curated, high-value subset of subcategories
+  to Anchor's operational primitives and enforcement mechanisms.
 seal: "sha256:PENDING"
 
 rules:
 
-  - id: "NIST-GOV"
-    name: "GOVERN: Institutional Policies"
-    original_id: "Govern 1.1"
+  - id: "NIST-GOV-1.1"
+    name: "GOVERN 1.1 — Legal and Regulatory Requirements Documented"
+    original_id: "Govern 1.1 (corrected — previously mislabeled with Govern 1 category-level text)"
     maps_to: "LEG-002"
+    obligation_type: disclosure
+    primitives:
+      action: document
+      object: legal_and_regulatory_ai_requirements
+      context: organization_wide
+      authority: governance_function
+      flow: applicable_law_to_documented_understanding
+    anchor_mechanism: >
+      constitution.anchor + government/*.anchor framework files (RBI,
+      SEBI, FCA, CFPB, EU AI Act) constitute the documented,
+      machine-readable record of understood legal/regulatory
+      requirements. anchor audit --report generates the disclosure
+      artifact.
     severity: "error"
-    obligation_type: "audit"
-    anchor_mechanism: "policy.anchor + sealed manifest"
+    min_severity: "warning"
     description: >
-      Policies, processes, and procedures for AI risk management are
-      established and maintained. Anchor satisfy this by enforcing
-      a cryptographically sealed constitution and project-level
-      policy.anchor overrides.
+      Verbatim: "Legal and regulatory requirements involving AI are
+      understood, managed, and documented." Anchor's entire government/
+      framework file structure is itself a direct implementation of
+      this subcategory — the act of maintaining these files IS the
+      "documented" requirement being satisfied.
 
-  - id: "NIST-MAP"
-    name: "MAP: Risk Identification"
-    original_id: "Map 1.1"
-    maps_to: "SHR-001"
+  - id: "NIST-GOV-1.6"
+    name: "GOVERN 1.6 — AI System Inventory Mechanisms"
+    original_id: "Govern 1.6 (new addition)"
+    maps_to: "DAC-AuditEntry"
+    obligation_type: provenance
+    primitives:
+      action: inventory
+      object: deployed_ai_systems
+      context: resourced_per_risk_priority
+      authority: governance_function
+      flow: model_metadata_to_organizational_inventory
+    anchor_mechanism: >
+      model_id + model_version in every AuditEntry constitutes a live
+      inventory record. SUP-003 versioning drift violation fires on
+      undeclared changes. Layer 2 in development for full inventory
+      aggregation.
     severity: "warning"
-    obligation_type: "audit"
-    anchor_mechanism: "anchor check --report-server"
+    min_severity: "warning"
     description: >
-      Context is established and risks are identified and documented.
-      Anchor's federated domains (SEC, ETH, PRV, etc.) provide the
-      contextual mapping of technical risks to organizational impact.
+      Verbatim: "Mechanisms are in place to inventory AI systems and
+      are resourced according to organizational risk priorities."
+      Directly parallel to RBI-023 and SEBI-CIR2019's inventory
+      obligations — a good example of a single Anchor mechanism
+      (AuditEntry inventory) satisfying multiple frameworks' distinct
+      citations simultaneously.
 
-  - id: "NIST-MEAS"
-    name: "MEASURE: Risk Assessment"
-    original_id: "Measure 2.1"
-    maps_to: "OPS-001"
+  - id: "NIST-GOV-6.1"
+    name: "GOVERN 6.1 — Third-Party AI Risk Policies"
+    original_id: "Govern 6.1 (new addition)"
+    maps_to: "SUP-001"
+    obligation_type: detection
+    primitives:
+      action: govern
+      object: third_party_ai_component_risk
+      context: vendor_and_supply_chain
+      authority: governance_function
+      flow: third_party_dependency_to_documented_policy
+    anchor_mechanism: >
+      SUP-001 through SUP-003 supply chain domain rules detect
+      undeclared or unversioned third-party AI dependencies. Layer 1
+      active now.
     severity: "warning"
-    obligation_type: "provenance"
-    anchor_mechanism: "telemetry_path: .anchor/telemetry/"
+    min_severity: "warning"
     description: >
-      AI systems are assessed for risks and impacts. Anchor's
-      telemetry output provides the metrics for assessing frequency
-      and severity of compliance violations across the fleet.
+      Verbatim: "Policies and procedures are in place that address AI
+      risks associated with third-party entities, including risks of
+      infringement of a third-party's intellectual property or other
+      rights." Directly relevant to Anchor's own supply-chain domain,
+      and to the vendor-liability position shared by RBI-008 and
+      SEBI-REG16C — liability doesn't transfer, but risk still needs
+      active management regardless.
 
-  - id: "NIST-MAN"
-    name: "MANAGE: Risk Treatment"
-    original_id: "Manage 1.1"
+  - id: "NIST-MAP-1.1"
+    name: "MAP 1.1 — Intended Purpose and Context Documented"
+    original_id: "Map 1.1 (corrected — previously mislabeled with Map 1 category-level text)"
+    maps_to: "LEG-002"
+    obligation_type: disclosure
+    primitives:
+      action: document
+      object: intended_purpose_and_deployment_context
+      context: pre_development
+      authority: ai_actor_design_team
+      flow: use_case_definition_to_documented_scope
+    anchor_mechanism: >
+      policy.anchor per-project scope declarations. anchor audit
+      --report surfaces documented purpose as part of the compliance
+      artifact.
+    severity: "warning"
+    min_severity: "warning"
+    description: >
+      Verbatim: "Intended purposes, potentially beneficial uses,
+      context-specific laws, norms and expectations, and prospective
+      settings in which the AI system will be deployed are understood
+      and documented." Corrected from the prior version, which used
+      the Map 1 category summary ("Context is established and
+      understood") rather than this subcategory's actual, more specific
+      text.
+
+  - id: "NIST-MAP-2.2"
+    name: "MAP 2.2 — Knowledge Limits and Human Oversight Documented"
+    original_id: "Map 2.2 (new addition)"
+    maps_to: "AGT-001"
+    obligation_type: detection
+    primitives:
+      action: document
+      object: system_knowledge_limits_and_oversight_path
+      context: human_ai_configuration
+      authority: ai_actor_design_team
+      flow: autonomy_boundary_to_documented_oversight
+    anchor_mechanism: >
+      AGT-001 (agent action authorization bypass) directly detects
+      the absence of a human oversight checkpoint. Layer 1 active now.
+    severity: "error"
+    min_severity: "warning"
+    description: >
+      Verbatim: "Information about the AI system's knowledge limits and
+      how system output may be utilized and overseen by humans is
+      documented." This is the NIST-side counterpart to RBI-016's
+      autonomous-AI human-oversight requirement — another example of
+      one Anchor rule (AGT-001) satisfying obligations cited by two
+      independent frameworks.
+
+  - id: "NIST-MAP-4.1"
+    name: "MAP 4.1 — Third-Party Component Risk Mapping"
+    original_id: "Map 4.1 (new addition)"
+    maps_to: "SUP-001"
+    obligation_type: detection
+    primitives:
+      action: map_risk
+      object: third_party_ai_component
+      context: legal_and_ip_risk
+      authority: ai_actor_design_team
+      flow: dependency_declaration_to_documented_risk
+    anchor_mechanism: >
+      SUP-001 supply chain domain rule detects undeclared third-party
+      AI dependencies at scan time. Layer 1 active now.
+    severity: "warning"
+    min_severity: "warning"
+    description: >
+      Verbatim: "Approaches for mapping AI technology and legal risks
+      of its components — including the use of third-party data or
+      software — are in place, followed, and documented, as are risks
+      of infringement of a third party's intellectual property or
+      other rights."
+
+  - id: "NIST-MEAS-2.1"
+    name: "MEASURE 2.1 — TEVV Test Sets and Tools Documented"
+    original_id: "Measure 2.1 (corrected — previously mislabeled with Measure 2 category-level text)"
+    maps_to: "DAC-AuditLog"
+    obligation_type: audit
+    primitives:
+      action: document
+      object: tevv_test_sets_and_tooling
+      context: pre_and_post_deployment_testing
+      authority: internal_or_independent_assessor
+      flow: test_methodology_to_documented_record
+    anchor_mechanism: >
+      anchor audit --report generates the documented test/tooling
+      artifact. DAC AuditLog records which policy version and rule
+      set were active during a given evaluation. Layer 2 in
+      development for full TEVV metadata capture.
+    severity: "warning"
+    min_severity: "warning"
+    description: >
+      Verbatim: "Test sets, metrics, and details about the tools used
+      during TEVV are documented." Corrected from the prior version,
+      which used the Measure 2 category summary ("AI systems are
+      evaluated for trustworthy characteristics") rather than this
+      subcategory's actual text about documentation specifically.
+
+  - id: "NIST-MEAS-2.9"
+    name: "MEASURE 2.9 — Model Explained, Validated, Interpreted"
+    original_id: "Measure 2.9 (new addition)"
+    maps_to: "ETH-002"
+    obligation_type: detection
+    primitives:
+      action: explain_validate
+      object: ai_model_and_output
+      context: responsible_use_and_governance
+      authority: internal_or_independent_assessor
+      flow: model_behavior_to_interpreted_documentation
+    anchor_mechanism: >
+      ETH-002 explainability absence detection active in Layer 1.
+      adverse_action_reasons() provides the interpreted output artifact.
+    severity: "error"
+    min_severity: "warning"
+    description: >
+      Verbatim: "The AI model is explained, validated, and documented,
+      and AI system output is interpreted within its context... to
+      inform responsible use and governance." This is the NIST
+      formulation of the same explainability expectation independently
+      cited by RBI-014's predecessor content, CFPB-001/002, and
+      FCA-001 — a recurring cross-framework theme, not a
+      NIST-specific quirk.
+
+  - id: "NIST-MEAS-2.11"
+    name: "MEASURE 2.11 — Fairness and Bias Evaluated"
+    original_id: "Measure 2.11 (new addition)"
+    maps_to: "ETH-001"
+    obligation_type: detection
+    primitives:
+      action: evaluate
+      object: fairness_and_bias
+      context: as_identified_in_map_function
+      authority: internal_or_independent_assessor
+      flow: bias_pattern_to_documented_result
+    anchor_mechanism: >
+      ETH-001 bias and discrimination detection active in Layer 1.
+      BIAS-* violation category fires on protected attribute usage.
+    severity: "error"
+    min_severity: "error"
+    description: >
+      Verbatim: "Fairness and bias — as identified in the MAP
+      function — are evaluated and results are documented." Same
+      underlying obligation as CFPB-003, SEBI-008, and RBI-019's
+      substance — fairness testing is one of the most consistently
+      cross-cited obligations across every framework file built so
+      far in this corpus.
+
+  - id: "NIST-MAN-1.2"
+    name: "MANAGE 1.2 — Risk Treatment Prioritized"
+    original_id: "Manage 1.2 (corrected — previously mislabeled as Manage 1.1, a different subcategory)"
     maps_to: "ALN-002"
+    obligation_type: audit
+    primitives:
+      action: prioritize
+      object: documented_ai_risk_treatment
+      context: impact_likelihood_and_available_resources
+      authority: risk_management_function
+      flow: risk_assessment_to_treatment_priority
+    anchor_mechanism: >
+      Anchor's severity taxonomy (blocker/error/warning/info) IS a
+      direct, structural implementation of risk prioritization by
+      impact. anchor check --severity error (CI gate) operationalizes
+      this at the enforcement layer.
     severity: "blocker"
-    obligation_type: "audit"
-    anchor_mechanism: "anchor check --severity error (CI Gate)"
+    min_severity: "error"
     description: >
-      Risks are prioritized and managed based on impact and likelihood.
-      Anchor's CI/CD integration (pre-commit hooks, GH Actions) acts
-      as the primary "Manage" gate, blocking non-compliant code from deployment.
+      Verbatim: "Treatment of documented AI risks is prioritized based
+      on impact, likelihood, and available resources or methods."
+      This is a genuine correction, not just a text-precision fix — the
+      prior version's description text doesn't match real Manage 1.1
+      at all (which is about a go/no-go determination on deployment,
+      see NIST-MAN-1.1 below); it's actually closer to this
+      subcategory, 1.2.
+
+  - id: "NIST-MAN-1.1"
+    name: "MANAGE 1.1 — Go/No-Go Deployment Determination"
+    original_id: "Manage 1.1 (new addition — the subcategory the prior version's NIST-MAN rule incorrectly cited)"
+    maps_to: "LEG-002"
+    obligation_type: detection
+    primitives:
+      action: determine
+      object: deployment_readiness
+      context: intended_purpose_achievement
+      authority: risk_management_function
+      flow: ci_cd_check_to_deployment_decision
+    anchor_mechanism: >
+      anchor check in CI/CD acts as the automated go/no-go gate — a
+      failing audit blocks deployment, satisfying this subcategory
+      directly and mechanically rather than through a manual sign-off
+      process alone.
+    severity: "blocker"
+    min_severity: "error"
+    description: >
+      Verbatim: "A determination is made as to whether the AI system
+      achieves its intended purposes and stated objectives and whether
+      its development or deployment should proceed." Added specifically
+      because this is the subcategory the prior file's NIST-MAN rule
+      claimed to cite but whose real text didn't match — now both the
+      correct 1.1 and 1.2 are present and correctly distinguished.
+
+  - id: "NIST-MAN-4.1"
+    name: "MANAGE 4.1 — Post-Deployment Monitoring and Incident Response"
+    original_id: "Manage 4.1 (new addition)"
+    maps_to: "DAC-AuditEntry"
+    obligation_type: provenance
+    primitives:
+      action: monitor_respond
+      object: post_deployment_ai_system
+      context: appeal_override_decommission_and_incident_response
+      authority: risk_management_function
+      flow: production_behavior_to_incident_response_record
+    anchor_mechanism: >
+      DAC AuditEntry chain provides the continuous production record.
+      /audit endpoint exposes it for incident-response review. Layer 2
+      in development for full appeal/override workflow support.
+    severity: "error"
+    min_severity: "warning"
+    description: >
+      Verbatim: "Post-deployment AI system monitoring plans are
+      implemented, including mechanisms for capturing and evaluating
+      input from users and other relevant AI actors, appeal and
+      override, decommissioning, incident response, recovery, and
+      change management." Directly parallel to RBI-022's incident
+      reporting obligation — another cross-framework convergence point.

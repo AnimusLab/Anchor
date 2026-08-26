@@ -1,19 +1,39 @@
 type: framework
 namespace: CFPB
-version: "2024"
-anchor_version: ">=4.0.0"
+version: "2026-08"
+anchor_version: ">=6.0.0"
 maintainer: "Anchor Core"
 opt_in: true
-source: "CFPB Regulation B (Equal Credit Opportunity Act) and 2024 AI Guidance"
+source: "CFPB Regulation B (ECOA), CFPB Circulars 2022-03/2023-03/2026-03, and related CFPB rules/guidance on AI in consumer finance"
 source_url: "https://www.consumerfinance.gov/compliance/circulars/"
-source_date: "2024"
+source_date: "2022-2026"
 credit: >
-  Consumer Financial Protection Bureau Regulation B implementing
-  the Equal Credit Opportunity Act (ECOA), and CFPB 2024 guidance
-  on adverse action notification requirements for AI-assisted credit
-  decisions. The $45 million enforcement action against Goldman Sachs
-  in October 2024 established the enforcement precedent for AI credit
-  model explainability obligations in US financial services.
+  Consumer Financial Protection Bureau Regulation B implementing the
+  Equal Credit Opportunity Act (ECOA); Consumer Financial Protection
+  Circular 2022-03 (May 26, 2022) and 2023-03 (Sept 19, 2023) on adverse
+  action notices for AI/algorithmic credit decisions; Circular 2026-03
+  (May 5, 2026) reaffirming the same position for machine-learning
+  underwriting models; the CFPB's June 2023 "Chatbots in Consumer
+  Finance" report; the CFPB/FTC interpretive rule on algorithmic
+  marketing (Aug 2022); and the CFPB's June 2024 rule on automated
+  valuation models in home appraisals. The $45 million enforcement
+  action against Goldman Sachs in October 2024 established the
+  enforcement precedent for AI credit model explainability obligations
+  in US financial services.
+citation_note: >
+  CORRECTION from prior version: CFPB-002 previously cited "CFPB Circular
+  2024" as its original_id — no such circular exists. Corrected below to
+  cite the actual circulars (2022-03, 2023-03, 2026-03) this rule's
+  substance draws from.
+legal_status: >
+  Circulars 2022-03, 2023-03, and 2026-03 are official CFPB guidance
+  documents interpreting existing binding law (ECOA / Regulation B) —
+  they are not themselves new regulations, but they state the CFPB's
+  enforcement position on how existing binding law applies to AI/algorithmic
+  credit decisions. The June 2024 Automated Valuation Model rule (CFPB-008
+  below) IS a binding rule under Dodd-Frank Section 1125, distinct in
+  legal force from the circulars. Distinguish these when describing legal
+  obligation strength to a client or auditor.
 layer_2_status: >
   Rules marked obligation_type: provenance depend on AnchorRuntime
   (Layer 2) and the Decision Audit Chain (DAC). Layer 2 is currently
@@ -27,6 +47,12 @@ rules:
     original_id: "Regulation B, Section 202.9"
     maps_to: "ETH-002"
     obligation_type: detection
+    primitives:
+      action: disclose
+      object: adverse_action_reason
+      context: credit_application_denial
+      authority: creditor
+      flow: decision_to_consumer_notice
     anchor_mechanism: >
       ETH-002 explainability absence fires on credit decision code
       without reason codes. CREDIT-001 violation fires specifically
@@ -48,10 +74,16 @@ rules:
       in US financial services.
 
   - id: "CFPB-002"
-    name: "AI Credit Models — Algorithm Not an Excuse"
-    original_id: "CFPB Circular 2024"
+    name: "AI Credit Models — Algorithmic Complexity Is Not an Excuse"
+    original_id: "CFPB Circular 2022-03 (May 26, 2022); reaffirmed by Circular 2023-03 (Sept 19, 2023) and Circular 2026-03 (May 5, 2026)"
     maps_to: "ETH-002"
     obligation_type: detection
+    primitives:
+      action: excuse_reject
+      object: black_box_algorithmic_defense
+      context: complex_or_proprietary_underwriting_model
+      authority: cfpb
+      flow: model_opacity_to_compliance_obligation
     anchor_mechanism: >
       ETH-002 explainability absence detection. CREDIT-001 fires
       on denial without reason code. ADV-001 fires on adverse
@@ -59,20 +91,32 @@ rules:
     severity: "blocker"
     min_severity: "blocker"
     description: >
-      CFPB 2024 guidance explicitly extends Regulation B to
-      AI-assisted credit decisions. The use of a complex AI model
-      does not exempt creditors from providing specific reasons
-      for adverse action. The model's complexity is the creditor's
-      problem, not the applicant's. Any creditor that cannot
-      explain its AI credit decisions at the individual level
-      is in violation of Regulation B regardless of the model's
-      technical architecture.
+      Circular 2022-03 established that creditors using complex
+      algorithms that make it difficult to identify specific denial
+      reasons must still comply with ECOA's adverse action notice
+      requirement — algorithmic complexity does not excuse non-compliance.
+      Circular 2023-03 reinforced this and specifically warned that a
+      standard "checkbox" sample adverse-action form is insufficient if
+      it doesn't accurately describe the factors the model actually
+      considered. Circular 2026-03 (May 2026) reaffirms the same position
+      for machine-learning underwriting models specifically, stating
+      lenders "cannot simply claim that the black box told us to do it"
+      and that proprietary or uninterpretable models do not excuse
+      compliance. Three circulars, four years apart, converging on the
+      same rule: model opacity is the creditor's problem to solve, not
+      a defense.
 
   - id: "CFPB-003"
     name: "Prohibited Basis Discrimination — ECOA Enforcement"
     original_id: "ECOA Section 701, Regulation B Section 202.4"
     maps_to: "ETH-001"
     obligation_type: detection
+    primitives:
+      action: discriminate_detect
+      object: protected_class_outcome_disparity
+      context: credit_decision_disparate_impact
+      authority: ecoa_and_fair_housing_act
+      flow: outcome_pattern_to_bias_violation
     anchor_mechanism: >
       ETH-001 bias and discrimination detection active in Layer 1.
       BIAS-001 fires on protected class reference in credit output.
@@ -90,27 +134,147 @@ rules:
       these protections to mortgage and housing-related credit.
       Disparate impact is measured against outcomes, not intent —
       a facially neutral AI model that produces systematically
-      worse outcomes for protected groups is a ECOA violation
+      worse outcomes for protected groups is an ECOA violation
       regardless of how it was designed.
 
   - id: "CFPB-004"
-    name: "Model Risk Management — Documented Validation"
-    original_id: "CFPB Supervisory Guidance 2024"
-    maps_to: "LEG-002"
+    name: "Model Validation and Fair Lending Testing — Credit Scoring Models"
+    original_id: >
+      CFPB Supervisory Highlights, fair lending / advanced credit
+      scoring models edition (Jan 2025) (corrected — previously cited
+      "OCC SR 11-7," a Fed/OCC document, not CFPB's own, and now
+      further complicated: SR 11-7 was REPLACED in April 2026 by
+      SR 26-2, which explicitly EXCLUDES generative and agentic AI
+      from its formal scope)
+    maps_to: "ETH-001"
     obligation_type: audit
+    primitives:
+      action: validate_test
+      object: ai_credit_scoring_model
+      context: disparate_treatment_and_disparate_impact
+      authority: cfpb_supervisory_examination
+      flow: model_lifecycle_to_fair_lending_evidence
     anchor_mechanism: >
       anchor audit pre-deployment produces validation evidence.
-      Violation taxonomy as documented validation artifact.
-      DAC audit chain as ongoing monitoring record. Layer 2
-      in development for full monitoring support.
+      ETH-001 bias detection covers disparate-impact testing. DAC
+      audit chain as ongoing monitoring record for the "testing and
+      validation of methodologies" the CFPB's Supervisory Highlights
+      says it will examine for. Layer 2 in development for full
+      monitoring support.
     severity: "error"
     min_severity: "error"
     description: >
-      CFPB 2024 guidance requires that AI credit models be
-      validated, documented, and subject to ongoing monitoring.
-      Validation results must be available for supervisory
-      examination. Backtesting and performance monitoring are
-      required throughout the model lifecycle — not just at
-      initial deployment. Model risk management for AI credit
-      models is subject to the same supervisory scrutiny as
-      traditional statistical models under OCC SR 11-7.
+      IMPORTANT REGULATORY GAP, worth knowing before pitching this as
+      settled ground: the traditional cross-agency Model Risk
+      Management framework (Fed/OCC/FDIC's SR 11-7, in force since
+      2011) was replaced in April 2026 by SR 26-2 — and SR 26-2
+      explicitly carves generative AI and agentic AI OUT of its formal
+      scope, on the stated basis that these technologies are still
+      novel and rapidly evolving. That means the traditional MRM
+      framework banks have relied on for a decade does not, as of this
+      version's date, formally apply to the exact category of AI most
+      relevant to Anchor's own use cases. What DOES currently and
+      specifically apply, from the CFPB directly rather than a
+      different regulator's superseded guidance: the CFPB's Supervisory
+      Highlights (Jan 2025 edition) on advanced credit scoring models,
+      which states plainly that any underwriting model — AI/ML-based or
+      not — is expected to undergo disparate treatment and disparate
+      impact testing, including active searching for less
+      discriminatory alternatives. This is the correct, CFPB-specific,
+      currently-applicable citation for this rule. The SR 26-2
+      generative-AI carve-out is itself worth flagging to clients as a
+      live regulatory gap, not something to paper over.
+
+  - id: "CFPB-005"
+    name: "Chatbot and Conversational AI Compliance Risk"
+    original_id: "CFPB Report, \"Chatbots in Consumer Finance\" (June 2023)"
+    maps_to: "AGT-002"
+    obligation_type: detection
+    primitives:
+      action: warn_deploy
+      object: customer_facing_chatbot
+      context: consumer_financial_service_interaction
+      authority: cfpb
+      flow: chatbot_interaction_to_harm_or_trust_erosion
+    anchor_mechanism: >
+      AGT-002 (agent action outside scope) and ETH-002 (explainability
+      absence) both apply to chatbot decision paths. New detection
+      candidate: CHATBOT-001 — fires when a customer-facing
+      conversational AI component lacks a documented escalation path
+      to a human, or cannot produce a record of what it told a
+      consumer. Not yet implemented as a dedicated rule ID — flagged
+      here as a gap to fill, not yet built.
+    severity: "error"
+    min_severity: "warning"
+    description: >
+      The CFPB's June 2023 report on chatbots in consumer finance
+      warns that financial institutions "risk violating legal
+      obligations, eroding customer trust, and causing consumer harm"
+      when deploying chatbot technology — including consumers being
+      unable to escalate to a human, receiving inaccurate information
+      that leads to real financial harm, and confusion about whether
+      they're speaking with a person. This is guidance rather than a
+      standalone binding rule, but it signals a clear CFPB enforcement
+      interest area for any regulated entity deploying AI-driven
+      customer service.
+
+  - id: "CFPB-006"
+    name: "Algorithmic Marketing — Service Provider Liability"
+    original_id: "CFPB Interpretive Rule (Aug 2022)"
+    maps_to: "LEG-002"
+    obligation_type: detection
+    primitives:
+      action: target_select
+      object: prospective_customer_or_content
+      context: digital_marketing_algorithm
+      authority: cfpb_service_provider_definition
+      flow: algorithmic_targeting_to_cfpa_liability
+    anchor_mechanism: >
+      No dedicated Anchor rule currently covers marketing/advertising
+      algorithms specifically — existing AGT-* rules focus on
+      agentic action authorization, not targeting/selection logic.
+      Flagged here as a scope gap: a MKTG-* rule category may be
+      warranted if Anchor's target customers include marketing-adjacent
+      AI use cases, not just credit/lending decisions.
+    severity: "warning"
+    min_severity: "warning"
+    description: >
+      In August 2022, the CFPB issued an interpretive rule stating that
+      when digital marketers are involved in identifying or selecting
+      prospective customers, or selecting/placing content to affect
+      consumer behavior, they are typically "service providers" under
+      the Consumer Financial Protection Act — meaning they can be held
+      directly accountable when their algorithm-driven targeting
+      violates federal consumer financial protection law. Relevant for
+      any regulated entity using AI/ML for customer acquisition or
+      targeting, not just underwriting.
+
+  - id: "CFPB-007"
+    name: "Automated Valuation Models — Accuracy and Accountability"
+    original_id: "CFPB/OCC/Federal Reserve/FDIC/NCUA/FHFA AVM Rule (June 24, 2024), implementing Dodd-Frank Section 1125"
+    maps_to: "LEG-002"
+    obligation_type: detection
+    primitives:
+      action: validate
+      object: automated_home_valuation_model
+      context: mortgage_lending_collateral_assessment
+      authority: interagency_rule_dodd_frank_1125
+      flow: valuation_model_to_accuracy_quality_control
+    anchor_mechanism: >
+      No dedicated Anchor rule currently covers valuation-model-specific
+      quality control. Flagged as a scope gap: an AVM-* rule category
+      could detect missing bias-testing or accuracy-validation code
+      paths in home-valuation AI pipelines, distinct from the
+      credit-decision rules (ETH-001/002) already covered.
+    severity: "error"
+    min_severity: "error"
+    description: >
+      This is a binding interagency final rule (not guidance), issued
+      jointly by the CFPB and federal banking/housing regulators under
+      Dodd-Frank Section 1125, requiring institutions that use automated
+      valuation models in mortgage lending to adopt policies ensuring a
+      high level of confidence in the estimates produced, protect against
+      manipulation, avoid conflicts of interest, require random sample
+      testing and reviews, and comply with applicable nondiscrimination
+      law. Distinct in legal force from the adverse-action circulars
+      above — this is enforceable regulation, not interpretive guidance.

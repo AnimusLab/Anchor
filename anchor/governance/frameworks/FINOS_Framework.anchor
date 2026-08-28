@@ -1,178 +1,395 @@
 type: framework
 namespace: FINOS
-version: "1.0"
-anchor_version: ">=4.0.0"
+version: "2026-08"
+anchor_version: ">=6.0.0"
 maintainer: "Anchor Core"
-source: "FINOS AI Governance Framework"
-source_url: "https://github.com/finos/ai-governance-framework"
-credit: "FINOS AI Governance Framework Risk Taxonomy (Ri-001 - Ri-023)"
+opt_in: true
+source: "FINOS AI Governance Framework (AIGF) v2"
+source_url: "https://air-governance-framework.finos.org/"
+source_date: "October 20, 2025 (v2)"
+credit: "FINOS AI Governance Framework Risk Catalogue, verified against the live source"
+verification_note: >
+  MAJOR REBUILD, not a patch. Fetched the live FINOS site directly. The
+  prior version's entire "Ri-001 through Ri-023" sequential ID scheme
+  does not match the real framework. Real FINOS IDs are non-sequential
+  (ri-1, ri-2, ri-4, ri-5, ri-6...ri-29, with several numbers absent/
+  reserved for deprecated or unlisted items) and organised into three
+  categories — Operational (11 risks), Security (9 risks), and
+  Regulatory & Compliance (3 risks) — not a flat list. Examples of the
+  scale of mismatch: the prior file's "Ri-001 Prompt Injection" should
+  be ri-10; "Ri-002 Data Poisoning" should be ri-9; "Ri-008
+  Hallucination" should be ri-4; "Ri-009 Bias and Discrimination"
+  should be ri-16; "Ri-004 Credential Harvesting" corresponds to the
+  much more specific and recent ri-29 "Agent-Mediated Credential
+  Discovery and Harvesting." The real framework is also v2 (Oct 2025),
+  not v1.0, and includes a parallel, equally-substantial Mitigation
+  Catalogue (MI- IDs) with no equivalent structure in the prior file at
+  all — not rebuilt here due to scope, flagged as a follow-up.
+  Descriptions below are paraphrased summaries, not verbatim
+  reproductions, of the real page content — full detail (attack
+  scenarios, financial-services examples, key risk factors) lives at
+  each risk's real URL, linked per rule.
 description: >
-  The FINOS AI Governance Framework provides the foundational risk
-  taxonomy for Anchor. This framework file acts as the primary
-  mapping layer, connecting the original FINOS Ri-IDs and V3 ANC-IDs
-  to the refined V4 Domain-prefixed rules. Use this framework to
-  ensure compliance with the FINOS standard.
+  The FINOS AI Governance Framework provides a real-world risk catalogue
+  for GenAI and agentic AI in financial services, organised into
+  Operational, Security, and Regulatory & Compliance categories, with
+  cross-references to OWASP, NIST, ISO 42001, and other frameworks
+  already represented elsewhere in this governance corpus.
 seal: "sha256:PENDING"
 
 rules:
 
-  - id: "FINOS-001"
-    name: "Prompt Injection"
-    original_id: "Ri-001"
-    maps_to: "SEC-001"
-    severity: "blocker"
-    description: "Malicious instructions injected into prompts."
+  # ===== Operational (11 real risks; 9 mapped below with an Anchor mechanism, 2 flagged as gaps) =====
 
-  - id: "FINOS-002"
-    name: "Data Poisoning"
-    original_id: "Ri-002"
-    maps_to: "SEC-002"
-    severity: "blocker"
-    description: "Poisoning of training, fine-tuning, or retrieval data."
-
-  - id: "FINOS-003"
-    name: "Model Tampering"
-    original_id: "Ri-003"
-    maps_to: "SEC-003"
-    severity: "blocker"
-    description: "Unauthorized modification of model weights or artifacts."
-
-  - id: "FINOS-004"
-    name: "Credential Harvesting"
-    original_id: "Ri-004"
-    maps_to: "SEC-004"
-    severity: "blocker"
-    description: "Systematic exfiltration of secrets via AI pipelines."
-
-  - id: "FINOS-005"
-    name: "Model Leakage and Theft"
-    original_id: "Ri-005"
-    maps_to: "SUP-001"
-    severity: "blocker"
-    description: "Unauthorized export or exfiltration of model weights."
-
-  - id: "FINOS-006"
-    name: "Weight Corruption"
-    original_id: "Ri-006"
-    maps_to: "SUP-002"
-    severity: "blocker"
-    description: "Accidental or malicious corruption of model weights."
-
-  - id: "FINOS-007"
-    name: "Versioning Drift"
-    original_id: "Ri-007"
-    maps_to: "SUP-003"
-    severity: "warning"
-    description: "Undocumented or unverified changes in model versions."
-
-  - id: "FINOS-008"
-    name: "Hallucination"
-    original_id: "Ri-008"
+  - id: "FINOS-RI4"
+    name: "Hallucination and Inaccurate Outputs"
+    original_id: "ri-4 (corrected — previously mislabeled Ri-008)"
+    category: "Operational"
     maps_to: "ALN-001"
     severity: "error"
-    description: "Model generating plausible but false or dangerous information."
+    primitives:
+      action: detect
+      object: fabricated_or_incorrect_output
+      context: no_reliable_prevention_method_exists
+      authority: finos_aigf
+      flow: statistical_pattern_to_false_confident_output
+    description: >
+      LLMs generate fluent, confident output that is fabricated or
+      factually wrong, because generation follows learned patterns
+      rather than verified fact — RAG reduces but cannot eliminate this.
+      ALN-001 detects known hallucination-prone output patterns.
 
-  - id: "FINOS-009"
-    name: "Bias and Discrimination"
-    original_id: "Ri-009"
-    maps_to: "ETH-001"
-    severity: "error"
-    description: "Systematically biased or discriminatory model outcomes."
+  - id: "FINOS-RI5"
+    name: "Foundation Model Versioning"
+    original_id: "ri-5 (corrected — previously the file's 'Ri-007 Versioning Drift' used a related but non-matching ID)"
+    category: "Operational"
+    maps_to: "SUP-003"
+    severity: "warning"
+    primitives:
+      action: track
+      object: foundation_model_version_change
+      context: silent_upstream_provider_updates
+      authority: finos_aigf
+      flow: undeclared_model_change_to_drift_detection
+    description: >
+      Model providers update, retrain, or reconfigure models upstream,
+      sometimes silently, breaking calibrated prompts and safety
+      measures without notice. SUP-003 detects undeclared model version
+      changes in scanned code.
 
-  - id: "FINOS-010"
-    name: "Explainability Absence"
-    original_id: "Ri-010"
-    maps_to: "ETH-002"
-    severity: "error"
-    description: "Decisions made by black-box models that cannot be explained."
+  - id: "FINOS-RI6"
+    name: "Non-Deterministic Behaviour"
+    original_id: "ri-6 (corrected — previously the file's 'Ri-006' was mislabeled 'Weight Corruption,' an unrelated concept)"
+    category: "Operational"
+    maps_to: "DAC-AuditEntry"
+    severity: "warning"
+    primitives:
+      action: document
+      object: output_variability
+      context: probabilistic_sampling_and_temperature
+      authority: finos_aigf
+      flow: sampling_variance_to_documented_expectation
+    description: >
+      LLMs can produce different outputs for identical inputs due to
+      probabilistic token sampling, complicating testing, reproducibility,
+      and audit. DAC AuditEntry records exact input/output/model-version
+      per decision, providing the reproducibility record even when the
+      underlying model behavior is non-deterministic.
 
-  - id: "FINOS-011"
-    name: "Availability and Denial"
-    original_id: "Ri-011"
+  - id: "FINOS-RI7"
+    name: "Availability of Foundational Model"
+    original_id: "ri-7 (new addition — not present in the prior version at all)"
+    category: "Operational"
     maps_to: "OPS-001"
     severity: "error"
-    description: "AI system unavailability due to resource exhaustion or attacks."
+    primitives:
+      action: ensure_availability
+      object: gpu_hosted_foundation_model
+      context: denial_of_wallet_and_tsp_outage_risk
+      authority: finos_aigf
+      flow: third_party_dependency_to_fallback_capacity
+    description: >
+      Third-party-hosted foundation models introduce availability risk
+      through cost/usage spikes ("denial of wallet"), provider outages,
+      and VRAM exhaustion. OPS-001 detects missing circuit breakers and
+      timeout/overload handling — directly relevant to this risk.
 
-  - id: "FINOS-012"
-    name: "Authorization Bypass"
-    original_id: "Ri-012"
-    maps_to: "SEC-005"
+  - id: "FINOS-RI8"
+    name: "Tampering With the Foundational Model"
+    original_id: "ri-8 (corrected — previously mislabeled Ri-003 with a different, non-matching ID)"
+    category: "Operational"
+    maps_to: "SEC-003"
     severity: "blocker"
-    description: "Executing actions outside granted permissions via AI tools."
+    primitives:
+      action: detect_tampering
+      object: model_weights_or_training_pipeline
+      context: third_party_saas_supply_chain
+      authority: finos_aigf
+      flow: upstream_compromise_to_backdoor_detection
+    description: >
+      Backdoors or adversarial triggers introduced during training/
+      fine-tuning of third-party-hosted models can cause unsafe behavior
+      under specific trigger conditions, undetectable without provider
+      transparency. SEC-003 covers model tampering detection in Layer 1.
 
-  - id: "FINOS-013"
-    name: "Raw Network Access"
-    original_id: "Ri-013"
-    maps_to: "SEC-006"
+  - id: "FINOS-RI9"
+    name: "Data Poisoning"
+    original_id: "ri-9 (corrected — previously mislabeled Ri-002 with a different, non-matching ID)"
+    category: "Operational"
+    maps_to: "SEC-002"
+    severity: "blocker"
+    primitives:
+      action: detect
+      object: adversarially_manipulated_training_data
+      context: continuous_learning_and_third_party_feeds
+      authority: finos_aigf
+      flow: poisoned_input_to_corrupted_model_behavior
+    description: >
+      Adversaries alter training/fine-tuning data — mislabeling fraud as
+      legitimate, injecting exploitable patterns — with effects that can
+      remain hidden until major failure. SEC-002 provides Layer 1
+      detection.
+
+  - id: "FINOS-RI14"
+    name: "Inadequate System Alignment"
+    original_id: "ri-14 (new addition — not present in the prior version)"
+    category: "Operational"
+    maps_to: "ALN-002"
     severity: "error"
-    description: "Unproxied outbound network calls from AI components."
+    primitives:
+      action: detect_drift
+      object: rag_output_business_purpose_alignment
+      context: retrieval_response_disconnect
+      authority: finos_aigf
+      flow: retrieved_context_to_aligned_output
+    description: >
+      RAG systems can generate fluent, relevant-seeming output that
+      contradicts retrieved documents, omits regulatory caveats truncated
+      by context limits, or exceeds authorized scope (e.g. a general
+      support bot giving investment advice). No dedicated Anchor rule
+      currently checks retrieval-response alignment specifically — ALN-002
+      partially covers general alignment failures; flagged as a real gap
+      for RAG-specific detection.
 
-  - id: "FINOS-014"
-    name: "Shell Injection"
-    original_id: "Ri-014"
-    maps_to: "SEC-007"
+  - id: "FINOS-RI16"
+    name: "Bias and Discrimination"
+    original_id: "ri-16 (corrected — previously mislabeled Ri-009 with a different, non-matching ID)"
+    category: "Operational"
+    maps_to: "ETH-001"
     severity: "blocker"
-    description: "Executing shell commands constructed from untrusted model input."
+    primitives:
+      action: detect_bias
+      object: protected_class_disparate_outcome
+      context: credit_insurance_and_customer_service
+      authority: finos_aigf
+      flow: proxy_variable_to_discriminatory_outcome
+    description: >
+      Biased training data, proxy variables (zip code, employment type),
+      or feedback loops produce discriminatory credit, insurance, or
+      service outcomes even without discriminatory intent. ETH-001
+      provides Layer 1 detection — same underlying obligation
+      independently cited by CFPB-003, SEBI-008, RBI-019, and NIST
+      Measure 2.11 in this corpus.
 
-  - id: "FINOS-015"
-    name: "PII Leakage"
-    original_id: "Ri-015"
+  - id: "FINOS-RI17"
+    name: "Lack of Explainability"
+    original_id: "ri-17 (new addition — not present in the prior version)"
+    category: "Operational"
+    maps_to: "ETH-002"
+    severity: "error"
+    primitives:
+      action: explain
+      object: black_box_model_decision
+      context: regulator_and_customer_facing_justification
+      authority: finos_aigf
+      flow: opaque_decision_to_documented_rationale
+    description: >
+      Complex foundation models operate as black boxes, making it
+      difficult to justify outcomes to regulators, stakeholders, or
+      customers, and concealing embedded errors or bias. ETH-002 provides
+      Layer 1 detection — the same recurring obligation independently
+      cited across RBI, CFPB, FCA, and NIST files in this corpus.
+
+  - id: "FINOS-RI18"
+    name: "Model Overreach / Expanded Use"
+    original_id: "ri-18 (new addition — not present in the prior version)"
+    category: "Operational"
+    maps_to: "AGT-002"
+    severity: "warning"
+    primitives:
+      action: detect_scope_violation
+      object: ai_system_used_beyond_validated_scope
+      context: anthropomorphism_and_misplaced_trust
+      authority: finos_aigf
+      flow: undefined_scope_boundary_to_misuse
+    description: >
+      Staff overestimate AI capability and repurpose a model beyond its
+      validated scope (e.g. a marketing-email model used for legal
+      drafting or investment advice), amplified by anthropomorphizing
+      AI output as authoritative. No dedicated Anchor rule currently
+      distinguishes "used outside validated scope" from AGT-002's
+      broader out-of-scope-action detection — flagged as a refinement
+      opportunity rather than a full gap.
+
+  # ===== Security (9 real risks; 6 mapped below, 3 flagged as significant gaps — all agentic-era) =====
+
+  - id: "FINOS-RI1"
+    name: "Information Leaked To Hosted Model"
+    original_id: "ri-1 (new addition — not present in the prior version, despite being the framework's actual first-listed risk)"
+    category: "Security"
     maps_to: "PRV-001"
     severity: "blocker"
-    description: "Unauthorized exposure of Personally Identifiable Information."
+    primitives:
+      action: prevent_leakage
+      object: sensitive_data_sent_to_third_party_llm
+      context: two_way_trust_boundary
+      authority: finos_aigf
+      flow: input_output_to_pii_exposure
+    description: >
+      Neither input to nor output from a third-party-hosted LLM can be
+      fully trusted — models can memorize and later disclose sensitive
+      data across unrelated sessions, including to different users.
+      PRV-001 provides Layer 1 PII leakage detection.
 
-  - id: "FINOS-016"
-    name: "Vector Inversion"
-    original_id: "Ri-016"
-    maps_to: "PRV-002"
+  - id: "FINOS-RI2"
+    name: "Information Leaked to Vector Store"
+    original_id: "ri-2 (new addition — the prior file's Ri-001/002 numbers were used for different, unrelated concepts)"
+    category: "Security"
+    maps_to: "SEC-006"
     severity: "error"
-    description: "Reconstructing training data from embedding vectors."
+    primitives:
+      action: prevent_leakage
+      object: embedding_inversion_or_membership_inference
+      context: rag_vector_database
+      authority: finos_aigf
+      flow: embedding_storage_to_inferred_original_data
+    description: >
+      Embeddings, though not human-readable, can be inverted to recover
+      substantial original data, or probed to infer whether specific
+      confidential information exists in the store. SEC-006 provides
+      relevant detection; full embedding-inversion-specific coverage is
+      a refinement opportunity.
 
-  - id: "FINOS-017"
-    name: "Supply Chain Attack"
-    original_id: "Ri-017"
-    maps_to: "SEC-008"
+  - id: "FINOS-RI10"
+    name: "Prompt Injection"
+    original_id: "ri-10 (corrected — previously mislabeled Ri-001 with a different, non-matching ID)"
+    category: "Security"
+    maps_to: "SEC-001"
     severity: "blocker"
-    description: "Compromised upstream dependencies or tool integrations."
+    primitives:
+      action: detect
+      object: malicious_instruction_in_prompt_or_content
+      context: direct_and_indirect_injection
+      authority: finos_aigf
+      flow: crafted_input_to_unintended_model_behavior
+    description: >
+      Attackers override intended model behavior directly, or hide
+      malicious instructions in third-party content the model later
+      ingests (indirect injection) — one of the most accessible and
+      exploited LLM attack vectors. SEC-001 provides Layer 1 detection.
 
-  - id: "FINOS-018"
-    name: "Model Overreach"
-    original_id: "Ri-018"
-    maps_to: "SHR-001"
-    severity: "warning"
-    description: "Using models beyond their validated scope or context."
+  - id: "FINOS-RI24"
+    name: "Agent Action Authorization Bypass"
+    original_id: "ri-24 (new addition — not present in the prior version)"
+    category: "Security"
+    maps_to: "AGT-001"
+    severity: "blocker"
+    primitives:
+      action: detect_bypass
+      object: agent_action_outside_authorization_boundary
+      context: api_discovery_and_tool_chain_privilege_escalation
+      authority: finos_aigf
+      flow: dynamic_privilege_interpretation_to_unauthorized_action
+    description: >
+      Agents interact directly with APIs and can discover unintended
+      endpoints, chain authorized calls into unauthorized outcomes, or
+      bypass approval workflows — a risk that doesn't exist for
+      UI-constrained human users. AGT-001 provides Layer 1 detection —
+      this is the real FINOS risk AGT-001 was always conceptually
+      closest to, now correctly cited.
 
-  - id: "FINOS-019"
-    name: "Regulatory Non-Compliance"
-    original_id: "Ri-019"
+  - id: "FINOS-RI25"
+    name: "Tool Chain Manipulation and Injection"
+    original_id: "ri-25 (new addition — not present in the prior version)"
+    category: "Security"
+    maps_to: "AGT-003"
+    severity: "blocker"
+    primitives:
+      action: detect_manipulation
+      object: agent_tool_selection_and_parameter_injection
+      context: multi_step_tool_chain_sequencing
+      authority: finos_aigf
+      flow: crafted_input_to_malicious_tool_invocation
+    description: >
+      Attackers manipulate which tools an agent selects or what
+      parameters it passes to legitimate APIs, or exploit dangerous
+      sequences of individually-safe tool calls — an evolution of prompt
+      injection targeting decision logic rather than text output. AGT-003
+      provides relevant Layer 1 detection.
+
+  - id: "FINOS-RI29"
+    name: "Agent-Mediated Credential Discovery and Harvesting"
+    original_id: "ri-29 (corrected — previously the file's 'Ri-004 Credential Harvesting' used a much lower, non-matching ID for a narrower version of this risk)"
+    category: "Security"
+    maps_to: "SEC-004"
+    severity: "blocker"
+    primitives:
+      action: detect
+      object: systematic_credential_exfiltration_via_agent_tools
+      context: legitimate_agent_access_abused_at_scale
+      authority: finos_aigf
+      flow: agent_tool_access_to_infrastructure_wide_compromise
+    description: >
+      Agents' legitimate broad access to files, databases, and cloud
+      resources becomes a force-multiplier for credential harvesting when
+      compromised — a qualitatively larger risk than traditional
+      credential theft due to autonomous, systematic exploration at
+      scale. SEC-004 provides Layer 1 detection.
+
+  # ===== Regulatory & Compliance (3 real risks; 2 mapped, 1 flagged) =====
+
+  - id: "FINOS-RI22"
+    name: "Regulatory Compliance and Oversight"
+    original_id: "ri-22 (new addition — not present in the prior version)"
+    category: "Regulatory and Compliance"
     maps_to: "LEG-002"
-    severity: "error"
-    description: "AI deployment violating specific jurisdictional laws."
-
-  - id: "FINOS-020"
-    name: "Human Oversight Removal"
-    original_id: "Ri-020"
-    maps_to: "ETH-003"
     severity: "blocker"
-    description: "Autonomous decisions made without human-in-the-loop controls."
+    primitives:
+      action: comply
+      object: ai_generated_decision_or_communication
+      context: same_standards_as_human_driven_process
+      authority: multi_jurisdictional_regulator
+      flow: ai_output_to_regulatory_obligation
+    anchor_mechanism: >
+      anchor check CI/CD gate + audit trail. Notably, this FINOS page
+      independently confirms and dates the SR 11-7 replacement already
+      corrected in CFPB-004: as of April 17, 2026, OCC/Fed/FDIC
+      reissued MRM guidance as OCC Bulletin 2026-13, explicitly
+      excluding generative and agentic AI from scope. Worth updating
+      CFPB-004's citation to reference this precise bulletin number.
+    description: >
+      AI-generated advice, decisions, and marketing must meet the same
+      regulatory standards as human-driven processes (suitability,
+      fairness, record-keeping) — AI use does not create a compliance
+      exemption. Regulatory regimes have diverged materially between
+      UK (PRA SS1/23 explicitly includes agentic AI in MRM scope) and US
+      (SR 11-7's replacement explicitly excludes it) — firms operating
+      in both jurisdictions face a real, live compliance gap between them.
 
-  - id: "FINOS-021"
-    name: "Goal Misrepresentation"
-    original_id: "Ri-021"
-    maps_to: "ALN-002"
-    severity: "blocker"
-    description: "Agents pursuing objectives misaligned with user intent."
-
-  - id: "FINOS-022"
-    name: "Cross-context Data Bleed"
-    original_id: "Ri-022"
-    maps_to: "PRV-003"
-    severity: "error"
-    description: "Data from one context leaking into another via shared state."
-
-  - id: "FINOS-023"
-    name: "IP Infringement"
-    original_id: "Ri-023"
+  - id: "FINOS-RI23"
+    name: "Intellectual Property (IP) and Copyright"
+    original_id: "ri-23 (new addition — not present in the prior version, despite the prior file's total count coincidentally also being 23)"
+    category: "Regulatory and Compliance"
     maps_to: "LEG-001"
     severity: "warning"
-    description: "Model outputs infringing on intellectual property or copyright."
+    primitives:
+      action: detect_infringement_risk
+      object: ai_generated_output_or_employee_input
+      context: training_data_copyright_and_trade_secret_leakage
+      authority: finos_aigf
+      flow: model_training_data_to_infringement_or_leak_risk
+    description: >
+      AI outputs may replicate copyrighted training data; employees
+      inputting proprietary data into public AI tools risk irretrievable
+      trade secret loss. LEG-001 provides relevant detection for
+      undeclared training data provenance.

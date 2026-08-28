@@ -11,9 +11,39 @@ credit: >
   Regulation (EU) 2024/1689 of the European Parliament and of the
   Council laying down harmonised rules on artificial intelligence.
   Published in the Official Journal of the European Union, L series,
-  2024. Full enforcement of high-risk AI provisions begins August 2,
-  2026. Credit scoring, AML monitoring, and fraud detection are
+  2024. Credit scoring, AML monitoring, and fraud detection are
   legally classified as high-risk AI systems under Annex III.
+verification_note: >
+  CRITICAL, TIME-SENSITIVE CORRECTION: the prior version of this file
+  stated "full enforcement of high-risk AI provisions begins August 2,
+  2026" and EU-ART99 was literally named "Penalties — No Safe Harbour
+  After August 2026." Both are now FALSE. The EU's "Digital Omnibus on
+  AI" (Regulation (EU) 2026/1744) was published in the Official Journal
+  on July 24, 2026 and entered into force July 27, 2026 — five weeks
+  before this version's writing, and days before the original deadline
+  this file cited. It defers Chapter III high-risk obligations —
+  exactly the category every rule in this file covers — as follows:
+    - Annex III (standalone high-risk systems, e.g. credit scoring,
+      AML, fraud detection): deferred to DECEMBER 2, 2027
+    - Annex I (high-risk AI embedded in regulated products): deferred
+      to AUGUST 2, 2028
+    - Article 50 transparency obligations: still apply August 2, 2026,
+      EXCEPT Article 50(2) (synthetic content labeling) for systems
+      already on the market, which moves to December 2, 2026
+    - New Article 5 prohibited practices (ban on AI-generated
+      non-consensual intimate imagery and CSAM, "nudifiers"): apply
+      December 2, 2026
+  This does NOT change what firms must technically do (the substantive
+  obligations in Articles 9-16 and 26 below are unaffected and remain
+  accurate) — only WHEN non-compliance becomes actionable. Do not tell
+  a client the August 2, 2026 deadline still governs high-risk
+  obligations; it does not. Given how recently this changed, re-verify
+  this date before every new external use of this file until the
+  Omnibus's provisions are fully settled into practice.
+source_date_note: >
+  Original Regulation: August 1, 2024 (entry into force). Digital
+  Omnibus amendment: July 27, 2026 (entry into force). Both dates are
+  now relevant to this file.
 layer_2_status: >
   Rules marked obligation_type: provenance or audit depend on
   AnchorRuntime (Layer 2) and the Decision Audit Chain (DAC).
@@ -45,7 +75,10 @@ rules:
       it must be updated continuously. Anchor's sealed constitution
       and CI/CD integration satisfy the technical continuous testing
       requirement. Fines up to €30 million or 6% of global annual
-      revenue for non-compliance after August 2, 2026.
+      revenue for non-compliance — but see verification_note above:
+      the applicable date for this obligation (Annex III standalone
+      systems, which includes credit scoring/AML/fraud detection) is
+      now December 2, 2027, not August 2, 2026 as previously stated.
 
   - id: "EU-ART10"
     name: "Data and Data Governance"
@@ -234,25 +267,57 @@ rules:
       regulatory liability for every decision the system makes
       in their deployment context.
 
+  - id: "EU-ART05-NCII"
+    name: "Prohibited Practice — AI-Generated Non-Consensual Intimate Imagery"
+    original_id: "Article 5 (new prohibition added by the Digital Omnibus on AI, Regulation (EU) 2026/1744)"
+    maps_to: "ETH-004"
+    obligation_type: detection
+    severity: "blocker"
+    min_severity: "blocker"
+    anchor_mechanism: >
+      ETH-004 toxic/harmful output detection is the closest existing
+      mechanism; a dedicated NCII/CSAM-specific detection rule does not
+      yet exist and would need real content-classification capability
+      beyond current pattern-matching — flagged as a real gap, not a
+      covered case.
+    description: >
+      NEW as of the Digital Omnibus on AI (in force July 27, 2026): a
+      prohibition was added to Article 5 banning AI systems used to
+      generate non-consensual intimate imagery ("nudifiers") and child
+      sexual abuse material. Applicable date: December 2, 2026 — under
+      four months away as of this version. This is an outright
+      prohibited practice under Article 5, carrying the higher penalty
+      tier (up to €35M / 7% of turnover), not a high-risk-system
+      obligation subject to the Annex III/I deferral above.
+
   - id: "EU-ART99"
-    name: "Penalties — No Safe Harbour After August 2026"
-    original_id: "Article 99"
+    name: "Penalties — Deferred but Not Cancelled (Annex III: Dec 2, 2027)"
+    original_id: "Article 99 (date corrected — see verification_note; substance unchanged)"
     maps_to: "LEG-002"
     obligation_type: disclosure
     anchor_mechanism: >
       Full Anchor compliance stack — sealed constitution, active
       domain rules, DAC audit chain, anchor audit --report — is
       the compliance evidence package that demonstrates conformity
-      and mitigates penalty exposure.
+      and mitigates penalty exposure, whenever the applicable date
+      arrives for a given deployment.
     severity: "blocker"
     min_severity: "blocker"
     description: >
       Violations of requirements for high-risk AI systems carry
       fines of up to €30 million or 6% of total worldwide annual
       turnover, whichever is higher. Violations of Article 5
-      prohibited practices carry up to €35 million or 7%.
-      There is no grace period after August 2, 2026. Supervisory
-      authorities in each EU member state are empowered to conduct
-      inspections, demand documentation, and impose fines without
-      prior warning. The only defense is documented, demonstrable
-      compliance — not intent to comply.
+      prohibited practices carry up to €35 million or 7%. IMPORTANT:
+      the prior version of this rule stated "no grace period after
+      August 2, 2026" — this is no longer accurate. Following the
+      Digital Omnibus on AI (Regulation (EU) 2026/1744, in force
+      July 27, 2026), the applicable date for Annex III standalone
+      high-risk systems (credit scoring, AML, fraud detection) is now
+      December 2, 2027; for Annex I embedded systems, August 2, 2028.
+      This is a deferral, not a cancellation — the Commission's stated
+      rationale was that harmonized standards bodies and conformity
+      assessment infrastructure were not ready in time, not that the
+      substantive requirements were reconsidered. Firms should treat
+      the additional runway as time to prepare, not as reduced
+      obligation — supervisory authorities and the Commission have
+      been explicit that implementation should already be underway.

@@ -167,21 +167,21 @@ rules:
       IMPORTANT REGULATORY GAP, worth knowing before pitching this as
       settled ground: the traditional cross-agency Model Risk
       Management framework (Fed/OCC/FDIC's SR 11-7, in force since
-      2011) was replaced in April 2026 by SR 26-2 — and SR 26-2
-      explicitly carves generative AI and agentic AI OUT of its formal
-      scope, on the stated basis that these technologies are still
-      novel and rapidly evolving. That means the traditional MRM
-      framework banks have relied on for a decade does not, as of this
-      version's date, formally apply to the exact category of AI most
-      relevant to Anchor's own use cases. What DOES currently and
-      specifically apply, from the CFPB directly rather than a
-      different regulator's superseded guidance: the CFPB's Supervisory
-      Highlights (Jan 2025 edition) on advanced credit scoring models,
-      which states plainly that any underwriting model — AI/ML-based or
-      not — is expected to undergo disparate treatment and disparate
-      impact testing, including active searching for less
-      discriminatory alternatives. This is the correct, CFPB-specific,
-      currently-applicable citation for this rule. The SR 26-2
+      2011) was replaced on April 17, 2026 by OCC Bulletin 2026-13 /
+      SR 26-2 — and OCC Bulletin 2026-13 / SR 26-2 explicitly carves
+      generative AI and agentic AI OUT of its formal scope, on the stated
+      basis that these technologies are still novel and rapidly evolving.
+      That means the traditional MRM framework banks have relied on for a
+      decade does not, as of this version's date, formally apply to the
+      exact category of AI most relevant to Anchor's own use cases. What
+      DOES currently and specifically apply, from the CFPB directly rather
+      than a different regulator's superseded guidance: the CFPB's
+      Supervisory Highlights (Jan 2025 edition) on advanced credit scoring
+      models, which states plainly that any underwriting model — AI/ML-based
+      or not — is expected to undergo disparate treatment and disparate
+      impact testing, including active searching for less discriminatory
+      alternatives. This is the correct, CFPB-specific, currently-applicable
+      citation for this rule. The OCC Bulletin 2026-13 / SR 26-2
       generative-AI carve-out is itself worth flagging to clients as a
       live regulatory gap, not something to paper over.
 

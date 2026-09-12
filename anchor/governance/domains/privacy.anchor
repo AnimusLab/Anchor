@@ -33,7 +33,12 @@ rules:
     min_mitigations: 1
     runtime_pattern: '(?i)(\b\d{3}-\d{2}-\d{4}\b|\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b|\b(?:\d[ -]??){13,16}\b)'
     detection: ~
-    primitives: ~
+    primitives:
+      action: redact_pii
+      object: personally_identifiable_information
+      context: external_model_prompt_payload
+      authority: privacy_guard
+      flow: user_data_to_external_api_prompt
 
   - id: "PRV-002"
     name: "Vector Inversion Attack"
@@ -47,7 +52,12 @@ rules:
     runtime_pattern: '(?i)(embedding|vector store|inversion|reconstruct|recover sensitive)'
     min_mitigations: 1
     detection: ~
-    primitives: ~
+    primitives:
+      action: protect_embeddings
+      object: high_dimensional_vector_store
+      context: rag_retrieval_database
+      authority: privacy_guard
+      flow: sensitive_document_to_vector_embedding
 
   - id: "PRV-003"
     name: "Cross-context Data Bleed"
@@ -61,4 +71,9 @@ rules:
     runtime_pattern: '(?i)(cross-context|bleed|contamination|shared session|tenant|leakage from session)'
     min_mitigations: 1
     detection: ~
-    primitives: ~
+    primitives:
+      action: isolate_tenant_context
+      object: user_session_state
+      context: multi_tenant_agent_runtime
+      authority: tenant_context_manager
+      flow: tenant_a_session_to_tenant_b_prompt

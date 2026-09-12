@@ -24,7 +24,12 @@ rules:
     runtime_pattern: '(?i)(I apologize|not found|fabricated|fictitious|error 404|non-existent)'
     min_mitigations: 1
     detection: ~
-    primitives: ~
+    primitives:
+      action: verify_fact
+      object: model_generated_statement
+      context: rag_retrieval_grounding
+      authority: fact_checking_verifier
+      flow: model_completion_to_grounding_evaluator
 
   - id: "ALN-002"
     name: "Goal Misrepresentation"
@@ -38,4 +43,9 @@ rules:
     runtime_pattern: '(?i)(diverge|misaligned|emergent behavior|optimize for|unintended)'
     min_mitigations: 1
     detection: ~
-    primitives: ~
+    primitives:
+      action: monitor_intent
+      object: agent_action_objective
+      context: declared_system_constitution
+      authority: alignment_monitor
+      flow: agent_reasoning_trace_to_system_purpose

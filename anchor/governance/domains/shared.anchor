@@ -46,7 +46,12 @@ rules:
     runtime_pattern: '(?i)(repurpose|beyond scope|unvalidated|not approved for|unauthorized use|expanded context)'
     min_mitigations: 1
     detection: ~
-    primitives: ~
+    primitives:
+      action: validate_use_case_scope
+      object: deployed_ai_model
+      context: expanded_deployment_context
+      authority: cross_domain_governance_board
+      flow: initial_validation_scope_to_expanded_deployment
 
   - id: "SHR-002"
     name: "Data Quality and Model Drift"
@@ -80,7 +85,12 @@ rules:
     runtime_pattern: '(?i)(drift|degrade|performance drop|accuracy decay|out-of-distribution|stale data)'
     min_mitigations: 1
     detection: ~
-    primitives: ~
+    primitives:
+      action: monitor_data_drift
+      object: production_input_distribution
+      context: continuous_model_monitoring
+      authority: model_risk_management
+      flow: training_baseline_to_live_inference_feed
 
   - id: "SHR-003"
     name: "Reputational and Conduct Risk"
@@ -114,4 +124,9 @@ rules:
     runtime_pattern: '(?i)(reputational|conduct|brand damage|unethical advice|poor outcome|retail customer harm)'
     min_mitigations: 1
     detection: ~
-    primitives: ~
+    primitives:
+      action: evaluate_conduct_harm
+      object: customer_facing_ai_output
+      context: retail_consumer_interaction
+      authority: conduct_risk_officer
+      flow: model_output_to_consumer_outcome_evaluation

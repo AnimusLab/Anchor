@@ -24,7 +24,12 @@ rules:
     runtime_pattern: '(?i)(copyright|trademark|patent|proprietary|all rights reserved|confidential|trade secret)'
     min_mitigations: 1
     detection: ~
-    primitives: ~
+    primitives:
+      action: verify_license
+      object: model_output_training_content
+      context: ip_and_copyright_compliance
+      authority: legal_compliance_auditor
+      flow: training_dataset_to_generated_output
 
   - id: "LEG-002"
     name: "Regulatory Non-Compliance"
@@ -38,4 +43,9 @@ rules:
     runtime_pattern: '(?i)(non-compliant|violation|regulation|mandate|compliance failure|article 13|article 14)'
     min_mitigations: 1
     detection: ~
-    primitives: ~
+    primitives:
+      action: audit_compliance
+      object: deployed_ai_system
+      context: multi_jurisdictional_regulatory_framework
+      authority: chief_compliance_officer
+      flow: system_deployment_to_regulatory_filing

@@ -484,6 +484,26 @@ def check(ctx, paths, fmt, severity, model, metadata, context):
     verdict_str = "COMPLIANT — All target code files verified." if is_compliant else "NON-COMPLIANT — Governance violations found."
     click.secho(f"VERDICT: {verdict_str}", fg="green" if is_compliant else "red", bold=True)
     click.echo("Detailed violation logs written to .anchor/reports/ and .anchor/violations/")
+    
+    # Cryptographic Telemetry Streaming to Governance Hub
+    try:
+        from anchor.core.telemetry import SpokeTelemetryClient
+        import time
+        telemetry = SpokeTelemetryClient()
+        project_name = os.path.basename(os.path.abspath(target_dir))
+        telemetry_result = telemetry.dispatch_state_event(
+            event_id=f"evt_cli_{int(time.time() * 1000)}_{uuid.uuid4().hex[:6]}",
+            project_name=project_name,
+            silo_id=os.environ.get("ANCHOR_HUB_ID", "animuslab-hq"),
+            verdict="COMPLIANT" if is_compliant else "NON_COMPLIANT",
+            risk_score=float(audit_report['risk_score']),
+            violations=filtered_violations
+        )
+        if telemetry_result and telemetry_result.get("status") == "LOGGED":
+            click.secho(f"  📡 Telemetry: Signed audit stream committed to Hub (Tx: {telemetry_result.get('transaction_id')})", fg="cyan")
+    except Exception as ex:
+        pass
+
     click.echo("=" * 70)
     click.echo("\n=================================================================================")
     click.echo("  REPORT CERTIFICATION & VALIDATION SIGN-OFF")

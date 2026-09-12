@@ -38,6 +38,12 @@ rules:
       place and enforced during the examination period.
     severity: "blocker"
     min_severity: "blocker"
+    primitives:
+      action: document_governance
+      object: ai_governance_controls
+      context: sec_registered_entity_examination
+      authority: sec_division_of_examinations
+      flow: internal_policy_to_examination_evidence
     description: >
       The SEC Division of Examinations identified AI governance as
       the top examination priority for 2026 — the first time in the
@@ -64,6 +70,12 @@ rules:
       Layer 1 detection active now.
     severity: "blocker"
     min_severity: "blocker"
+    primitives:
+      action: substantiate_claims
+      object: ai_capability_and_governance_claim
+      context: investor_public_disclosure
+      authority: sec_enforcement_division
+      flow: marketing_claim_to_technical_audit_trail
     description: >
       The SEC has indicated that overstating AI capabilities,
       misrepresenting AI governance maturity, or claiming AI-driven
@@ -91,6 +103,12 @@ rules:
       Layer 1 active now.
     severity: "blocker"
     min_severity: "error"
+    primitives:
+      action: explain_recommendation
+      object: ai_generated_investment_advice
+      context: regulation_best_interest_fiduciary_duty
+      authority: sec_investment_adviser_act
+      flow: client_profile_to_explainable_recommendation
     description: >
       Investment advisers using AI to generate investment
       recommendations must satisfy Regulation Best Interest
@@ -116,6 +134,12 @@ rules:
       survives legal discovery. Layer 2 in development.
     severity: "blocker"
     min_severity: "error"
+    primitives:
+      action: record_audit_trail
+      object: ai_assisted_trading_decision
+      context: algorithmic_trading_and_order_routing
+      authority: sec_market_regulation
+      flow: market_data_input_to_tamper_evident_trade_log
     description: >
       AI systems used in trading — algorithmic trading, order
       routing, risk management, and market surveillance — are
@@ -142,6 +166,12 @@ rules:
       Layer 1 active now.
     severity: "blocker"
     min_severity: "error"
+    primitives:
+      action: defend_cybersecurity
+      object: ai_trading_and_advisory_infrastructure
+      context: sec_rule_10_cybersecurity_program
+      authority: sec_division_of_examinations
+      flow: ai_threat_vector_to_security_control
     description: >
       SEC Rule 10 on cybersecurity requires registered firms to
       have policies and procedures reasonably designed to address

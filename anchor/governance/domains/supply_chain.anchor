@@ -24,7 +24,12 @@ rules:
     runtime_pattern: '(?i)(model weights|architecture|fine-tuning data|extract|reconstruct|reverse-engineer|api query limit)'
     min_mitigations: 1
     detection: ~
-    primitives: ~
+    primitives:
+      action: protect_model
+      object: proprietary_model_weights
+      context: model_endpoint_exposure
+      authority: model_security_guard
+      flow: model_storage_to_public_api_endpoint
 
   - id: "SUP-002"
     name: "Weight Corruption"
@@ -38,7 +43,12 @@ rules:
     runtime_pattern: '(?i)(corrupt|modified|adversarial variant|poisoned artifact|backdoor trigger|malicious weight)'
     min_mitigations: 1
     detection: ~
-    primitives: ~
+    primitives:
+      action: verify_checkpoint_hash
+      object: model_weight_file
+      context: deployment_pipeline
+      authority: supply_chain_verifier
+      flow: model_registry_to_inference_server
 
   - id: "SUP-003"
     name: "Versioning Drift"
@@ -52,4 +62,9 @@ rules:
     runtime_pattern: '(?i)(unpinned|undocumented version|behavioral change|drift|untracked version|change management failure)'
     min_mitigations: 1
     detection: ~
-    primitives: ~
+    primitives:
+      action: pin_version
+      object: model_version_identifier
+      context: production_deployment_config
+      authority: version_control_auditor
+      flow: model_config_to_runtime_initialization

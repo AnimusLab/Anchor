@@ -24,4 +24,9 @@ rules:
     runtime_pattern: '(?i)(timeout|rate limit|overload|denial of service|dos|resource exhaustion|infinite loop|recursion|slow response)'
     min_mitigations: 1
     detection: ~
-    primitives: ~
+    primitives:
+      action: enforce_circuit_breaker
+      object: ai_service_endpoint
+      context: high_concurrency_production_traffic
+      authority: rate_limit_backstop
+      flow: incoming_request_to_model_inference_queue

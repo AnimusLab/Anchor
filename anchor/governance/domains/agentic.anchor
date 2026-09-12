@@ -79,7 +79,12 @@ rules:
     runtime_pattern: '(?i)(tool output|fabricated|interceptor|poisoned tool)'
     min_mitigations: 1
     detection: ~
-    primitives: ~
+    primitives:
+      action: manipulate_chain
+      object: tool_parameter_output
+      context: agent_tool_calling_loop
+      authority: external_adversary
+      flow: poisoned_tool_output_to_agent_reasoning
 
   - id: "AGT-003"
     name: "MCP Server Supply Chain Compromise"
@@ -110,7 +115,12 @@ rules:
     runtime_pattern: '(?i)(mcp server|manifest|tool schema|protocol error)'
     min_mitigations: 1
     detection: ~
-    primitives: ~
+    primitives:
+      action: verify_manifest
+      object: mcp_server_tool_schema
+      context: live_mcp_connection
+      authority: mcp_protocol_verifier
+      flow: mcp_server_schema_to_agent_tool_registry
 
   - id: "AGT-004"
     name: "Agent State Persistence Poisoning"
@@ -139,7 +149,12 @@ rules:
     runtime_pattern: '(?i)(persistent state|memory|vector store|long-term memory)'
     min_mitigations: 1
     detection: ~
-    primitives: ~
+    primitives:
+      action: audit_state
+      object: agent_persistent_memory
+      context: cross_session_vector_store
+      authority: state_memory_auditor
+      flow: malicious_input_to_persistent_memory_store
 
   - id: "AGT-005"
     name: "Multi-Agent Trust Boundary Violations"
@@ -173,4 +188,9 @@ rules:
     runtime_pattern: '(?i)(multi-agent|swarm|delegate|orchestrator|trust boundary)'
     min_mitigations: 1
     detection: ~
-    primitives: ~
+    primitives:
+      action: validate_inter_agent_trust
+      object: agent_to_agent_message
+      context: multi_agent_swarm
+      authority: swarm_trust_boundary_verifier
+      flow: orchestrator_to_worker_agent_delegation

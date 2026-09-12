@@ -21,6 +21,12 @@ rules:
     maps_to: "SEC-001"
     severity: "blocker"
     description: "Malicious instructions injected into prompts to manipulate LLM behavior."
+    primitives:
+      action: detect
+      object: prompt_injection_payload
+      context: untrusted_user_input
+      authority: owasp_top_10
+      flow: user_prompt_to_llm_execution
 
   - id: "OWASP-002"
     name: "LLM02: Insecure Output Handling"
@@ -28,6 +34,12 @@ rules:
     maps_to: "SEC-007"
     severity: "blocker"
     description: "Failure to sanitize LLM outputs before passing them to sensitive downstream functions (e.g. shell)."
+    primitives:
+      action: sanitize
+      object: llm_generated_output
+      context: downstream_execution_context
+      authority: owasp_top_10
+      flow: model_output_to_sensitive_sink
 
   - id: "OWASP-003"
     name: "LLM03: Training Data Poisoning"
@@ -35,6 +47,12 @@ rules:
     maps_to: "SEC-002"
     severity: "blocker"
     description: "Poisoning training data to create backdoors or bias in LLM behavior."
+    primitives:
+      action: validate
+      object: training_data_feed
+      context: model_training_pipeline
+      authority: owasp_top_10
+      flow: external_dataset_to_model_weights
 
   - id: "OWASP-004"
     name: "LLM04: Model Denial of Service"
@@ -42,6 +60,12 @@ rules:
     maps_to: "OPS-001"
     severity: "error"
     description: "Causing excessive resource consumption in LLMs to degrade availability."
+    primitives:
+      action: rate_limit
+      object: llm_resource_consumption
+      context: high_concurrency_requests
+      authority: owasp_top_10
+      flow: incoming_request_to_llm_inference
 
   - id: "OWASP-005"
     name: "LLM05: Supply Chain Vulnerabilities"
@@ -49,6 +73,12 @@ rules:
     maps_to: "SEC-008"
     severity: "blocker"
     description: "Risks from compromised third-party components, data, or models."
+    primitives:
+      action: verify
+      object: third_party_llm_component
+      context: supply_chain_dependency
+      authority: owasp_top_10
+      flow: vendor_repository_to_local_application
 
   - id: "OWASP-006"
     name: "LLM06: Sensitive Information Disclosure"
@@ -56,6 +86,12 @@ rules:
     maps_to: "PRV-001"
     severity: "blocker"
     description: "LLM leaking PII or other sensitive data in its responses."
+    primitives:
+      action: redact
+      object: sensitive_pii_data
+      context: llm_completion_output
+      authority: owasp_top_10
+      flow: model_completion_to_user_response
 
   - id: "OWASP-007"
     name: "LLM07: Insecure Plugin Design"
@@ -63,6 +99,12 @@ rules:
     maps_to: "AGT-001"
     severity: "blocker"
     description: "Plugins/tools with insufficient access controls callable by the LLM."
+    primitives:
+      action: enforce_access_control
+      object: llm_plugin_tool
+      context: tool_invocation_context
+      authority: owasp_top_10
+      flow: llm_reasoning_to_plugin_execution
 
   - id: "OWASP-008"
     name: "LLM08: Excessive Agency"
@@ -70,6 +112,12 @@ rules:
     maps_to: "AGT-005"
     severity: "blocker"
     description: "LLM having broad permissions or functioning without adequate human oversight."
+    primitives:
+      action: restrict_agency
+      object: llm_agent_permissions
+      context: autonomous_action_scope
+      authority: owasp_top_10
+      flow: agent_intent_to_action_execution
 
   - id: "OWASP-009"
     name: "LLM09: Overreliance"
@@ -77,6 +125,12 @@ rules:
     maps_to: "ALN-001"
     severity: "error"
     description: "Dependence on LLM outputs without verification, increasing risk from hallucinations."
+    primitives:
+      action: verify
+      object: ungrounded_llm_output
+      context: decision_making_process
+      authority: owasp_top_10
+      flow: llm_completion_to_human_decision
 
   - id: "OWASP-010"
     name: "LLM10: Model Theft"
@@ -84,3 +138,9 @@ rules:
     maps_to: "SUP-001"
     severity: "blocker"
     description: "Unauthorized access, copying, or extraction of proprietary models."
+    primitives:
+      action: protect
+      object: proprietary_model_artifact
+      context: model_api_endpoint
+      authority: owasp_top_10
+      flow: model_storage_to_unauthorized_extraction

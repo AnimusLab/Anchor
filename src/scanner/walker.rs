@@ -73,12 +73,16 @@ impl DirectoryScanner {
 
                 for (idx, line) in content_str.lines().enumerate() {
                     line_count += 1;
+                    let trimmed = line.trim();
+                    if trimmed.starts_with('#') || trimmed.starts_with("//") || line.contains("anchor: ignore") || line.contains("anchor:ignore") {
+                        continue;
+                    }
                     let matches = regex_set.matches(line);
                     if matches.matched_any() {
                         let matched_indices: Vec<usize> = matches.into_iter().collect();
                         line_matches.push(LineViolationMatch {
                             line_number: idx + 1,
-                            line_content: line.trim().to_string(),
+                            line_content: trimmed.to_string(),
                             matched_rule_indices: matched_indices,
                         });
                     }

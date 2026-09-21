@@ -45,7 +45,7 @@ impl AnchorEngine {
             r"(?i)(hide_ai_identity|mimic_human_agent|pretend_human|bypass_disclosure)", // index 0: AGT-001 / EU-ART52
             r"(?i)(enable_audit_log\s*=\s*false|disable_logging|suppress_traceability)",  // index 1: RBI-007 / EU-ART12
             r"(?i)(autonomous_p2p_wire|unvetted_risk_execution|bypass_human_auth)",      // index 2: AGT-001 / EU-ART14
-            r"(?i)(ignore previous instructions|system prompt override|jailbreak)",       // index 3: SEC-001
+            r"(?i)(ignore\s+(all\s+)?(previous|prior)\s+instructions|system\s+prompt\s+override|jailbreak|disregard\s+(all\s+)?(previous|prior)\s+instructions)",       // index 3: SEC-001
             r#"(?i)(api[_-]?key\s*=\s*['\"][A-Za-z0-9_-]{8,}['\"]|bearer\s+[A-Za-z0-9_.-]{8,}|api_key\s*=\s*['\"][^'"]+['\"]|authorization['"]\s*==\s*['\"]Bearer)"#, // index 4: SEC-002
             r"(?i)(subprocess\.(run|call|Popen|check_output)|os\.(system|popen|spawn))\s*\(", // index 5: SEC-007 / Shell Injection / Unsandboxed Subprocess
             r"(?i)(\.(completions|messages|chat)\.(create|send)|agents\.messages\.create)\s*\(", // index 6: ALN-001 / Hallucination (LLM Output Validation)

@@ -5,7 +5,15 @@ import uuid
 import asyncio
 import logging
 import hashlib
-import httpx
+import urllib.request
+import urllib.error
+
+try:
+    import httpx
+    HAS_HTTPX = True
+except ImportError:
+    HAS_HTTPX = False
+
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
@@ -113,15 +121,26 @@ class SpokeTelemetryClient:
             headers["X-Anchor-Signature"] = sig_hex
 
         try:
-            with httpx.Client(timeout=4.0) as client:
-                res = client.post(self.endpoint, content=raw_bytes, headers=headers)
-                if res.status_code == 200:
-                    data = res.json()
-                    logger.info(f"Telemetry packet committed to Hub. Tx ID: {data.get('transaction_id')}")
-                    return data
-                else:
-                    logger.warning(f"Hub telemetry transmission rejected ({res.status_code}): {res.text}")
-                    return None
+            if HAS_HTTPX:
+                with httpx.Client(timeout=4.0) as client:
+                    res = client.post(self.endpoint, content=raw_bytes, headers=headers)
+                    if res.status_code == 200:
+                        data = res.json()
+                        logger.info(f"Telemetry packet committed to Hub. Tx ID: {data.get('transaction_id')}")
+                        return data
+                    else:
+                        logger.warning(f"Hub telemetry transmission rejected ({res.status_code}): {res.text}")
+                        return None
+            else:
+                req = urllib.request.Request(self.endpoint, data=raw_bytes, headers=headers, method="POST")
+                with urllib.request.urlopen(req, timeout=4.0) as res:
+                    if res.status == 200:
+                        data = json.loads(res.read().decode('utf-8'))
+                        logger.info(f"Telemetry packet committed to Hub. Tx ID: {data.get('transaction_id')}")
+                        return data
+                    else:
+                        logger.warning(f"Hub telemetry transmission returned status ({res.status})")
+                        return None
         except Exception as ex:
             logger.debug(f"Telemetry transmission skipped (Hub unreachable): {ex}")
             return None

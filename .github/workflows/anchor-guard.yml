@@ -1,0 +1,74 @@
+name: "Anchor CI/CD Governance Guard"
+
+on:
+  push:
+    branches: [ "main", "master", "dev", "release/*" ]
+  pull_request:
+    branches: [ "main", "master", "dev" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+  security-events: write
+
+jobs:
+  anchor-governance-audit:
+    name: "Anchor Static Governance & Asymmetric Audit Gate"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: "Checkout Repository Context"
+        uses: actions/checkout@v4
+
+      - name: "Set up Python Environment"
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "pip"
+
+      - name: "Set up Rust Toolchain"
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: "Install Anchor Kernel & Dependencies"
+        run: |
+          python -m pip install --upgrade pip maturin
+          pip install .
+
+      - name: "Run Cryptographic Compliance Audit"
+        id: anchor_scan
+        env:
+          ANCHOR_HUB_URL: ${{ secrets.ANCHOR_HUB_URL }}
+          ANCHOR_API_KEY: ${{ secrets.ANCHOR_API_KEY }}
+          ANCHOR_ED25519_KEY: ${{ secrets.ANCHOR_ED25519_PRIVATE_KEY }}
+        run: |
+          echo "Executing zero-copy Rust static analysis kernel..."
+          python -m anchor check . --format human --severity error
+          echo "compliance_status=COMPLIANT" >> $GITHUB_OUTPUT
+
+      - name: "Upload Statutory Governance Audit Report"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: anchor-governance-report
+          path: |
+            .anchor/reports/
+            .anchor/violations/
+
+      - name: "Publish Audit Scorecard to Pull Request"
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const mdPath = '.anchor/reports/governance_audit.md';
+            let reportContent = '### 🛡️ Anchor Governance Gate: No report found.';
+            if (fs.existsSync(mdPath)) {
+              reportContent = fs.readFileSync(mdPath, 'utf8');
+            }
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🛡️ Anchor AI Statutory Governance Verification\n\n${reportContent}\n\n*Certified by AnimusLab System Kernel Architecture Node.*`
+            });

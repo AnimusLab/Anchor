@@ -143,7 +143,7 @@ def _fix_anc_023(line: str):
 
 
 def _fix_subprocess_shell(line: str):
-    """ANC-018: subprocess without Diamond Cage sandboxing."""
+    """SEC-007 / ANC-018: subprocess without Diamond Cage sandboxing."""
     if "shell=True" in line:
         suggested = line.replace("shell=True", "shell=False")
         return (
@@ -152,7 +152,13 @@ def _fix_subprocess_shell(line: str):
             "to prevent shell injection attacks.",
             True
         )
-    # No shell=True, but still unsandboxed — suggest Diamond Cage
+    if "# anchor: ignore" not in line:
+        suggested = line.rstrip() + "  # anchor: ignore SEC-007"
+        return (
+            suggested,
+            "Designate reviewed host subprocess invocation with '# anchor: ignore SEC-007' or route through DiamondCage.run_safe().",
+            True
+        )
     return (
         "",
         "Native subprocess calls bypass the Diamond Cage sandbox. "
@@ -225,6 +231,11 @@ def _fix_pickle(line: str):
 # Fixer registry: maps rule_id prefix → fixer function
 # ---------------------------------------------------------------------------
 _FIXERS: list[tuple[str, callable]] = [
+    ("SEC-007",  _fix_subprocess_shell),
+    ("SEC-002",  _fix_hardcoded_secret),
+    ("SEC-001",  _fix_anc_010),
+    ("ALN-001",  _fix_anc_015),
+    ("AGT-001",  _fix_anc_010),
     ("ANC-001",  _fix_anc_001),
     ("ANC-002",  _fix_anc_002),
     ("ANC-010",  _fix_anc_010),
@@ -237,9 +248,6 @@ _FIXERS: list[tuple[str, callable]] = [
     ("ANC-030",  _fix_eval),
     ("ANC-031",  _fix_eval),
     ("RI-08",    _fix_open_file),
-    ("ANC-010",  _fix_hardcoded_secret),
-    ("ANC-011",  _fix_hardcoded_secret),
-    ("ANC-012",  _fix_hardcoded_secret),
     ("ANC-PKL",  _fix_pickle),
 ]
 

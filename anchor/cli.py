@@ -554,6 +554,7 @@ def sync(restore):
 @click.option("--apply", "apply_fixes", is_flag=True, help="Apply fixes in-place.")
 def heal(paths, apply_fixes):
     """Review and apply Anchor's suggested fixes."""
+    from anchor.core.healer import suggest_fix, format_suggestion_for_report, apply_fix
     click.secho("\nAnchor Heal Engine", bold=True)
     click.echo("=" * 70)
     json_path = os.path.join(".anchor", "reports", "governance_report.json")
@@ -566,15 +567,29 @@ def heal(paths, apply_fixes):
     if not violations:
         click.secho("No active violations to heal.", fg="green")
         return
+
+    fixed_count = 0
     for v in violations:
         click.secho(f"\n[VIOLATION] {v['file']}:{v['line']}", fg="red", bold=True)
         click.echo(f"  Rules: {v['aggregated_rule_ids']}")
         primary = v['aggregated_rule_ids'].split(', ')[0]
-        if primary in REMEDIATION_SNIPPETS:
-            click.secho("  Fix Suggestion:", fg="cyan")
-            click.echo(REMEDIATION_SNIPPETS[primary])
+        suggestion = suggest_fix({
+            "id": primary,
+            "file": v['file'],
+            "line": v['line'],
+            "message": v.get('line_content', '')
+        })
+        if suggestion:
+            click.echo(format_suggestion_for_report(suggestion))
+            if apply_fixes and suggestion.auto_fixable:
+                if apply_fix(suggestion):
+                    fixed_count += 1
+                    click.secho(f"  ✔ Applied auto-patch to {v['file']}:{v['line']}", fg="green")
+                else:
+                    click.secho(f"  ✖ Failed to apply patch to {v['file']}:{v['line']}", fg="yellow")
+
     if apply_fixes:
-        click.secho("\nApplied auto-fix patches to target files.", fg="green")
+        click.secho(f"\nApplied {fixed_count} auto-fix patch(es) in-place.", fg="green", bold=True)
 
 def main():
     cli()

@@ -1,0 +1,36 @@
+# ==============================================================================
+# Anchor Spoke Execution Node - Production Dockerfile
+# Python 3.10 + Rust Static Kernel (anchor_core_rs)
+# ==============================================================================
+
+FROM python:3.10-slim AS builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+WORKDIR /build
+COPY pyproject.toml Cargo.toml Cargo.lock ./
+COPY src ./src/
+COPY anchor ./anchor/
+
+RUN pip install --upgrade pip maturin \
+    && maturin build --release
+
+# --- Stage 2: Minimal Runtime Image ---
+FROM python:3.10-slim AS runner
+
+WORKDIR /workspace
+
+COPY --from=builder /build/target/wheels/*.whl /tmp/
+RUN pip install --no-cache-dir /tmp/*.whl && rm -rf /tmp/*.whl
+
+RUN useradd -u 1000 -m anchoruser
+USER anchoruser
+
+ENTRYPOINT ["python", "-m", "anchor"]
+CMD ["check", ".", "--format", "human"]

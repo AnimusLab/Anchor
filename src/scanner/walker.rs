@@ -70,13 +70,29 @@ impl DirectoryScanner {
 
                 let mut line_matches = Vec::new();
                 let mut line_count = 0;
+                let mut suppress_next = false;
 
                 for (idx, line) in content_str.lines().enumerate() {
                     line_count += 1;
                     let trimmed = line.trim();
-                    if trimmed.starts_with('#') || trimmed.starts_with("//") || line.contains("anchor: ignore") || line.contains("anchor:ignore") {
+
+                    // If this line carries an anchor:ignore directive, suppress the next code line
+                    if line.contains("anchor: ignore") || line.contains("anchor:ignore") {
+                        suppress_next = true;
                         continue;
                     }
+
+                    // Skip pure comment lines (they can't be violations themselves)
+                    if trimmed.starts_with('#') || trimmed.starts_with("//") || trimmed.starts_with("/*") || trimmed.starts_with('*') || trimmed.starts_with("{/*") {
+                        continue;
+                    }
+
+                    // Consume a pending suppression for the current code line
+                    if suppress_next {
+                        suppress_next = false;
+                        continue;
+                    }
+
                     let matches = regex_set.matches(line);
                     if matches.matched_any() {
                         let matched_indices: Vec<usize> = matches.into_iter().collect();

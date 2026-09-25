@@ -28,9 +28,20 @@ impl DirectoryScanner {
             .filter(|e| e.file_type().is_file())
             .filter(|e| {
                 let p = e.path();
-                // Exclude .git, .anchor, node_modules, and build dirs
+                // Exclude .git, .anchor, node_modules, build dirs, venvs, and compiled output
                 let p_str = p.to_string_lossy();
-                if p_str.contains(".git") || p_str.contains(".anchor") || p_str.contains("node_modules") || p_str.contains("__pycache__") || p_str.contains("target") {
+                // Check path component by component to avoid false matches (e.g. "distribute")
+                let is_excluded = p.components().any(|c| {
+                    let s = c.as_os_str().to_string_lossy();
+                    matches!(s.as_ref(),
+                        ".git" | ".anchor" | "node_modules" | "__pycache__" |
+                        "target" | ".venv" | ".next" | "dist" | "build"
+                    )
+                });
+                // Also exclude by substring for dot-prefixed dirs that components may miss
+                let has_excluded_prefix = p_str.contains(".git") || p_str.contains(".anchor")
+                    || p_str.contains(".venv") || p_str.contains(".next");
+                if is_excluded || has_excluded_prefix {
                     return false;
                 }
                 if let Some(ext) = p.extension() {

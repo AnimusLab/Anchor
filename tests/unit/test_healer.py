@@ -1,19 +1,22 @@
-import pytest
+﻿import pytest
 from anchor.core.healer import suggest_fix, format_suggestion_for_report
 
 def test_suggest_fix_subprocess(tmp_path):
     f = tmp_path / "app.py"
+    # anchor: ignore -- test fixture; adversarial payload used to verify detection, not a real violation
     f.write_text("result = subprocess.run(['ls'])")
+    # anchor: ignore -- test fixture; adversarial payload used to verify detection, not a real violation
     v = {"id": "SEC-007", "file": str(f), "line": 1, "message": "result = subprocess.run(['ls'])"}
     suggestion = suggest_fix(v)
     assert suggestion is not None
     assert suggestion.rule_id == "SEC-007"
     assert "subprocess" in suggestion.original
     formatted = format_suggestion_for_report(suggestion)
-    assert "[✗]" in formatted
+    assert "[âœ—]" in formatted
 
 
 def test_suggest_fix_sec_002():
+    # anchor: ignore -- test fixture; adversarial payload used to verify detection, not a real violation
     v = {"id": "SEC-002", "file": "config.py", "line": 5, "message": 'api_key = "sk-1234567890123456"'}
     suggestion = suggest_fix(v)
     assert suggestion is not None

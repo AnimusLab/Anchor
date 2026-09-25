@@ -1,4 +1,4 @@
-import pytest
+﻿import pytest
 from anchor.core.assessment import ArchitecturalAssessmentEngine, generate_executive_summary_text
 
 def test_assess_security_compliance_empty():
@@ -8,7 +8,9 @@ def test_assess_security_compliance_empty():
 
 def test_assess_security_compliance_with_violations():
     violations = [
+        # anchor: ignore -- test fixture; adversarial payload used to verify detection, not a real violation
         {"id": "SEC-007", "file": "app.py", "line": 42, "line_content": "subprocess.run(['ls'])"},
+        # anchor: ignore -- test fixture; adversarial payload used to verify detection, not a real violation
         {"id": "SEC-002", "file": "db.py", "line": 10, "line_content": "api_key='sk-test'"},
         {"id": "ALN-001", "file": "llm.py", "line": 15, "line_content": "chat.completions.create()"},
     ]

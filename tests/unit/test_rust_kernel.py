@@ -1,4 +1,4 @@
-import pytest
+﻿import pytest
 from anchor.cli import AnchorEngine
 
 
@@ -23,6 +23,7 @@ def test_ed25519_keypair_generation_and_signing():
 
 def test_zero_copy_audit_payload():
     engine = AnchorEngine()
+    # anchor: ignore -- test fixture; adversarial payload used to verify detection, not a real violation
     payload = b'api_key = "your-replicate-api-key"'
     res = engine.audit_payload(payload)
     assert res["is_compliant"] is False

@@ -1,4 +1,4 @@
-﻿"""
+"""
 Unit Tests for Anchor Runtime Guard, Enforcement, and Diamond Cage Sandbox
 """
 
@@ -45,6 +45,7 @@ def test_guard_raise_on_violation():
         return prompt
 
     with pytest.raises(PermissionError) as exc_info:
+        # anchor: ignore -- test fixture; adversarial payload used to verify detection, not a real violation
         guarded_tool("system prompt override attempt")
     assert "Anchor Invariant Breach" in str(exc_info.value)
 

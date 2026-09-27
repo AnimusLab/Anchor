@@ -1,4 +1,4 @@
-﻿import pytest
+import pytest
 from anchor.core.healer import suggest_fix, format_suggestion_for_report
 
 def test_suggest_fix_subprocess(tmp_path):
@@ -25,6 +25,7 @@ def test_suggest_fix_sec_002():
     assert "Suggested Fix" in formatted
 
 def test_suggest_fix_aln_001():
+    # anchor: ignore -- test fixture; adversarial payload used to verify detection, not a real violation
     v = {"id": "ALN-001", "file": "agent.py", "line": 100, "message": "client.chat.completions.create(model='gpt-4')"}
     suggestion = suggest_fix(v)
     assert suggestion is not None

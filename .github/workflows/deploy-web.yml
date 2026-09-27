@@ -1,0 +1,23 @@
+name: Trigger anchor-web Vercel rebuild on new release
+
+# Fires when a version tag (v*.*.*) is pushed to the Anchor repo.
+# This causes anchor-web to rebuild, which re-fetches the PyPI version
+# at build time — propagating the new version string to every page
+# without a manual commit to anchor-web.
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
+jobs:
+  trigger-vercel-rebuild:
+    name: Redeploy anchor-web
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Vercel deploy hook
+        run: |
+          echo "New Anchor release: ${GITHUB_REF_NAME}"
+          curl -s -X POST "${{ secrets.ANCHOR_WEB_VERCEL_DEPLOY_HOOK }}" \
+            -d "reason=anchor-audit+${GITHUB_REF_NAME}+released" \
+            | jq .

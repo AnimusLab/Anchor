@@ -38,6 +38,20 @@ Deploy the compiled binary kernel straight into your production cluster workspac
 pip install anchor-audit
 ```
 
+Anchor pulls in its runtime dependencies automatically (Click, HTTPX, PyYAML,
+cryptography, wrapt, GitPython and the tree-sitter grammars), so the `anchor`
+command is usable straight after install.
+
+Optional extras:
+
+```bash
+pip install "anchor-audit[providers]"   # OpenAI, Anthropic, Groq, Cohere, Ollama, ...
+pip install "anchor-audit[server]"      # FastAPI/ASGI gateway (anchor.app) + uvicorn
+pip install "anchor-audit[dev]"         # pytest, black, mypy
+```
+
+The CLI, the `@guard` decorator and the static scanner need none of these extras.
+
 Initialize your local asymmetric cryptographic repository identity:
 
 ```bash

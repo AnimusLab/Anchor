@@ -4,8 +4,15 @@ Consumes raw network streams directly out of ASGI buffers to preserve zero-copy 
 Supports synchronous and async multi-threaded execution + live WebSocket telemetry stream.
 """
 
-from fastapi import FastAPI, Request, HTTPException, WebSocket, WebSocketDisconnect
-from anchor.server.telemetry import telemetry_bus
+try:
+    from fastapi import FastAPI, Request, HTTPException, WebSocket, WebSocketDisconnect
+    from anchor.server.telemetry import telemetry_bus
+except ImportError as exc:  # pragma: no cover - depends on install extras
+    raise ImportError(
+        "The Anchor Gateway requires the optional 'server' dependencies.\n"
+        "Install server support with: pip install anchor-audit[server]\n"
+        f"(original import error: {exc})"
+    ) from exc
 
 try:
     from anchor_core_rs import AnchorEngine

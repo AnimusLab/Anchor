@@ -6,7 +6,15 @@ Streams live violation packets & DAC audit entries to hub.animuslab.dev/hub/tele
 import json
 import asyncio
 from typing import Dict, Any, List, Set
-from fastapi import WebSocket, WebSocketDisconnect
+
+try:
+    from fastapi import WebSocket, WebSocketDisconnect
+except ImportError as exc:  # pragma: no cover - depends on install extras
+    raise ImportError(
+        "anchor.server.telemetry requires the optional 'server' dependencies.\n"
+        "Install server support with: pip install anchor-audit[server]\n"
+        f"(original import error: {exc})"
+    ) from exc
 
 class TelemetryBroadcaster:
     def __init__(self):

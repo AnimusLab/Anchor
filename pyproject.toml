@@ -12,20 +12,67 @@ authors = [
     { name = "Tanishq", email = "tan@animuslab.dev" }
 ]
 license = { text = "Apache-2.0" }
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 dependencies = [
+    # CLI
     "click>=8.0.0",
-    "httpx>=0.24.0",
-    "cryptography>=41.0.0",
     "rich>=13.0.0",
+    # Config / policy loading
     "pyyaml>=6.0",
+    # Telemetry egress + ledger sync + runtime HTTP backstop
+    "httpx>=0.24.0",
+    # Governance signature verification (Ed25519)
+    "cryptography>=41.0.0",
+    # Transparent, signature-preserving SDK patches in anchor.runtime
+    "wrapt>=1.14",
+    # anchor.core.history (imported as `git`)
+    "gitpython>=3.1.0",
+    # AST adapters in anchor/adapters
+    "tree-sitter>=0.21",
+    "tree-sitter-python>=0.21",
+    "tree-sitter-java>=0.21",
+    "tree-sitter-go>=0.21",
+    "tree-sitter-rust>=0.21",
+    "tree-sitter-typescript>=0.21",
 ]
+
+[project.optional-dependencies]
+# Provider SDKs wrapped by anchor/runtime/interceptors/framework.py.
+# These are imported lazily inside try/except; Anchor degrades gracefully
+# when they are absent, so they are never hard requirements.
+providers = [
+    "openai>=1.0.0",
+    "anthropic>=0.20.0",
+    "cohere>=4.0.0",
+    "groq>=0.9.0",
+    "mistralai>=0.1.0",
+    "ollama>=0.1.0",
+    "langchain>=0.1.0",
+    "google-generativeai>=0.5.0",
+    "transformers>=4.30.0",
+]
+# ASGI gateway in anchor/app.py + an ASGI server to actually serve it.
+server = [
+    "fastapi>=0.110.0",
+    "uvicorn>=0.27.0",
+]
+# Test and lint tooling.
+dev = [
+    "pytest>=7.4.0",
+    "black>=23.0.0",
+    "mypy>=1.5.0",
+]
+
 classifiers = [
     "Development Status :: 5 - Production/Stable",
 
     "Intended Audience :: Developers",
     "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Programming Language :: Rust",
     "Topic :: Software Development :: Quality Assurance"
 ]
@@ -37,5 +84,3 @@ anchor = "anchor.cli:main"
 features = ["pyo3/extension-module", "pyo3/abi3-py310"]
 module-name = "anchor_core_rs"
 python-packages = ["anchor"]
-
-

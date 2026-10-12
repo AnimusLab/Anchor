@@ -80,6 +80,10 @@ def execute_algorithmic_trade(order_payload):
     return route_order_to_exchange(order_payload)
 ```
 
+`from anchor.guard import guard` is the equivalent spelling if you prefer to
+import the decorator directly. Both are exercised by
+[`tests/test_readme_example.py`](tests/test_readme_example.py).
+
 ---
 
 ## 🌐 The AnimusLab Institution Network

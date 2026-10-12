@@ -26,6 +26,21 @@ except ImportError:
 
 logger = logging.getLogger("anchor.telemetry")
 
+# ---------------------------------------------------------------------------
+# Opt-in switch
+# ---------------------------------------------------------------------------
+# Telemetry is OFF unless ANCHOR_TELEMETRY is explicitly set to a truthy
+# value. When off, dispatch_state_event() returns before any socket is
+# opened, so a guarded call never performs network I/O. See docs/telemetry.md
+# for the exact list of fields that are transmitted.
+TELEMETRY_TRUTHY = {"1", "true", "on", "yes"}
+
+
+def telemetry_enabled() -> bool:
+    """Return True only when the operator has opted in via ANCHOR_TELEMETRY."""
+    return os.getenv("ANCHOR_TELEMETRY", "").strip().lower() in TELEMETRY_TRUTHY
+
+
 class SpokeTelemetryClient:
     def __init__(
         self,
@@ -98,7 +113,17 @@ class SpokeTelemetryClient:
     ) -> Optional[Dict[str, Any]]:
         """
         Dispatches and synchronously streams signed telemetry packet to the Governance Hub.
+
+        Returns None immediately (no network call, no key read) unless
+        ANCHOR_TELEMETRY is set to a truthy value.
         """
+        if not telemetry_enabled():
+            logger.debug(
+                "[Anchor] Telemetry disabled (ANCHOR_TELEMETRY not set); "
+                "no data was transmitted."
+            )
+            return None
+
         payload = {
             "event_id": event_id or f"evt_{uuid.uuid4().hex[:12]}",
             "silo_id": silo_id or "animuslab-hq",

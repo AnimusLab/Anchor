@@ -7,22 +7,22 @@
 
 Anchor is a high-performance, dual-language (Rust/Python) infrastructure library designed to enforce strict regulatory invariants, architectural boundaries, and safety safeguards around autonomous AI agents and LLM application pipelines in real-time. 
 
-By executing compiled Abstract Syntax Tree (AST) query matchers and single-pass Deterministic Finite Automaton (DFA) regex sets, Anchor operates with zero-copy memory boundaries—allowing enterprises to secure high-frequency workloads without introducing a latency tax.
+By executing compiled Abstract Syntax Tree (AST) query matchers and single-pass Deterministic Finite Automaton (DFA) regex sets, Anchor operates with zero-copy memory boundaries—designed to keep per-call overhead low. See `benchmarks/bench_guard.py` to measure it on your hardware.
 
 ---
 
 ## 🏎️ Core Architectural Horsepower
 
-- **~1,800,000 Lines/Sec Parsing Speed**: Powered by a lock-free, multi-threaded Rust backend engine utilizing parallel directory walking via `rayon` and memory-mapped files (`memmap2`).
+- **Fast static scanning**: Rust backend engine utilizing parallel directory walking via `rayon` and memory-mapped files (`memmap2`).
 - **Zero-Copy Memory Boundaries**: Leverages PyO3 zero-copy buffer bridges to consume incoming network data frames straight from host ASGI server pools (like FastAPI) with zero heap allocation overhead.
-- **Asymmetric Cryptographic Identity**: Every compiled audit log is bundled into an un-falsifiable Decision Audit Chain (DAC) block—cryptographically sealed locally using Ed25519 asymmetric keys and verified via constant-time hashing (`subtle::ConstantTimeEq`).
+- **Asymmetric Cryptographic Identity**: Every compiled audit log is bundled into an tamper-evident Decision Audit Chain (DAC) block, sealed locally using Ed25519 asymmetric keys and verified via constant-time hashing (`subtle::ConstantTimeEq`).
 - **Active Self-Healing Interception**: Moves beyond passive post-mortem dashboards. If an active consumer agent drifts into an invariant violation, Anchor's runtime layer intercepts the thread, halts execution, and injects dynamic, domain-agnostic rerouting directives on the fly.
 
 ---
 
 ## 🏛️ Comprehensive Regulatory Scope
 
-Anchor converts dense legislative text into executable code gates out-of-the-box, natively supporting:
+Anchor maps rules to the provisions they relate to (a pattern match is not a legal finding). Coverage includes:
 
 1. **EU Artificial Intelligence Act (Regulation EU 2024/1689)**: Complete mapping from Chapter II Article 5 Prohibited Practices (subliminal manipulation, facial scraping safeguards) to Chapter III Articles 6–27 High-Risk System obligations (6-month log retention tracking under Art 12/19, Article 14 human override levers), stretching up to Article 99 turnover penalty metrics.
 2. **U.S. Securities and Exchange Commission (SEC / FINRA)**: Hard automated boundaries protecting algorithmic trading setups under SEC Regulation SCI (System capacity loop circuit breakers), Exchange Act Rule 15c3-5 (Pre-trade credit and risk limit validation), and Cybersecurity Form 8-K outbound data exfiltration gates.
@@ -58,7 +58,7 @@ Initialize your local asymmetric cryptographic repository identity:
 anchor init
 ```
 
-Run a parallel, sub-millisecond static code safety audit across your local workspace:
+Run a parallel static code safety audit across your local workspace:
 
 ```bash
 anchor check .
@@ -66,17 +66,17 @@ anchor check .
 
 ---
 
-## 🔌 Zero-Friction Runtime Integration
+## 🔌 Runtime Integration
 
-Wrap any high-privilege agent routine or LLM invocation loop using a single python decorator to activate your real-time security envelope:
+Wrap a high-privilege agent routine or LLM invocation with a decorator. `@guard` only protects functions you wrap; unwrapped code is not covered.
 
 ```python
-from anchor.runtime import anchor
+from anchor import guard
 
-@anchor.guard(domain="finance")
+@guard(domain="finance")
 def execute_algorithmic_trade(order_payload):
     # If the autonomous agent tries to route an un-vetted market order,
-    # Anchor intercepts it in microseconds, blocks execution, and self-heals the track.
+    # Anchor audits the call payload before the function body runs and returns a BLOCKED_BY_ANCHOR directive on a match.
     return route_order_to_exchange(order_payload)
 ```
 
@@ -95,4 +95,12 @@ Anchor Core acts as the local spoke auditing engine that feeds seamlessly into t
 - **Statutory Rules Documentation**: [animuslab.dev/rules](https://animuslab.dev/rules)
 - **Authoritative Engineering Profile**: [tan.animuslab.dev](https://tan.animuslab.dev)
 
-*Managed and Certified by the AnimusLab Open-Source Network Engine. Verifiable proofs are cryptographically bound to our global institutional identity registry.*
+*Maintained by AnimusLab.*
+
+---
+
+## ⚠️ Limitations
+
+- `@guard` (Layer 2) covers only the functions you decorate. Keyword/pattern checks can be rephrased around; treat Anchor as one deterministic layer in defense-in-depth.
+- Telemetry is **off by default**. Set `ANCHOR_TELEMETRY=on` to opt in; see [docs/telemetry.md](docs/telemetry.md) for exactly what is sent.
+- Static rules are pattern/AST based. Known detection gaps are tracked as `xfail` tests in `tests/unit/test_detection_gaps.py`.

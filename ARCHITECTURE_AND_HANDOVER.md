@@ -1,7 +1,7 @@
 # Anchor Institutional System Architecture & Handover Specification
 **Authoritative Architectural Specification & Operational Handover Document**  
 **Classification:** Enterprise AI Governance Infrastructure (Restricted / Institutional)  
-**Version:** 6.0.2-LTS  
+**Version:** 6.0.3
 **Author:** AnimusLab System Kernel Architecture Team  
 
 ---
@@ -22,6 +22,15 @@
 ## 1. Executive Summary & System Invariants
 
 Anchor is an institutional-grade federated governance and audit infrastructure designed to enforce deterministic safety, statutory compliance, and behavioral integrity across enterprise AI systems and autonomous agent swarms.
+
+### v6.0.3 release baseline
+
+- Python package release published through the `pyproject.toml`/Maturin build.
+- Telemetry is opt-in and disabled unless `ANCHOR_TELEMETRY` is explicitly enabled.
+- Governance lock signatures normalize line endings before signing and verification,
+  so the signed baseline is portable across operating systems.
+- The governance signing private key is generated and stored outside the repository;
+  only the rotated public key is committed.
 
 ### Core System Invariants
 - **Cryptographic Non-Repudiation:** Every code audit, violation stream, and runtime agent checkpoint is signed using asymmetric Ed25519 keypairs or HMAC-SHA256 DAC chains.

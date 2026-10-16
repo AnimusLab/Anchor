@@ -12,6 +12,8 @@ from pathlib import Path
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives import serialization
 
+from anchor.core.governance_signature import normalize_lock_bytes
+
 
 def load_private_key(path: Path) -> Ed25519PrivateKey:
     pem_bytes = path.read_bytes()
@@ -22,7 +24,7 @@ def load_private_key(path: Path) -> Ed25519PrivateKey:
 
 
 def sign_lock_file(lock_path: Path, private_key_path: Path) -> Path:
-    lock_bytes = lock_path.read_bytes()
+    lock_bytes = normalize_lock_bytes(lock_path.read_bytes())
     private_key = load_private_key(private_key_path)
     signature = private_key.sign(lock_bytes)
 

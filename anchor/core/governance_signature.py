@@ -11,6 +11,11 @@ from cryptography.exceptions import InvalidSignature
 GOVERNANCE_PUBLIC_KEY_HEX = "c04f2c898d1a433394221092307fa22fed56120dd666e731455d005b87b90993"
 
 
+def normalize_lock_bytes(data: bytes) -> bytes:
+    """Canonicalize line endings so signatures verify on every OS."""
+    return data.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+
+
 class GovernanceSignatureError(Exception):
     """Raised when GOVERNANCE.lock signature is missing, invalid, or tampered."""
     pass
@@ -41,7 +46,7 @@ def verify_lock_signature(lock_path: Path, sig_path: Optional[Path] = None) -> d
     except (json.JSONDecodeError, KeyError, ValueError) as e:
         raise GovernanceSignatureError(f"Malformed signature file {sig_path}: {e}") from e
 
-    lock_bytes = lock_path.read_bytes()
+    lock_bytes = normalize_lock_bytes(lock_path.read_bytes())
     public_key = _load_public_key()
 
     try:

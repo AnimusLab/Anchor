@@ -39,3 +39,11 @@ target/
 # pytest
 .pytest_cache/
 
+
+# Secrets - never commit private keys
+*.pem
+!*_public.pem
+!.anchor/keys/*_public.pem
+.anchor/keys/*private*
+*.key
+scratch/

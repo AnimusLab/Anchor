@@ -5,13 +5,13 @@
 # applies policy overrides.
 # ─────────────────────────────────────────────────────────────
 
+from __future__ import annotations
+
 # Canonical version of this client — used in version-skew detection
 # so old clients connecting to a newer backend emit a clear upgrade
 # prompt rather than a misleading security alarm.
 CLIENT_VERSION = "6.0.2"
 CLIENT_MAJOR = 6
-
-from __future__ import annotations
 
 import hashlib
 import hmac

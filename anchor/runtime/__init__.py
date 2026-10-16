@@ -42,8 +42,30 @@ from anchor.runtime.interceptors.base import (
     PromptScanResult, ResponseScanResult,
 )
 from anchor.runtime.guard import AnchorGuard
+from anchor.guard import enforce, guard
 
 logger = logging.getLogger("anchor.runtime")
+
+
+# ---------------------------------------------------------------------------
+# Decorator namespace
+# ---------------------------------------------------------------------------
+# The README documents the Layer 2 integration as:
+#
+#     from anchor.runtime import anchor
+#
+#     @anchor.guard(domain="finance")
+#     def execute_algorithmic_trade(order_payload): ...
+#
+# so re-export a minimal namespace that makes that import real. This is the
+# same object `anchor.guard` exposes, just namespaced, so
+# `from anchor.guard import guard` keeps working unchanged.
+class anchor:
+    """Namespace exposing Anchor's Layer 2 decorators as attributes."""
+
+    guard = staticmethod(guard)
+    enforce = staticmethod(enforce)
+
 
 # ---------------------------------------------------------------------------
 # Module-level state
@@ -215,6 +237,7 @@ activate()
 
 # Re-export for convenience
 __all__ = [
+    "anchor",
     "activate",
     "deactivate",
     "register_provider",

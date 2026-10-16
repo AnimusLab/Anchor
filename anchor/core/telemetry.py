@@ -26,17 +26,35 @@ except ImportError:
 
 logger = logging.getLogger("anchor.telemetry")
 
+# ---------------------------------------------------------------------------
+# Opt-in switch
+# ---------------------------------------------------------------------------
+# Telemetry is OFF unless ANCHOR_TELEMETRY is explicitly set to a truthy
+# value. When off, dispatch_state_event() returns before any socket is
+# opened, so a guarded call never performs network I/O. See docs/telemetry.md
+# for the exact list of fields that are transmitted.
+TELEMETRY_TRUTHY = {"1", "true", "on", "yes"}
+
+
+def telemetry_enabled() -> bool:
+    """Return True only when the operator has opted in via ANCHOR_TELEMETRY."""
+    return os.getenv("ANCHOR_TELEMETRY", "").strip().lower() in TELEMETRY_TRUTHY
+
+
 class SpokeTelemetryClient:
     def __init__(
         self,
         hub_url: Optional[str] = None,
         identity_fingerprint: Optional[str] = None,
         private_key_path: Optional[str] = None,
-        api_key: Optional[str] = None
+        api_key: Optional[str] = None,
+        enabled: Optional[bool] = None,
     ):
         """
-        Initializes the federated spoke-to-hub network connection pool with cryptographic signing.
+        Initializes the spoke-to-hub client. Opt-in: with telemetry disabled (the
+        default) no network connection is ever attempted.
         """
+        self.enabled = telemetry_enabled() if enabled is None else enabled
         self.hub_url = (hub_url or os.environ.get("ANCHOR_HUB_URL", "http://localhost:3000")).rstrip("/")
         self.endpoint = f"{self.hub_url}/api/v1/telemetry/event"
         self.api_key = api_key or os.environ.get("ANCHOR_API_KEY")
@@ -98,7 +116,16 @@ class SpokeTelemetryClient:
     ) -> Optional[Dict[str, Any]]:
         """
         Dispatches and synchronously streams signed telemetry packet to the Governance Hub.
+
+        Returns None immediately (no network call, no key read) unless
+        ANCHOR_TELEMETRY is set to a truthy value.
         """
+        if not self.enabled:
+            logger.debug(
+                "[Anchor] Telemetry disabled; "
+                "no data was transmitted."
+            )
+            return None
         payload = {
             "event_id": event_id or f"evt_{uuid.uuid4().hex[:12]}",
             "silo_id": silo_id or "animuslab-hq",

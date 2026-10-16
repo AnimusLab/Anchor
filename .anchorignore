@@ -2,5 +2,8 @@
 build/
 target/
 tests/
+tests\
+benchmarks\
+scripts\generate_signing_key.py
 .venv/
 node_modules/

@@ -5,6 +5,8 @@
 [![PyPI Version](https://img.shields.io/pypi/v/anchor-audit.svg)](https://pypi.org/project/anchor-audit/)
 [![License](https://img.shields.io/github/license/AnimusLab/Anchor.svg)](https://github.com/AnimusLab/Anchor)
 
+**Current release: 6.0.3** · Python 3.10–3.13
+
 Anchor is a high-performance, dual-language (Rust/Python) infrastructure library designed to enforce strict regulatory invariants, architectural boundaries, and safety safeguards around autonomous AI agents and LLM application pipelines in real-time. 
 
 By executing compiled Abstract Syntax Tree (AST) query matchers and single-pass Deterministic Finite Automaton (DFA) regex sets, Anchor operates with zero-copy memory boundaries—designed to keep per-call overhead low. See `benchmarks/bench_guard.py` to measure it on your hardware.
@@ -51,6 +53,15 @@ pip install "anchor-audit[dev]"         # pytest, black, mypy
 ```
 
 The CLI, the `@guard` decorator and the static scanner need none of these extras.
+
+### 6.0.3 release highlights
+
+- Telemetry remains explicitly opt-in and performs no network dispatch by default.
+- Governance signatures are line-ending independent across Windows, macOS, and Linux.
+- The package metadata, wheel smoke test, secret scanning, and developer extras are
+  aligned with the `pyproject.toml` build.
+- The committed governance public key is rotated; the private signing key is
+  generated and retained outside the repository.
 
 Initialize your local asymmetric cryptographic repository identity:
 

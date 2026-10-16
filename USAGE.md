@@ -1,22 +1,22 @@
-# Anchor Usage Guide 
+# Anchor Usage Guide (v6.0.3)
 
 This guide covers the command-line interface (CLI), Python API, and integration patterns for AI agents.
 
 ## Installation
 
-Anchor is designed to be installed as a python package.
+Anchor 6.0.3 is published on PyPI and supports Python 3.10 through 3.13.
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/yourusername/anchor.git
-cd anchor
+# Install the latest v6.0.3 release
+python -m pip install anchor-audit==6.0.3
 
-# 2. Install in editable mode
-pip install -e .
-
-# 3. Verify installation
+# Verify installation
 anchor --help
 ```
+
+For source development, clone
+`https://github.com/AnimusLab/Anchor.git` and install with
+`python -m pip install -e ".[dev]"`.
 
 ##  Quick Start
 

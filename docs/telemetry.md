@@ -1,4 +1,4 @@
-# Telemetry
+# Telemetry (Anchor v6.0.3)
 
 Anchor does **not** contact any server unless you opt in.
 
@@ -18,3 +18,10 @@ case no network connection is attempted. Hub address: `ANCHOR_HUB_URL`; key: `AN
 | `violations[]` | `rule_id`, `statute`, `severity`, `trace_uri` (file/function path), `summary` |
 
 Source code and call payloads are not included. Network failures are logged at DEBUG only.
+
+## Release behavior
+
+In v6.0.3, telemetry is disabled by default in both the PyPI package and source
+checkout. Installing or importing Anchor does not enable network access. Set
+`ANCHOR_TELEMETRY=on` only after reviewing the fields above and configuring the
+intended `ANCHOR_HUB_URL`.

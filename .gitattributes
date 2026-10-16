@@ -1,0 +1,3 @@
+# Signed artifacts must keep LF endings on every platform
+anchor/governance/GOVERNANCE.lock text eol=lf
+anchor/governance/GOVERNANCE.lock.sig text eol=lf

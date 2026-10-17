@@ -1,14 +1,14 @@
-# Anchor Usage Guide (v6.0.3)
+# Anchor Usage Guide (v6.0.4)
 
 This guide covers the command-line interface (CLI), Python API, and integration patterns for AI agents.
 
 ## Installation
 
-Anchor 6.0.3 is published on PyPI and supports Python 3.10 through 3.13.
+Anchor 6.0.4 is published on PyPI and supports Python 3.10 through 3.13.
 
 ```bash
-# Install the latest v6.0.3 release
-python -m pip install anchor-audit==6.0.3
+# Install the latest v6.0.4 release
+python -m pip install anchor-audit==6.0.4
 
 # Verify installation
 anchor --help

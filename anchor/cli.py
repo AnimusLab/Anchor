@@ -522,7 +522,6 @@ def check(ctx, paths, fmt, severity, model, metadata, context):
         click.echo("  This compliance evaluation report and its constituent cryptographic")
         click.echo("  verifications have been compiled and checked")
         click.echo("  by the AnimusLab System Kernel under verified policy parameters.\n")
-        click.secho("  Signed by:", bold=True)
         click.secho("  Signed by AnimusLab node (see key fingerprint in the report)", fg="cyan", bold=True)
     else:
         click.secho("  âš ï¸ UNVERIFIED LOCAL GOVERNANCE / SIGNATURE NOT VALIDATED", fg="yellow", bold=True)

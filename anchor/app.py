@@ -40,7 +40,7 @@ async def process_agent_decision(request: Request):
         
         if not audit_report["is_compliant"]:
             # Stream live violation event to hub.animuslab.dev telemetry bus
-            await telemetry_bus.broadcast_violation(audit_report, raw_payload_bytes.decode("utf-8", "ignore"))
+            await telemetry_bus.broadcast_violation(audit_report)
             raise HTTPException(
                 status_code=422,
                 detail={
@@ -70,7 +70,7 @@ async def process_agent_decision_async(request: Request):
         audit_report = await engine.audit_payload_async(raw_payload_bytes)
         
         if not audit_report["is_compliant"]:
-            await telemetry_bus.broadcast_violation(audit_report, raw_payload_bytes.decode("utf-8", "ignore"))
+            await telemetry_bus.broadcast_violation(audit_report)
             raise HTTPException(
                 status_code=422,
                 detail={

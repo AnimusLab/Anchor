@@ -116,6 +116,41 @@ def test_telemetry_websocket_requires_valid_shared_token():
     assert allowed.closed == []
 
 
+def test_telemetry_websocket_rejects_query_string_token():
+    bus = server_telemetry.TelemetryBroadcaster(required_token="secret")
+    websocket = FakeWebSocket(
+        headers={"origin": "https://hub.animuslab.dev"},
+        query_params={"token": "secret"},
+    )
+
+    asyncio.run(bus.connect(websocket))
+
+    assert websocket.accepted is False
+    assert websocket.closed == [1008]
+
+
+def test_telemetry_packet_excludes_payload():
+    class FakeConnection:
+        def __init__(self):
+            self.messages = []
+
+        async def send_text(self, message):
+            self.messages.append(message)
+
+    bus = server_telemetry.TelemetryBroadcaster(required_token="secret")
+    connection = FakeConnection()
+    bus.active_connections.add(connection)
+
+    asyncio.run(
+        bus.broadcast_violation(
+            {"rule_version": "6.0.4", "violations": ["SEC-001"]},
+        )
+    )
+
+    assert len(connection.messages) == 1
+    assert "payload_snippet" not in connection.messages[0]
+
+
 def test_guarded_blocked_call_makes_no_request(monkeypatch, no_network):
     """End-to-end: a blocked guarded call must not touch the network."""
     monkeypatch.delenv("ANCHOR_TELEMETRY", raising=False)

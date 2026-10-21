@@ -39,9 +39,6 @@ class TelemetryBroadcaster:
         auth = websocket.headers.get("authorization")
         if auth and auth.lower().startswith("bearer "):
             return auth.split(None, 1)[1].strip()
-        token = websocket.query_params.get("token")
-        if token:
-            return token.strip()
         return None
 
     async def connect(self, websocket: WebSocket):
@@ -68,11 +65,10 @@ class TelemetryBroadcaster:
     def disconnect(self, websocket: WebSocket):
         self.active_connections.discard(websocket)
 
-    async def broadcast_violation(self, audit_report: Dict[str, Any], payload_snippet: str = ""):
+    async def broadcast_violation(self, audit_report: Dict[str, Any]):
         """
         Broadcasts live violation telemetry payload across authorized clients only.
-        Payload snippets are redacted to the minimum necessary and must never
-        include tenant prompts, secrets, or raw code.
+        Request bodies are intentionally excluded from telemetry.
         """
         if not self.active_connections:
             return
@@ -84,8 +80,7 @@ class TelemetryBroadcaster:
             "risk_score": audit_report.get("risk_score"),
             "risk_level": audit_report.get("risk_level"),
             "violations": audit_report.get("violations", []),
-            "execution_microsec": audit_report.get("execution_microsec"),
-            "payload_snippet": (payload_snippet[:80] if payload_snippet else "")
+            "execution_microsec": audit_report.get("execution_microsec")
         }
 
         message = json.dumps(packet)

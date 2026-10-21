@@ -12,11 +12,27 @@ instead.
 
 import socket
 import ssl  # noqa: F401  - ssl subclasses socket.socket, must import first
+import asyncio
 
 import pytest
 
 import anchor.core.telemetry as telemetry_mod
+import anchor.server.telemetry as server_telemetry
 from anchor.core.telemetry import SpokeTelemetryClient, telemetry_enabled
+
+
+class FakeWebSocket:
+    def __init__(self, *, headers=None, query_params=None):
+        self.headers = headers or {}
+        self.query_params = query_params or {}
+        self.accepted = False
+        self.closed = []
+
+    async def accept(self):
+        self.accepted = True
+
+    async def close(self, code=1008):
+        self.closed.append(code)
 
 
 @pytest.fixture
@@ -82,6 +98,22 @@ def test_no_network_call_when_disabled(monkeypatch, no_network):
 
     assert client.dispatch_state_event(**_payload_kwargs()) is None
     assert no_network == [], f"network attempted while disabled: {no_network}"
+
+
+def test_telemetry_websocket_requires_valid_shared_token():
+    bus = server_telemetry.TelemetryBroadcaster(required_token="secret")
+
+    blocked = FakeWebSocket(headers={"origin": "https://hub.animuslab.dev"})
+    asyncio.run(bus.connect(blocked))
+    assert blocked.accepted is False
+    assert blocked.closed == [1008]
+
+    allowed = FakeWebSocket(
+        headers={"origin": "https://hub.animuslab.dev", "authorization": "Bearer secret"}
+    )
+    asyncio.run(bus.connect(allowed))
+    assert allowed.accepted is True
+    assert allowed.closed == []
 
 
 def test_guarded_blocked_call_makes_no_request(monkeypatch, no_network):

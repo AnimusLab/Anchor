@@ -14,12 +14,21 @@ try:
     from anchor_core_rs import AnchorEngine
 except ImportError:
     class AnchorEngine:
+        def __init__(self, *args, **kwargs):
+            raise RuntimeError(
+                "Anchor native engine is unavailable. Reinstall anchor-audit with its native extension "
+                "enabled before running security checks."
+            )
+
         def scan_directory_detailed(self, path: str):
-            return {"total_files_scanned": 0, "total_lines_scanned": 0, "scan_latency_microsec": 0, "total_violations": 0, "violations": []}
+            raise RuntimeError("Anchor native engine is unavailable.")
+
         def load_rules_from_dir(self, path: str):
-            return {"total_rules_loaded": 43, "rule_ids": []}
+            raise RuntimeError("Anchor native engine is unavailable.")
+
         def generate_keypair(self):
-            return {"private_key_pem": "priv_hex_mock", "public_key_pem": "pub_hex_mock", "fingerprint": "sha256:mock_fingerprint"}
+            raise RuntimeError("Anchor native engine is unavailable.")
+
         def version(self):
             return _pkg_version()
 

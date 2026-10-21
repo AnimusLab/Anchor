@@ -16,21 +16,11 @@ except ImportError as exc:  # pragma: no cover - depends on install extras
 
 try:
     from anchor_core_rs import AnchorEngine
-except ImportError:
-    class AnchorEngine:
-        def __init__(self):
-            self.rule_set_version = "6.0.0-alpha (Python Fallback)"
-        def audit_payload(self, py_bytes: bytes):
-            return {
-                "is_compliant": True,
-                "rule_version": self.rule_set_version,
-                "violations": [],
-                "risk_score": 0.0,
-                "risk_level": "LOW",
-                "execution_microsec": 12
-            }
-        async def audit_payload_async(self, py_bytes: bytes):
-            return self.audit_payload(py_bytes)
+except ImportError as exc:  # pragma: no cover - native extension required
+    raise RuntimeError(
+        "Anchor server mode requires the native engine. Install anchor-audit with the Rust extension "
+        "enabled before starting the gateway."
+    ) from exc
 
 app = FastAPI(
     title="AnimusLab Anchor Core Gateway",

@@ -58,6 +58,10 @@ impl AnchorEngine {
             r"(?i)(\.(completions|messages|chat)\.(create|send)|agents\.messages\.create)\s*\(", // index 6: ALN-001 / Hallucination (LLM Output Validation)
             // anchor: ignore SEC-002 -- pattern definition, not a violation
             r"(?i)\.(upsert|add_texts|add_documents)\s*\(", // index 7: SEC-002 / Data Poisoning (Unencrypted Vector Store Write)
+            // anchor: ignore SEC-010 -- pattern definition, not a violation
+            r"(^|[^.\w])(eval|exec)\s*\(|__import__\s*\(", // index 8: SEC-010 / Insecure Python Execution (case-sensitive; skips .eval( and literal_eval()
+            // anchor: ignore SEC-007 -- pattern definition, not a violation
+            r"(?i)(rm\s+-(rf|fr)\s+[/~]|curl\s+[^\s]+\s*\|\s*(bash|sh|zsh|fish))", // index 9: SEC-007 / destructive or piped shell strings
         ];
 
         let regex_set = Arc::new(
@@ -72,7 +76,7 @@ impl AnchorEngine {
         let remediation_graph = RemediationGraph::load_from_file(mitigation_path);
 
         Ok(AnchorEngine {
-            rule_set_version: "6.0.0".to_string(),
+            rule_set_version: env!("CARGO_PKG_VERSION").to_string(),
 
             regex_set,
             legal_mapper: LegalMapper::new(),
@@ -109,6 +113,8 @@ impl AnchorEngine {
             ("SEC-007", "OWASP-LLM07", "Shell Injection (Unsandboxed Subprocess in Agent)"),
             ("ALN-001", "OWASP-LLM09", "Hallucination (LLM Output Without Validation)"),
             ("SEC-002", "OWASP-LLM03", "Data Poisoning (Unencrypted Vector Store Upsert)"),
+            ("SEC-010", "OWASP-LLM05", "Insecure Python Execution (eval/exec/dynamic import)"),
+            ("SEC-007", "OWASP-LLM07", "Shell Injection (Destructive or Piped Shell String)"),
         ];
 
 
@@ -390,6 +396,14 @@ impl AnchorEngine {
         if matches.matched(4) {
             violations.push("SEC_002_CREDENTIAL_LEAK: Hardcoded API secret or bearer token detected in context payload.");
             matched_rule_ids.push("SEC-002");
+        }
+        if matches.matched(8) {
+            violations.push("SEC_010_INSECURE_EXECUTION: Dynamic code execution (eval/exec/__import__) detected in payload.");
+            matched_rule_ids.push("SEC-010");
+        }
+        if matches.matched(9) {
+            violations.push("SEC_007_SHELL_INJECTION: Destructive or piped shell command detected in payload.");
+            matched_rule_ids.push("SEC-007");
         }
 
         let is_compliant = violations.is_empty();

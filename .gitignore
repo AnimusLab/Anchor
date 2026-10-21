@@ -39,6 +39,8 @@ target/
 # pytest
 .pytest_cache/
 
+# local patch artifacts
+anchor-detection-fix.patch
 
 # Secrets - never commit private keys
 *.pem

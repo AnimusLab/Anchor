@@ -19,8 +19,8 @@ class TypeScriptAdapter(LanguageAdapter):
     def build_dangerous_call_query(self, function_names: List[str]) -> str:
         """
         Constructs a query to find calls like:
-        - eval('code')
-        - child_process.exec('cmd')
+        - calls to eval
+        - calls to child_process exec
         """
         # Create a regex that matches ANY of the banned functions
         # e.g., "eval|exec|spawn"

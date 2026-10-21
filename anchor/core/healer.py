@@ -175,7 +175,7 @@ def _fix_eval(line: str):
         suggested = line[:m.start()] + "# UNSAFE: " + line[m.start():].rstrip() + "  # Use ast.literal_eval() for safe literal parsing"
         return (
             suggested.rstrip(),
-            "eval() on user input allows arbitrary code execution. "
+            "Calling eval on user input allows arbitrary code execution. "
             "Use ast.literal_eval() for safe parsing of literals, or redesign to avoid eval entirely.",
             False
         )

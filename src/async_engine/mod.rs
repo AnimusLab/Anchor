@@ -46,6 +46,12 @@ impl AsyncEngineCore {
             if matches.matched(4) {
                 violations.push("SEC_002_CREDENTIAL_LEAK: Hardcoded API secret or bearer token detected in context payload.".to_string());
             }
+            if matches.matched(8) {
+                violations.push("SEC_010_INSECURE_EXECUTION: Dynamic code execution (eval/exec/__import__) detected in payload.".to_string());
+            }
+            if matches.matched(9) {
+                violations.push("SEC_007_SHELL_INJECTION: Destructive or piped shell command detected in payload.".to_string());
+            }
 
             AsyncAuditResult {
                 is_compliant: violations.is_empty(),

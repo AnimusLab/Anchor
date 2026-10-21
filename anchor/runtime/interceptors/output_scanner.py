@@ -67,13 +67,13 @@ _RESPONSE_PATTERNS: list[tuple[str, str, str, str]] = [
 
     # ── Insecure Python / eval-exec patterns ─────────────────────────
     (r'(?i)\beval\s*\(.*input\s*\(',
-        "RSP-030", "error", "eval(input()) pattern in LLM response"),
+        "RSP-030", "error", "eval-of-input pattern in LLM response"),
 
     (r'(?i)\bexec\s*\(.*request\.',
-        "RSP-031", "error", "exec(request.*) pattern in LLM response"),
+        "RSP-031", "error", "exec-of-request pattern in LLM response"),
 
     (r'(?i)__import__\s*\(["\']os["\']',
-        "RSP-032", "error", "Dynamic __import__('os') in LLM response"),
+        "RSP-032", "error", "Dynamic import of os in LLM response"),
 
     # ── Subprocess with shell=True ────────────────────────────────────
     (r'(?i)subprocess\.(run|call|Popen|check_output)\s*\(.*shell\s*=\s*True',

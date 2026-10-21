@@ -18,7 +18,7 @@ class PythonAdapter(LanguageAdapter):
     def build_dangerous_call_query(self, function_names: List[str]) -> str:
         """
         Query for Python function calls like:
-        eval(...)
+        calls to eval or exec
         subprocess.run(...)  # anchor: ignore ANC-018
         """
         funcs_regex = "|".join(function_names)

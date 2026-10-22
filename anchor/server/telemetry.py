@@ -5,6 +5,7 @@ Streams live violation packets & DAC audit entries to hub.animuslab.dev/hub/tele
 
 import json
 import asyncio
+import hmac
 import os
 from typing import Dict, Any, Set, Optional
 
@@ -21,7 +22,7 @@ except ImportError as exc:  # pragma: no cover - depends on install extras
 class TelemetryBroadcaster:
     def __init__(self, required_token: Optional[str] = None):
         self.active_connections: Set[WebSocket] = set()
-        self.required_token = required_token or os.environ.get("ANCHOR_TELEMETRY_TOKEN")
+        self._token_override = required_token
 
     def _origin_allowed(self, origin: Optional[str]) -> bool:
         if not origin:
@@ -33,7 +34,10 @@ class TelemetryBroadcaster:
             "http://localhost:3001",
             "http://localhost:8000",
         }
-        return origin.rstrip("/") in allowed or origin.endswith(".animuslab.dev")
+        return origin.rstrip("/") in allowed
+
+    def _required_token(self) -> Optional[str]:
+        return self._token_override or os.environ.get("ANCHOR_TELEMETRY_TOKEN")
 
     def _extract_bearer_token(self, websocket: WebSocket) -> Optional[str]:
         auth = websocket.headers.get("authorization")
@@ -48,14 +52,15 @@ class TelemetryBroadcaster:
             return
 
         token = self._extract_bearer_token(websocket)
-        if self.required_token is None:
+        required_token = self._required_token()
+        if required_token is None:
             # Safe default: no external telemetry websocket is allowed without a
             # configured shared secret. Operators can set ANCHOR_TELEMETRY_TOKEN to
             # explicitly enable a local or trusted external hub connection.
             await websocket.close(code=1008)
             return
 
-        if not token or token != self.required_token:
+        if not token or not hmac.compare_digest(token, required_token):
             await websocket.close(code=1008)
             return
 

@@ -42,6 +42,9 @@ target/
 # local patch artifacts
 anchor-detection-fix.patch
 
+# pull request draft
+PR_description.md
+
 # Secrets - never commit private keys
 *.pem
 !*_public.pem

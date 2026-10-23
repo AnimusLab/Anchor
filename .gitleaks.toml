@@ -1,0 +1,11 @@
+title = "Anchor gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Deliberately insecure demo and test fixtures"
+paths = [
+  '''garbage_code\.py''',
+  '''tests/.*''',
+]

@@ -115,3 +115,13 @@ Anchor Core acts as the local spoke auditing engine that feeds seamlessly into t
 - `@guard` (Layer 2) covers only the functions you decorate. Keyword/pattern checks can be rephrased around; treat Anchor as one deterministic layer in defense-in-depth.
 - Telemetry is **off by default**. Set `ANCHOR_TELEMETRY=on` to opt in; see [docs/telemetry.md](docs/telemetry.md) for exactly what is sent.
 - Static rules are pattern/AST based. Known detection gaps are tracked as `xfail` tests in `tests/unit/test_detection_gaps.py`.
+
+---
+
+## Security and legal notes
+
+- **Gateway.** `anchor.app` fails closed: set `ANCHOR_GATEWAY_TOKEN` and send `Authorization: Bearer <token>`. Request bodies are limited to 1 MiB (`ANCHOR_GATEWAY_MAX_BODY_BYTES`). Bind to `127.0.0.1` unless it runs behind a trusted proxy. For local development only, `ANCHOR_GATEWAY_ALLOW_UNAUTHENTICATED=1` disables the check.
+- **Remote policies.** `extends:` accepts `https://` URLs only, refuses private and local addresses, and can be restricted with `ANCHOR_POLICY_URL_ALLOWLIST`.
+- **Sandbox runtime.** Downloaded runtime files are verified against pinned SHA-256 hashes before use.
+- **Not legal advice.** Anchor reports automated pattern and AST findings mapped to the provisions they relate to. A finding is not a legal determination, and a clean scan is not a compliance certification. References to OWASP, NIST, FINOS, OECD and regulators identify sources only and do not imply endorsement.
+- **Reporting vulnerabilities:** see [SECURITY.md](SECURITY.md). Third-party licenses: [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).

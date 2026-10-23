@@ -1,10 +1,11 @@
 ﻿import pytest
+import anchor
 from anchor.cli import AnchorEngine
 
 
 def test_rust_engine_instantiation():
     engine = AnchorEngine()
-    assert engine.version() == "6.0.0"
+    assert engine.version() == anchor.__version__
 
 
 def test_ed25519_keypair_generation_and_signing():

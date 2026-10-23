@@ -44,6 +44,7 @@ anchor-detection-fix.patch
 
 # pull request draft
 PR_description.md
+pr.md
 
 # Secrets - never commit private keys
 *.pem

@@ -1,7 +1,6 @@
 use ed25519_dalek::{SigningKey, VerifyingKey, Signature, Signer, Verifier};
 use hmac::{Hmac, Mac};
-use rand_core::OsRng;
-use sha2::{Digest, Sha256};
+use sha2_10::{Digest, Sha256};
 use subtle::ConstantTimeEq;
 
 
@@ -15,7 +14,7 @@ pub struct Ed25519KeyPair {
 
 /// Generate fresh Ed25519 Keypair for local deployment identity
 pub fn generate_ed25519_keypair() -> Ed25519KeyPair {
-    let mut csprng = OsRng;
+    let mut csprng = rand::rng();
     let signing_key = SigningKey::generate(&mut csprng);
     let verifying_key: VerifyingKey = signing_key.verifying_key();
 
@@ -26,8 +25,8 @@ pub fn generate_ed25519_keypair() -> Ed25519KeyPair {
     let public_hex = hex::encode(pub_bytes);
 
     // Compute SHA-256 fingerprint of public key
-    let mut hasher = sha2::Sha256::new();
-    sha2::Digest::update(&mut hasher, pub_bytes);
+    let mut hasher = Sha256::new();
+    Digest::update(&mut hasher, pub_bytes);
     let fingerprint = format!("sha256:{}", hex::encode(hasher.finalize()));
 
     Ed25519KeyPair {

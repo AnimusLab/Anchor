@@ -1,5 +1,9 @@
-import yaml
+import ipaddress
+import socket
+import urllib.error
+import urllib.parse
 import urllib.request
+import yaml
 import os
 import sys
 from typing import Dict, Any, List, Optional
@@ -15,6 +19,64 @@ def _severity_rank(severity: str) -> int:
         return SEVERITY_LEVELS.index(severity.lower())
     except ValueError:
         return 0  # Unknown severity defaults to lowest
+
+
+_MAX_POLICY_BYTES = 1024 * 1024
+
+
+class PolicyURLError(ValueError):
+    """Raised when an `extends:` URL is not allowed."""
+
+
+def _host_allowlist() -> List[str]:
+    raw = os.environ.get("ANCHOR_POLICY_URL_ALLOWLIST", "")
+    return [h.strip().lower() for h in raw.split(",") if h.strip()]
+
+
+def _is_public_ip(addr: str) -> bool:
+    ip = ipaddress.ip_address(addr)
+    return not (ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_multicast
+                or ip.is_reserved or ip.is_unspecified)
+
+
+def validate_policy_url(url: str) -> str:
+    """Return the URL if it is safe to fetch as a remote policy, else raise PolicyURLError.
+
+    Rules: https only; a host must be present; if ANCHOR_POLICY_URL_ALLOWLIST is set
+    the host must be on it; hosts that are, or resolve to, private, loopback,
+    link-local or otherwise non-public addresses are refused.
+    """
+    if not isinstance(url, str):
+        raise PolicyURLError("extends must be a URL string")
+    parts = urllib.parse.urlsplit(url.strip())
+    if parts.scheme.lower() != "https":
+        raise PolicyURLError(f"Remote policy URL must use https:// (got '{parts.scheme or 'none'}')")
+    host = (parts.hostname or "").lower()
+    if not host:
+        raise PolicyURLError("Remote policy URL has no host")
+    allow = _host_allowlist()
+    if allow and host not in allow:
+        raise PolicyURLError(f"Host '{host}' is not in ANCHOR_POLICY_URL_ALLOWLIST")
+    if host == "localhost" or host.endswith(".localhost"):
+        raise PolicyURLError("Remote policy URL must not point at localhost")
+    try:
+        literal = ipaddress.ip_address(host)
+        addrs = [str(literal)]
+    except ValueError:
+        try:
+            addrs = sorted({ai[4][0] for ai in socket.getaddrinfo(host, parts.port or 443, proto=socket.IPPROTO_TCP)})
+        except socket.gaierror:
+            addrs = []  # unresolved here; the fetch itself will fail and be reported
+    for a in addrs:
+        if not _is_public_ip(a):
+            raise PolicyURLError(f"Remote policy host '{host}' resolves to a non-public address ({a})")
+    return url
+
+
+class _HttpsOnlyRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        validate_policy_url(newurl)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
 class PolicyLoader:
@@ -64,10 +126,18 @@ class PolicyLoader:
 
     def _fetch_remote_policy(self, url: str) -> Dict[str, Any]:
         """Fetches a remote .anchor file (e.g., from Github Raw) using urllib."""
+        # A bad URL is a configuration error: fail loudly instead of silently
+        # dropping a (possibly stricter) parent policy.
+        validate_policy_url(url)
         try:
-            with urllib.request.urlopen(url, timeout=10) as response:
-                content = response.read().decode('utf-8')
-                return yaml.safe_load(content) or {}
+            opener = urllib.request.build_opener(_HttpsOnlyRedirect)
+            with opener.open(url, timeout=10) as response:  # nosec B310 - scheme and host validated above
+                raw = response.read(_MAX_POLICY_BYTES + 1)
+                if len(raw) > _MAX_POLICY_BYTES:
+                    raise ValueError("Remote policy exceeds the 1 MiB size limit")
+                return yaml.safe_load(raw.decode('utf-8')) or {}
+        except PolicyURLError:
+            raise
         except Exception as e:
             if self.verbose:
                 print(f"[!]️   Warning: Could not fetch Master Policy from {url}.")

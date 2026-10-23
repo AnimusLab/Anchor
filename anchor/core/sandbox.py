@@ -15,7 +15,13 @@ The "Diamond Cage" provides:
 """
 
 import subprocess  # anchor: ignore ANC-018
+import hashlib
+import hmac
 import os
+import stat as _stat
+import tarfile
+import urllib.request
+import zipfile
 import sys
 import time
 import platform
@@ -192,6 +198,17 @@ class DiamondCage:
         "https://github.com/vmware-labs/webassembly-language-runtimes/releases/"
         "download/python%2F3.11.3%2B20230428-7d1b259/python-3.11.3.wasm"
     )
+
+    # SHA-256 of the pinned artifacts. Downloads that do not match are rejected.
+    # The WasmEdge values match the project's published SHA256SUM for 0.13.5.
+    # Update these together with the versions above.
+    WASMEDGE_SHA256 = {
+        "linux_x86_64":   "3686e0226871bf17b62ec57e1c15778c2947834b90af0dfad14f2e0202bf9284",
+        "darwin_x86_64":  "b7fdfaf59805951241f47690917b501ddfa06d9b6f7e0262e44e784efe4a7b33",
+        "darwin_arm64":   "acc93721210294ced0887352f360e42e46dcc05332e6dd78c1452fb3a35d5255",
+        "windows_x86_64": "db533289ba26ec557b5193593c9ed03db75be3bc7aa737e2caa5b56b8eef888a",
+    }
+    PYTHON_WASM_SHA256 = "658cb6add2bbf8dfe84d67fb85430956d5a8b2b1d694d33432d654cdf048f813"
 
     def __init__(self, anchor_home: Optional[Path] = None, verbose: bool = False):
         self.anchor_home = anchor_home or (Path.home() / ".anchor")
@@ -609,16 +626,101 @@ class DiamondCage:
 # Installation helper
 # ===========================================================================
 
+_MAX_DOWNLOAD_BYTES = 200 * 1024 * 1024
+
+
+def _download_verified(url: str, expected_sha256: str, dest: Path, timeout: int = 60) -> None:
+    """Download ``url`` over HTTPS to ``dest`` only if its SHA-256 matches.
+
+    The data is streamed to a temporary file next to ``dest`` and moved into
+    place after the hash check, so a mismatching or truncated download never
+    leaves an executable artifact behind.
+    """
+    if not url.lower().startswith("https://"):
+        raise ValueError(f"Refusing non-HTTPS download URL: {url}")
+    dest = Path(dest)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    tmp = dest.with_name(dest.name + ".part")
+    digest = hashlib.sha256()
+    size = 0
+    try:
+        with urllib.request.urlopen(url, timeout=timeout) as response, open(tmp, "wb") as out:  # nosec B310 - https only, checked above
+            while True:
+                chunk = response.read(1024 * 1024)
+                if not chunk:
+                    break
+                size += len(chunk)
+                if size > _MAX_DOWNLOAD_BYTES:
+                    raise ValueError("Download exceeds the maximum allowed size")
+                digest.update(chunk)
+                out.write(chunk)
+        actual = digest.hexdigest()
+        if not hmac.compare_digest(actual, expected_sha256.lower()):
+            raise ValueError(
+                f"SHA-256 mismatch for {url}: expected {expected_sha256}, got {actual}"
+            )
+        os.replace(tmp, dest)
+    finally:
+        if tmp.exists():
+            try:
+                tmp.unlink()
+            except OSError:
+                pass
+
+
+def _inside(base: Path, candidate: Path) -> bool:
+    try:
+        candidate.resolve().relative_to(base.resolve())
+        return True
+    except ValueError:
+        return False
+
+
+def _safe_extract_tar(archive: Path, dest: Path) -> None:
+    """Extract a .tar.gz refusing absolute paths, '..' escapes and unsafe links."""
+    dest = Path(dest)
+    dest.mkdir(parents=True, exist_ok=True)
+    with tarfile.open(archive, "r:gz") as tf:
+        members = []
+        for m in tf.getmembers():
+            target = dest / m.name
+            if os.path.isabs(m.name) or not _inside(dest, target):
+                raise ValueError(f"Unsafe path in archive: {m.name}")
+            if m.issym():
+                if os.path.isabs(m.linkname) or not _inside(dest, target.parent / m.linkname):
+                    raise ValueError(f"Unsafe symlink in archive: {m.name} -> {m.linkname}")
+            elif m.islnk():
+                if os.path.isabs(m.linkname) or not _inside(dest, dest / m.linkname):
+                    raise ValueError(f"Unsafe hardlink in archive: {m.name} -> {m.linkname}")
+            elif not (m.isfile() or m.isdir()):
+                raise ValueError(f"Unsupported member type in archive: {m.name}")
+            members.append(m)
+        try:
+            tf.extractall(dest, members=members, filter="data")  # Python >= 3.12 and security backports
+        except TypeError:
+            tf.extractall(dest, members=members)  # nosec B202 - members validated above
+
+
+def _safe_extract_zip(archive: Path, dest: Path) -> None:
+    """Extract a .zip refusing absolute paths, '..' escapes and symlink entries."""
+    dest = Path(dest)
+    dest.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(archive, "r") as zf:
+        for info in zf.infolist():
+            name = info.filename
+            if name.startswith(("/", "\\")) or (len(name) > 1 and name[1] == ":") or not _inside(dest, dest / name):
+                raise ValueError(f"Unsafe path in archive: {name}")
+            if _stat.S_ISLNK(info.external_attr >> 16):
+                raise ValueError(f"Symlink entries are not allowed in archives: {name}")
+        zf.extractall(dest)  # nosec B202 - every entry validated above
+
+
 def install_diamond_cage(force: bool = False, verbose: bool = False) -> bool:
     """
     Install the Diamond Cage dependencies (WasmEdge + Python WASM).
 
     Returns True if installation succeeded, False otherwise.
     """
-    import urllib.request
-    import tarfile
-    import zipfile
-
     cage = DiamondCage(verbose=verbose)
 
     if cage.is_installed() and not force:
@@ -648,18 +750,14 @@ def install_diamond_cage(force: bool = False, verbose: bool = False) -> bool:
             print(f"v  Downloading WasmEdge {cage.WASMEDGE_VERSION}...")
         archive_path = cage.bin_dir / "wasmedge_download"
 
-        with urllib.request.urlopen(wasmedge_url, timeout=60) as response:
-            with open(archive_path, "wb") as f:
-                f.write(response.read())
+        _download_verified(wasmedge_url, cage.WASMEDGE_SHA256[platform_key], archive_path, timeout=60)
 
         if verbose:
             print("PKP: Extracting WasmEdge...")
         if cage.os_name == "windows":
-            with zipfile.ZipFile(archive_path, "r") as zf:
-                zf.extractall(cage.bin_dir)
+            _safe_extract_zip(archive_path, cage.bin_dir)
         else:
-            with tarfile.open(archive_path, "r:gz") as tf:
-                tf.extractall(cage.bin_dir)
+            _safe_extract_tar(archive_path, cage.bin_dir)
 
         archive_path.unlink()
 
@@ -710,9 +808,7 @@ def install_diamond_cage(force: bool = False, verbose: bool = False) -> bool:
         if verbose:
             print(f"v  Downloading Python {cage.PYTHON_WASM_VERSION} WASM...")
 
-        with urllib.request.urlopen(cage.PYTHON_WASM_URL, timeout=120) as response:
-            with open(cage.python_wasm_path, "wb") as f:
-                f.write(response.read())
+        _download_verified(cage.PYTHON_WASM_URL, cage.PYTHON_WASM_SHA256, cage.python_wasm_path, timeout=120)
 
         if verbose:
             print("[V] Python WASM installed.")

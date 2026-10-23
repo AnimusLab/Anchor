@@ -129,6 +129,36 @@ def test_telemetry_websocket_rejects_query_string_token():
     assert websocket.closed == [1008]
 
 
+def test_telemetry_websocket_rejects_untrusted_subdomain():
+    bus = server_telemetry.TelemetryBroadcaster(required_token="secret")
+    websocket = FakeWebSocket(
+        headers={
+            "origin": "https://evil.animuslab.dev",
+            "authorization": "Bearer secret",
+        }
+    )
+
+    asyncio.run(bus.connect(websocket))
+
+    assert websocket.accepted is False
+    assert websocket.closed == [1008]
+
+
+def test_telemetry_token_is_read_at_connection_time(monkeypatch):
+    bus = server_telemetry.TelemetryBroadcaster()
+    monkeypatch.setenv("ANCHOR_TELEMETRY_TOKEN", "secret")
+    websocket = FakeWebSocket(
+        headers={
+            "origin": "https://hub.animuslab.dev",
+            "authorization": "Bearer secret",
+        }
+    )
+
+    asyncio.run(bus.connect(websocket))
+
+    assert websocket.accepted is True
+
+
 def test_telemetry_packet_excludes_payload():
     class FakeConnection:
         def __init__(self):

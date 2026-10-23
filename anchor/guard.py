@@ -18,44 +18,11 @@ _telemetry_client = SpokeTelemetryClient()
 
 try:
     from anchor_core_rs import AnchorEngine
-except ImportError:
-    class AnchorEngine:
-        def audit_payload(self, py_bytes: bytes):
-            # Fallback mock for non-compiled environments
-            payload_str = py_bytes.decode("utf-8", errors="ignore")
-            violations = []
-            matched_rule_ids = []
-            # anchor: ignore -- test fixture; adversarial payload used to verify detection, not a real violation
-            if "ignore previous instructions" in payload_str.lower() or "ignore all previous instructions" in payload_str.lower() or "jailbreak" in payload_str.lower():
-                violations.append("SEC_001_PROMPT_INJECTION")
-                matched_rule_ids.append("SEC-001")
-            # anchor: ignore -- test fixture; adversarial payload used to verify detection, not a real violation
-            if "hide_ai_identity" in payload_str.lower() or "mimic_human" in payload_str.lower():
-                violations.append("EU_ART52_TRANSPARENCY_VIOLATION")
-                matched_rule_ids.append("AGT-001")
-            if "api_key" in payload_str.lower() and "sk-" in payload_str:
-                violations.append("SEC_002_CREDENTIAL_LEAK")
-                matched_rule_ids.append("SEC-002")
-
-            is_compliant = len(violations) == 0
-            return {
-                "is_compliant": is_compliant,
-                "violations": violations,
-                "matched_rule_ids": matched_rule_ids,
-                "risk_score": 0.0 if is_compliant else 8.5,
-                "risk_level": "LOW" if is_compliant else "BLOCKER",
-                "execution_microsec": 15
-            }
-
-        def generate_healing_payload(self, rule_id: str, default_name: str, severity: str, statute_ref: str):
-            return {
-                "status": "BLOCKED_BY_ANCHOR",
-                "violation_id": rule_id,
-                "rule_name": default_name,
-                "severity": severity,
-                "reroute_directive": f"Sanitize and enforce structural boundaries for rule {rule_id}.",
-                "statutory_reference": statute_ref
-            }
+except ImportError as exc:
+    raise RuntimeError(
+        "Anchor runtime guards require the native engine. Install anchor-audit "
+        "with its compiled extension before using @guard or @enforce."
+    ) from exc
 
 _engine_instance = AnchorEngine()
 

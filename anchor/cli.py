@@ -1,5 +1,5 @@
-﻿"""
-Anchor Core CLI Handler â€” Layer 1 Static Analyzer & Identity Management
+"""
+Anchor Core CLI Handler — Layer 1 Static Analyzer & Identity Management
 """
 
 import sys
@@ -69,7 +69,7 @@ RULE_DESCRIPTIONS = {
     "EU-ART05-A": (
         "Subliminal behavioral deception technique detected in agent prompt sequence or conversational logic. "
         "Purposefully manipulating user behavior to impair informed decision-making violates Article 5(1)(a) "
-        "and carries mandatory statutory fines up to â‚¬35M or 7% of global turnover."
+        "and carries mandatory statutory fines up to €35M or 7% of global turnover."
     ),
     "EU-ART05-E": (
         "Untargeted facial image ingestion stream detected without consent or data rights filtration. "
@@ -108,7 +108,7 @@ RULE_DESCRIPTIONS = {
         "Article 50 requires artificially generated text, image, audio, or video to be clearly labeled."
     ),
     "EU-ART99": (
-        "Critical non-compliance detected. Maximum administrative penalty threshold triggered (up to â‚¬35M or 7% turnover)."
+        "Critical non-compliance detected. Maximum administrative penalty threshold triggered (up to €35M or 7% turnover)."
     ),
     "SEC-REG-SCI": (
         "Your code contains an unbounded execution loop or unthrottled API call stream within a high-frequency trading pipeline. "
@@ -179,7 +179,7 @@ def cli():
 def init(domains, frameworks, regulators, all_items, no_prompt, gitignore, hook, hub_key, project_key):
     """Initialise Anchor governance, keys, and constitution in a repository."""
     engine = AnchorEngine()
-    click.echo("\nðŸ›¡ï¸  Anchor Governance Kernel â€” Repository Initialization\n")
+    click.echo("\n🛡️  Anchor Governance Kernel — Repository Initialization\n")
 
     package_root = os.path.dirname(os.path.abspath(__file__))
     src_gov_dir = os.path.join(package_root, "governance")
@@ -202,7 +202,7 @@ def init(domains, frameworks, regulators, all_items, no_prompt, gitignore, hook,
     policy_path = os.path.join(dot_anchor, "policy.anchor")
     if not os.path.exists(policy_path):
         with open(policy_path, "w", encoding="utf-8") as f:
-            f.write("# POLICY.ANCHOR â€” Project Governance Overrides\n# Add project-specific rules or raise severity.\n")
+            f.write("# POLICY.ANCHOR — Project Governance Overrides\n# Add project-specific rules or raise severity.\n")
 
     priv_key_path = os.path.join(keys_dir, "ed25519_private.pem")
     pub_key_path = os.path.join(keys_dir, "ed25519_public.pem")
@@ -217,11 +217,11 @@ def init(domains, frameworks, regulators, all_items, no_prompt, gitignore, hook,
             os.chmod(priv_key_path, 0o600)
         except Exception:
             pass
-        click.secho(f"ðŸ”‘ [1/3] Generated Ed25519 Project Identity", fg="cyan")
+        click.secho(f"🔑 [1/3] Generated Ed25519 Project Identity", fg="cyan")
         click.echo(f"   Private Key: {priv_key_path} (chmod 0600)")
         click.echo(f"   Public Key:  {pub_key_path} (Fingerprint: {kp.get('fingerprint', 'local')})")
     else:
-        click.secho(f"ðŸ”‘ [1/3] Using existing Ed25519 Project Identity in {keys_dir}", fg="cyan")
+        click.secho(f"🔑 [1/3] Using existing Ed25519 Project Identity in {keys_dir}", fg="cyan")
 
     # 2. Consent-Driven .gitignore Handling
     add_gitignore = gitignore
@@ -296,9 +296,9 @@ fi
             click.echo("\n[Open-Source Privacy Safeguard]")
             click.echo("   Your private key never leaves your machine. No telemetry calls are active.")
             click.echo("   Benefits of Public Identity Registration:")
-            click.echo("     âœ“ Public signature verification for auditors & open-source contributors")
-            click.echo("     âœ“ Identity discovery & verified project compliance badge")
-            click.echo("     âœ“ Support for key rotation & revocation")
+            click.echo("     ✓ Public signature verification for auditors & open-source contributors")
+            click.echo("     ✓ Identity discovery & verified project compliance badge")
+            click.echo("     ✓ Support for key rotation & revocation")
             click.echo("   (Only your PUBLIC key is uploaded. Your PRIVATE key NEVER leaves your machine.)")
             resp = click.prompt("   Register public identity with AnimusLab Registry?", default="N", show_choices=False).strip().lower()
             click.echo("   Register public identity with AnimusLab Registry? [y/N]: " + (resp if resp else "n"))
@@ -311,9 +311,24 @@ fi
     else:
         click.secho(f"   [ENTERPRISE HUB] Provisioned under Hub Key {hub_key[:12]}...", fg="cyan")
 
-    click.secho("\nâœ… Anchor initialization complete. Created `.anchor/` governance package.", fg="green", bold=True)
+    click.secho("\n✅ Anchor initialization complete. Created `.anchor/` governance package.", fg="green", bold=True)
 
     click.echo("   Run `anchor check .` to start auditing!\n")
+
+
+def _packaged_governance_dir():
+    from pathlib import Path
+    return Path(__file__).resolve().parent / "governance"
+
+
+def _governance_status():
+    """(verified, note): verify the packaged rule files against the signed GOVERNANCE.lock."""
+    from anchor.core.governance_signature import verify_governance_tree
+    try:
+        verify_governance_tree(_packaged_governance_dir())
+        return True, ""
+    except Exception as exc:  # signature/hash problems and I/O errors all mean "not verified"
+        return False, str(exc)
 
 
 @cli.group("check", invoke_without_command=True)
@@ -352,6 +367,12 @@ def check(ctx, paths, fmt, severity, model, metadata, context):
         if detected_risks:
             click.secho(f"   Activated dynamic enforcement rules for {len(detected_risks)} detected risk IDs", fg="green")
 
+
+    for _p in (paths or (".",)):
+        if not os.path.exists(_p):
+            _hint = f" Did you mean `anchor {_p}`?" if _p in ("verify-sync", "drift") else ""
+            click.secho(f"Path not found: {_p}.{_hint}", fg="red")
+            sys.exit(2)
 
     engine = AnchorEngine()
     target_dir = os.path.abspath(paths[0] if paths else ".")
@@ -469,7 +490,7 @@ def check(ctx, paths, fmt, severity, model, metadata, context):
     click.echo("=" * 70)
     click.echo(f"  Target Path:   {target_dir}")
     click.echo(f"  Engine:        Anchor Core Rust Kernel v{audit_report['rule_version']}")
-    click.echo(f"  Scanned:       {audit_report['files_scanned']} files ({audit_report['lines_scanned']} lines) in {audit_report['scan_latency_us']} Âµs")
+    click.echo(f"  Scanned:       {audit_report['files_scanned']} files ({audit_report['lines_scanned']} lines) in {audit_report['scan_latency_us']} µs")
     click.echo(f"  Violations:    {total_violations}")
     click.echo(f"  Risk Score:    {audit_report['risk_score']}/10.0 [{audit_report['risk_level']}]")
     click.echo("=" * 70)
@@ -482,7 +503,7 @@ def check(ctx, paths, fmt, severity, model, metadata, context):
             norm_path = v['file'].replace('\\', '/')
             file_uri = f"file:///{norm_path}#L{v['line']}"
             rule_id = v['aggregated_rule_ids'].split(', ')[0]
-            click.secho(f"  âŒ [{rule_id}] {v.get('name', 'Policy Violation')}", fg="red", bold=True)
+            click.secho(f"  ❌ [{rule_id}] {v.get('name', 'Policy Violation')}", fg="red", bold=True)
             click.echo(f"     Severity:   {v.get('severity', 'ERROR').upper()}")
             click.echo(f"     Trace URI:  {file_uri}")
             click.echo(f"     Statutes:   {v['statutory_references']}")
@@ -495,12 +516,12 @@ def check(ctx, paths, fmt, severity, model, metadata, context):
     else:
         click.secho("SUMMARY OF AUDIT CHECKS:", bold=True)
         click.echo("----------------------------------------------------------------------")
-        click.secho("  âœ… All target code files verified compliant across all 9 core domains.", fg="green")
-        click.secho("  âœ… No prompt injection, secret leaks, or transparency violations found.", fg="green")
+        click.secho("  No violations found by Anchor's automated checks.", fg="green")
+        click.secho("  No prompt injection, secret leaks, or transparency violations found.", fg="green")
         click.echo("")
 
     click.echo("=" * 70)
-    verdict_str = "COMPLIANT â€” All target code files verified." if is_compliant else "NON-COMPLIANT â€” Governance violations found."
+    verdict_str = "NO VIOLATIONS FOUND (automated checks only)." if is_compliant else "VIOLATIONS FOUND - see findings above."
     click.secho(f"VERDICT: {verdict_str}", fg="green" if is_compliant else "red", bold=True)
     click.echo("Detailed violation logs written to .anchor/reports/ and .anchor/violations/")
     
@@ -519,53 +540,93 @@ def check(ctx, paths, fmt, severity, model, metadata, context):
             violations=filtered_violations
         )
         if telemetry_result and telemetry_result.get("status") == "LOGGED":
-            click.secho(f"  ðŸ“¡ Telemetry: Signed audit stream committed to Hub (Tx: {telemetry_result.get('transaction_id')})", fg="cyan")
+            click.secho(f"  📡 Telemetry: Signed audit stream committed to Hub (Tx: {telemetry_result.get('transaction_id')})", fg="cyan")
     except Exception as ex:
         pass
 
     click.echo("=" * 70)
     click.echo("\n=================================================================================")
-    click.echo("  REPORT SIGNATURE")
+    click.echo("  RULE SET INTEGRITY")
     click.echo("---------------------------------------------------------------------------------")
-    if engine and getattr(engine, "verified", True):
-        click.echo("  This report was generated by Anchor's automated pattern and AST checks")
-        click.echo("  using rules whose integrity was verified.\n")
-        click.secho("  Signed by AnimusLab node (see key fingerprint in the report)", fg="cyan", bold=True)
+    governance_verified, governance_note = _governance_status()
+    if governance_verified:
+        click.echo("  This report was generated by Anchor's automated pattern and AST checks.")
+        click.secho("  Built-in rule files match the signed GOVERNANCE.lock.\n", fg="cyan", bold=True)
     else:
-        click.secho("  âš ï¸ UNVERIFIED LOCAL GOVERNANCE / SIGNATURE NOT VALIDATED", fg="yellow", bold=True)
-        click.echo("  Local rule parameters could not be cryptographically authenticated.")
-        click.echo("  Run `anchor sync --restore` to restore signed governance baseline.\n")
+        click.secho("  [!] UNVERIFIED RULE SET: built-in rules could not be checked against the signed lock.", fg="yellow", bold=True)
+        for note_line in governance_note.splitlines()[:5]:
+            click.echo(f"      {note_line}")
+        click.echo("  Reinstall with: pip install --force-reinstall anchor-audit\n")
     click.echo("  Automated findings only: not legal advice and not a compliance certification.")
     click.echo("=================================================================================\n")
-
-
-    if not is_compliant:
+    if not governance_verified and os.environ.get("ANCHOR_REQUIRE_VERIFIED_GOVERNANCE", "").strip().lower() in {"1", "true", "on", "yes"}:
+        sys.exit(2)
         sys.exit(1)
 
-@check.command("verify-sync")
-@click.option("--fix", is_flag=True, help="Fix mitigation catalog sync mismatches.")
+@cli.command("verify-sync")
+@click.option("--fix", is_flag=True, help="Overwrite mismatched copies with the packaged catalog.")
 def check_verify_sync(fix):
-    """Verify that all copies of mitigation.anchor are identical."""
+    """Verify that every mitigation.anchor under the current directory matches the packaged catalog."""
+    import shutil as _sh
+    from pathlib import Path
+    from anchor.core.governance_signature import hash_governance_bytes
+    canonical = _packaged_governance_dir() / "mitigation.anchor"
+    want = hash_governance_bytes(canonical.read_bytes())
+    skip = {".git", "node_modules", ".venv", "venv", "target", "build", "dist"}
+    copies = [p for p in Path(".").rglob("mitigation.anchor") if not (set(p.parts) & skip)]
+    bad = [p for p in copies if hash_governance_bytes(p.read_bytes()) != want]
     click.secho("\nAnchor Mitigation Sync Check", bold=True)
     click.echo("=" * 60)
-    click.secho("  [OK] Canonical mitigation catalog synced.", fg="green")
+    click.echo(f"  Copies found: {len(copies)}")
+    if not bad:
+        click.secho("  [OK] All copies match the packaged mitigation catalog.", fg="green")
+    elif fix:
+        for p in bad:
+            _sh.copyfile(canonical, p)
+            click.echo(f"  [FIXED] {p}")
+    else:
+        for p in bad:
+            click.secho(f"  [MISMATCH] {p}", fg="red")
+        click.echo("  Re-run with --fix to overwrite them.")
+        sys.exit(1)
     click.echo("=" * 60)
 
-@check.command("drift")
+@cli.command("drift")
 @click.argument("target", default=".")
 def check_drift(target):
-    """Scan for architectural drift across codebase history."""
-    click.secho(f"\nScanning architectural drift for: {target}", bold=True)
-    click.secho("  Aligned: 0 symbols drifted. History verified.", fg="green")
+    """Architectural drift scan (not implemented in this release)."""
+    click.secho("`anchor check drift` is not implemented in this release; no analysis was performed.", fg="yellow")
+    sys.exit(2)
 
 @cli.command("sync")
-@click.option("--restore", is_flag=True, help="Restore authoritative governance files.")
+@click.option("--restore", is_flag=True, help="Restore the packaged governance files into ./.anchor.")
 def sync(restore):
-    """Sync governance files with authoritative remote repository."""
+    """Restore ./.anchor governance files from the verified packaged copy."""
+    import shutil as _sh
+    from pathlib import Path
+    from anchor.core.governance_signature import verify_governance_tree, hash_governance_bytes
     if not restore:
         click.secho("Use `anchor sync --restore` to restore authoritative files.", fg="yellow")
         sys.exit(1)
-    click.secho("Synced authoritative governance catalog from Canon.", fg="green")
+    dst = Path(".anchor")
+    if not dst.is_dir():
+        click.secho("No .anchor/ directory here. Run `anchor init` first.", fg="yellow")
+        sys.exit(1)
+    src = _packaged_governance_dir()
+    try:
+        verify_governance_tree(src)
+    except Exception as exc:
+        click.secho("Refusing to restore: the packaged rule files failed verification.", fg="red")
+        click.echo(str(exc))
+        sys.exit(1)
+    restored = 0
+    for p in sorted(list(src.rglob("*.anchor")) + [src / "GOVERNANCE.lock", src / "GOVERNANCE.lock.sig"]):
+        target = dst / p.relative_to(src)
+        if not target.exists() or hash_governance_bytes(target.read_bytes()) != hash_governance_bytes(p.read_bytes()):
+            target.parent.mkdir(parents=True, exist_ok=True)
+            _sh.copyfile(p, target)
+            restored += 1
+    click.secho(f"Restored {restored} governance file(s) from the verified packaged copy.", fg="green")
 
 @cli.command("heal")
 @click.argument("paths", nargs=-1, default=None)
@@ -602,9 +663,9 @@ def heal(paths, apply_fixes):
             if apply_fixes and suggestion.auto_fixable:
                 if apply_fix(suggestion):
                     fixed_count += 1
-                    click.secho(f"  âœ” Applied auto-patch to {v['file']}:{v['line']}", fg="green")
+                    click.secho(f"  ✔ Applied auto-patch to {v['file']}:{v['line']}", fg="green")
                 else:
-                    click.secho(f"  âœ– Failed to apply patch to {v['file']}:{v['line']}", fg="yellow")
+                    click.secho(f"  ✖ Failed to apply patch to {v['file']}:{v['line']}", fg="yellow")
 
     if apply_fixes:
         click.secho(f"\nApplied {fixed_count} auto-fix patch(es) in-place.", fg="green", bold=True)

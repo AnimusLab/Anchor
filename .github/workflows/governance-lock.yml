@@ -1,0 +1,20 @@
+name: Governance lock
+on:
+  pull_request:
+    paths: ["anchor/governance/**", "anchor/core/governance_signature.py", "scripts/update_governance_lock.py"]
+  push:
+    branches: [main]
+    paths: ["anchor/governance/**", "anchor/core/governance_signature.py", "scripts/update_governance_lock.py"]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install cryptography pyyaml
+      - name: Rule files must match the signed GOVERNANCE.lock
+        run: python scripts/update_governance_lock.py --check

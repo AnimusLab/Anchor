@@ -106,7 +106,7 @@ def verify_remote_lockfile(anchor_dir: Path, offline_attr: str = "warn") -> bool
     import urllib.request
     import urllib.error
 
-    GOVERNANCE_LOCK_URL = "https://raw.githubusercontent.com/Tanishq1030/anchor/main/anchor/governance/GOVERNANCE.lock"
+    GOVERNANCE_LOCK_URL = "https://raw.githubusercontent.com/AnimusLab/Anchor/main/anchor/governance/GOVERNANCE.lock"
     local_lock_path = anchor_dir / ".anchor.lock"
 
     lock_data = None
@@ -168,7 +168,9 @@ def verify_remote_lockfile(anchor_dir: Path, offline_attr: str = "warn") -> bool
         except GovernanceSignatureError as sig_err:
             raise RuntimeError(f"\nGOVERNANCE INTEGRITY VIOLATION / SIGNATURE INVALID\n{sig_err}")
 
-    if not lock_data or "files" not in lock_data:
+    from anchor.core.governance_signature import lock_files_from_data, hash_governance_bytes
+    remote_files = lock_files_from_data(lock_data)
+    if not remote_files:
         return False
 
     # ── VERSION-SKEW CHECK ────────────────────────────────────────────────────
@@ -196,7 +198,6 @@ def verify_remote_lockfile(anchor_dir: Path, offline_attr: str = "warn") -> bool
         except (ValueError, IndexError):
             pass  # Unparseable version — proceed with hash check
 
-    remote_files = lock_data["files"]
     target_dirs = [
         (anchor_dir / "domains", "domains"),
         (anchor_dir / "frameworks", "frameworks"),
@@ -208,7 +209,7 @@ def verify_remote_lockfile(anchor_dir: Path, offline_attr: str = "warn") -> bool
             for f in folder.rglob("*.anchor"):
                 rel_path = f"{prefix}/{f.relative_to(folder)}".replace("\\", "/")
                 if rel_path in remote_files:
-                    local_hash = hashlib.sha256(f.read_bytes()).hexdigest()
+                    local_hash = hash_governance_bytes(f.read_bytes())
                     if local_hash != remote_files[rel_path]:
                         raise RuntimeError(
                             f"\nGovernance file tampered or out of sync: {rel_path}\n"

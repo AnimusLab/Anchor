@@ -5,7 +5,7 @@
 [![PyPI Version](https://img.shields.io/pypi/v/anchor-audit.svg)](https://pypi.org/project/anchor-audit/)
 [![License](https://img.shields.io/github/license/AnimusLab/Anchor.svg)](https://github.com/AnimusLab/Anchor)
 
-**Current release: 6.0.4** · Python 3.10–3.13
+**Current release: 6.0.6** · Python 3.10–3.13
 
 Anchor is a high-performance, dual-language (Rust/Python) infrastructure library designed to enforce strict regulatory invariants, architectural boundaries, and safety safeguards around autonomous AI agents and LLM application pipelines in real-time. 
 
@@ -74,6 +74,25 @@ Run a parallel static code safety audit across your local workspace:
 ```bash
 anchor check .
 ```
+
+`anchor check` exits `0` when no findings meet the threshold, `1` when there are
+findings, and `2` on usage errors or when `ANCHOR_REQUIRE_VERIFIED_GOVERNANCE=1`
+is set and the bundled rules cannot be verified, so it can gate CI directly.
+
+```bash
+anchor --version
+anchor check . --severity blocker      # blocker | error (default) | warning | info
+anchor check . --format json           # machine-readable report on stdout (or: markdown)
+```
+
+`anchor init` prompts interactively in a terminal; with no terminal (CI, Docker)
+or with `--no-prompt` it runs non-interactively.
+
+### Building from source
+
+Prebuilt wheels need no toolchain. Installing from source (`pip install .` or an
+sdist on a platform without a wheel) compiles the Rust kernel and needs Rust
+**1.78 or newer** (the committed `Cargo.lock` is lockfile v4) and a C toolchain.
 
 ---
 

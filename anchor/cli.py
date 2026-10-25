@@ -7,6 +7,8 @@ import os
 import json
 import shutil
 import warnings
+import functools
+from pathlib import Path
 import click
 from typing import Dict, Any, List
 
@@ -44,9 +46,16 @@ REMEDIATION_SNIPPETS = {
 RULE_DESCRIPTIONS = {
     "SEC-007": (
         # anchor: ignore -- test fixture; adversarial payload used to verify detection, not a real violation
-        "Your code initializes an unrestricted OS shell wrapper ('subprocess.Popen(..., shell=True)') "
-        "to execute tool payloads. If an active AI agent is targeted by a runtime prompt injection attack, "
-        "an adversary can exploit this string field to run arbitrary malicious scripts straight on your host machine."
+        "Your code passes a command string to the operating system shell (for example os.system(), os.popen(), "
+        "or subprocess with shell=True). If an active AI agent is targeted by a runtime prompt injection attack, "
+        "an adversary can exploit this string to run arbitrary malicious commands on your host machine. "
+        "Prefer subprocess with shell=False and an argument list."
+    ),
+    "SEC-010": (
+        # anchor: ignore -- rule description text that names the pattern; not executable code
+        "Your code evaluates dynamically constructed Python (eval(), exec(), or __import__()). If any part of "
+        "that string originates from model output or user input, an attacker can execute arbitrary code in your "
+        "process. Remove the dynamic evaluation, or run it inside a restricted sandbox."
     ),
     "SEC-002": (
         "Hardcoded high-privilege cloud or API access secrets were detected within your repository context. "
@@ -150,6 +159,65 @@ def _pkg_version() -> str:
         return "unknown"
 
 
+_SEVERITY_RANK = {"info": 0, "warning": 1, "error": 2, "blocker": 3}
+
+
+@functools.lru_cache(maxsize=1)
+def _declared_rule_severities() -> Dict[str, str]:
+    """Map rule id -> severity declared in the packaged governance rule files (read-only)."""
+    import yaml
+
+    declared: Dict[str, str] = {}
+    gov_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "governance")
+    for dirpath, _dirs, files in os.walk(gov_dir):
+        for fname in sorted(files):
+            if not fname.endswith(".anchor"):
+                continue
+            try:
+                with open(os.path.join(dirpath, fname), "r", encoding="utf-8") as fh:
+                    data = yaml.safe_load(fh)
+            except Exception:
+                continue
+            rules = data.get("rules") if isinstance(data, dict) else None
+            for rule in rules or []:
+                if not isinstance(rule, dict) or not rule.get("id"):
+                    continue
+                sev = str(rule.get("severity", "")).lower()
+                if sev in _SEVERITY_RANK:
+                    declared.setdefault(str(rule["id"]), sev)
+    return declared
+
+
+def _effective_severity(violation: Dict[str, Any]) -> str:
+    """Severity of a finding: the highest severity its rules declare, else what the scanner reported."""
+    declared = _declared_rule_severities()
+    ids = [r.strip() for r in str(violation.get("aggregated_rule_ids", "")).split(",") if r.strip()]
+    known = [declared[r] for r in ids if r in declared]
+    if known:
+        return max(known, key=_SEVERITY_RANK.__getitem__)
+    reported = str(violation.get("severity", "error")).lower()
+    return reported if reported in _SEVERITY_RANK else "error"
+
+
+def _dispatch_telemetry(target_dir, is_compliant, audit_report, violations):
+    """Opt-in telemetry egress (a no-op unless configured). Never raises, never prints."""
+    try:
+        import time
+        import uuid
+        from anchor.core.telemetry import SpokeTelemetryClient
+
+        return SpokeTelemetryClient().dispatch_state_event(
+            event_id=f"evt_cli_{int(time.time() * 1000)}_{uuid.uuid4().hex[:6]}",
+            project_name=os.path.basename(os.path.abspath(target_dir)),
+            silo_id=os.environ.get("ANCHOR_HUB_ID", "animuslab-hq"),
+            verdict="COMPLIANT" if is_compliant else "NON_COMPLIANT",
+            risk_score=float(audit_report["risk_score"]),
+            violations=violations,
+        )
+    except Exception:
+        return None
+
+
 def load_anchorignore(root_path: str) -> List[str]:
     ignore_path = os.path.join(root_path, ".anchorignore")
     if not os.path.exists(ignore_path):
@@ -158,6 +226,7 @@ def load_anchorignore(root_path: str) -> List[str]:
         return [line.strip() for line in f if line.strip() and not line.startswith("#")]
 
 @click.group()
+@click.version_option(version=_pkg_version(), prog_name="anchor")
 def cli():
     """Anchor: The Federated Governance Engine for AI."""
     if hasattr(sys.stdout, "reconfigure"):
@@ -178,6 +247,9 @@ def cli():
 @click.option("--project-key", default=None, help="Enterprise Project Key.")
 def init(domains, frameworks, regulators, all_items, no_prompt, gitignore, hook, hub_key, project_key):
     """Initialise Anchor governance, keys, and constitution in a repository."""
+    if not no_prompt and not sys.stdin.isatty():
+        # CI / Docker / piped stdin: nobody can answer prompts, so never block.
+        no_prompt = True
     engine = AnchorEngine()
     click.echo("\n🛡️  Anchor Governance Kernel — Repository Initialization\n")
 
@@ -331,7 +403,7 @@ def _governance_status():
         return False, str(exc)
 
 
-@cli.group("check", invoke_without_command=True)
+@cli.group("check", invoke_without_command=True, context_settings={"allow_interspersed_args": True})
 @click.argument("paths", nargs=-1)
 @click.option("--format", "fmt", type=click.Choice(["human", "json", "markdown"]), default="human", help="Output format")
 @click.option("--severity", type=click.Choice(["blocker", "error", "warning", "info"]), default="error", help="Severity threshold")
@@ -389,6 +461,12 @@ def check(ctx, paths, fmt, severity, model, metadata, context):
         f_path = v["file"]
         if not any(pat in f_path for pat in ignored_patterns):
             filtered_violations.append(v)
+
+    # Effective severity per finding, then apply the --severity threshold.
+    for v in filtered_violations:
+        v["severity"] = _effective_severity(v)
+    _threshold = _SEVERITY_RANK[severity]
+    filtered_violations = [v for v in filtered_violations if _SEVERITY_RANK[v["severity"]] >= _threshold]
 
     total_violations = len(filtered_violations)
     is_compliant = (total_violations == 0)
@@ -485,6 +563,22 @@ def check(ctx, paths, fmt, severity, model, metadata, context):
             f.write("No active violations detected.\n")
 
 
+    if fmt in ("json", "markdown"):
+        # Machine-readable modes: emit only the report on stdout so it can be
+        # piped/parsed. The same files are still written under .anchor/.
+        _dispatch_telemetry(target_dir, is_compliant, audit_report, filtered_violations)
+        if fmt == "json":
+            click.echo(json.dumps(audit_report, indent=2))
+        else:
+            with open(md_path, "r", encoding="utf-8") as _md:
+                click.echo(_md.read())
+        _verified, _ = _governance_status()
+        if not _verified and os.environ.get("ANCHOR_REQUIRE_VERIFIED_GOVERNANCE", "").strip().lower() in {"1", "true", "on", "yes"}:
+            sys.exit(2)
+        if not is_compliant:
+            sys.exit(1)
+        return
+
     click.echo("=" * 70)
     click.secho("ANCHOR GOVERNANCE AUDIT REPORT", bold=True)
     click.echo("=" * 70)
@@ -500,8 +594,7 @@ def check(ctx, paths, fmt, severity, model, metadata, context):
         click.secho("CODE VIOLATIONS DETECTED:", fg="red", bold=True)
         click.echo("----------------------------------------------------------------------")
         for v in filtered_violations:
-            norm_path = v['file'].replace('\\', '/')
-            file_uri = f"file:///{norm_path}#L{v['line']}"
+            file_uri = f"{Path(os.path.abspath(v['file'])).as_uri()}#L{v['line']}"
             rule_id = v['aggregated_rule_ids'].split(', ')[0]
             click.secho(f"  ❌ [{rule_id}] {v.get('name', 'Policy Violation')}", fg="red", bold=True)
             click.echo(f"     Severity:   {v.get('severity', 'ERROR').upper()}")
@@ -525,24 +618,10 @@ def check(ctx, paths, fmt, severity, model, metadata, context):
     click.secho(f"VERDICT: {verdict_str}", fg="green" if is_compliant else "red", bold=True)
     click.echo("Detailed violation logs written to .anchor/reports/ and .anchor/violations/")
     
-    # Cryptographic Telemetry Streaming to Governance Hub
-    try:
-        from anchor.core.telemetry import SpokeTelemetryClient
-        import time
-        telemetry = SpokeTelemetryClient()
-        project_name = os.path.basename(os.path.abspath(target_dir))
-        telemetry_result = telemetry.dispatch_state_event(
-            event_id=f"evt_cli_{int(time.time() * 1000)}_{uuid.uuid4().hex[:6]}",
-            project_name=project_name,
-            silo_id=os.environ.get("ANCHOR_HUB_ID", "animuslab-hq"),
-            verdict="COMPLIANT" if is_compliant else "NON_COMPLIANT",
-            risk_score=float(audit_report['risk_score']),
-            violations=filtered_violations
-        )
-        if telemetry_result and telemetry_result.get("status") == "LOGGED":
-            click.secho(f"  📡 Telemetry: Signed audit stream committed to Hub (Tx: {telemetry_result.get('transaction_id')})", fg="cyan")
-    except Exception as ex:
-        pass
+    # Cryptographic Telemetry Streaming to Governance Hub (opt-in)
+    telemetry_result = _dispatch_telemetry(target_dir, is_compliant, audit_report, filtered_violations)
+    if telemetry_result and telemetry_result.get("status") == "LOGGED":
+        click.secho(f"  📡 Telemetry: Signed audit stream committed to Hub (Tx: {telemetry_result.get('transaction_id')})", fg="cyan")
 
     click.echo("=" * 70)
     click.echo("\n=================================================================================")
@@ -561,6 +640,7 @@ def check(ctx, paths, fmt, severity, model, metadata, context):
     click.echo("=================================================================================\n")
     if not governance_verified and os.environ.get("ANCHOR_REQUIRE_VERIFIED_GOVERNANCE", "").strip().lower() in {"1", "true", "on", "yes"}:
         sys.exit(2)
+    if not is_compliant:
         sys.exit(1)
 
 @cli.command("verify-sync")

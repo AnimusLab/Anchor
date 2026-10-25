@@ -8,6 +8,7 @@ update_governance_lock.py - regenerate and sign anchor/governance/GOVERNANCE.loc
 Run after any change to a *.anchor rule file, then commit GOVERNANCE.lock and GOVERNANCE.lock.sig.
 """
 import argparse
+import importlib.util
 import sys
 import tomllib
 from pathlib import Path
@@ -16,7 +17,18 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from anchor.core.governance_signature import GovernanceSignatureError, build_lock_text, verify_governance_tree  # noqa: E402
+_SIGNATURE_PATH = ROOT / "anchor" / "core" / "governance_signature.py"
+_SIGNATURE_SPEC = importlib.util.spec_from_file_location(
+    "anchor_governance_signature", _SIGNATURE_PATH
+)
+if _SIGNATURE_SPEC is None or _SIGNATURE_SPEC.loader is None:
+    raise ImportError(f"Unable to load governance signature module: {_SIGNATURE_PATH}")
+_SIGNATURE_MODULE = importlib.util.module_from_spec(_SIGNATURE_SPEC)
+_SIGNATURE_SPEC.loader.exec_module(_SIGNATURE_MODULE)
+
+GovernanceSignatureError = _SIGNATURE_MODULE.GovernanceSignatureError
+build_lock_text = _SIGNATURE_MODULE.build_lock_text
+verify_governance_tree = _SIGNATURE_MODULE.verify_governance_tree
 
 
 def main() -> int:

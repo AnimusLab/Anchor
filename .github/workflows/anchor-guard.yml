@@ -43,7 +43,7 @@ jobs:
           ANCHOR_ED25519_KEY: ${{ secrets.ANCHOR_ED25519_PRIVATE_KEY }}
         run: |
           echo "Executing zero-copy Rust static analysis kernel..."
-          python -m anchor check . --format human --severity error
+          python -m anchor check --format human --severity error .
           echo "compliance_status=COMPLIANT" >> $GITHUB_OUTPUT
 
       - name: "Upload Statutory Governance Audit Report"

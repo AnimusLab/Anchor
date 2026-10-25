@@ -21,12 +21,15 @@ runtime extension.
 - Gateway authentication, body limits, sandbox checksum validation, safe
   extraction, and remote-policy URL restrictions remain enforced.
 - Python and Rust package versions are synchronized at 6.0.6.
+- `anchor check` exits `1` on findings, honours `--format json|markdown` and
+  `--severity`, accepts options after the path, and `anchor --version` exists.
+- `anchor init` never blocks when no terminal is attached.
 
 ## Validation
 
 - Governance lock check passed.
 - CLI governance check passed with zero violations.
-- Full unit suite: 116 passed.
+- Full unit suite: 139 passed.
 
 This is an engineering security release. Deployment owners remain responsible
 for authorization, network isolation, privacy, legal, and regulatory review.

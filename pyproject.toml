@@ -83,3 +83,8 @@ anchor = "anchor.cli:main"
 features = ["pyo3/extension-module", "pyo3/abi3-py310"]
 module-name = "anchor_core_rs"
 python-packages = ["anchor"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# tests/ and tests/unit/ both contain test_readme_example.py and neither is a package.
+addopts = "--import-mode=importlib"

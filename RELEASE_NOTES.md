@@ -1,44 +1,32 @@
-# Anchor 6.0.5
+# Anchor 6.0.6
 
 ## Summary
 
-Anchor 6.0.5 hardens enforcement and telemetry behavior after the 6.0.4
-release. The runtime now fails closed when its native enforcement engine is
-unavailable, and telemetry access is restricted to explicitly authorized
-clients without transmitting request bodies.
+Anchor 6.0.6 extends the 6.0.5 security hardening with signed governance-rule
+integrity verification. Reports now state whether the bundled rule set was
+actually verified, and CI can validate the lock without installing the native
+runtime extension.
 
 ## Highlights
 
-- SEC-010 and SEC-007 detection is enabled in both static and runtime paths.
-- Rust and Python package versions are checked for synchronization.
-- CLI, gateway, and runtime decorators fail closed when the native engine is
-  unavailable.
-- Telemetry requires an `Authorization: Bearer <token>` header.
-- Telemetry tokens are compared with constant-time comparison.
-- Query-string tokens are rejected.
-- Telemetry tokens are read when each WebSocket connection is established.
-- WebSocket origins use an explicit allowlist.
-- Request payloads are excluded from telemetry packets.
-
-## Security and compliance impact
-
-These changes reduce the risk of false compliance results, silent enforcement
-bypasses, credential leakage through WebSocket URLs, unauthorized telemetry
-subscriptions, and disclosure of prompts, secrets, source code, or tenant
-data.
-
-This is an engineering security release. Deployment owners remain responsible
-for protecting telemetry credentials, isolating deployments, configuring
-authorization, and completing deployment-specific privacy, legal, and
-regulatory review.
+- Governance rules are checked against the signed `GOVERNANCE.lock`.
+- Modified, missing, and unlisted rule files are detected.
+- `anchor verify-sync` compares mitigation catalogs honestly.
+- `anchor drift` reports that architectural drift analysis is not implemented
+  rather than claiming success.
+- `anchor sync --restore` restores only from verified packaged rules.
+- Missing audit paths fail with an error instead of producing a clean result.
+- The CLI reports `NO VIOLATIONS FOUND (automated checks only)` and includes a
+  not-legal-advice disclaimer.
+- Gateway authentication, body limits, sandbox checksum validation, safe
+  extraction, and remote-policy URL restrictions remain enforced.
+- Python and Rust package versions are synchronized at 6.0.6.
 
 ## Validation
 
-The focused security and regression suite passed:
+- Governance lock check passed.
+- CLI governance check passed with zero violations.
+- Full unit suite: 116 passed.
 
-```text
-43 passed
-```
-
-Deployment-specific compliance results depend on the configured policies and
-the code being audited.
+This is an engineering security release. Deployment owners remain responsible
+for authorization, network isolation, privacy, legal, and regulatory review.

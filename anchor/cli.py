@@ -380,19 +380,17 @@ def init(domains, frameworks, regulators, all_items, no_prompt, gitignore, hook,
         click.echo("   Add `.anchor/cache/` to `.gitignore`? [Y/n]: " + (resp if resp else "y"))
         add_gitignore = resp in ["", "y", "yes"]
 
+    private_key_entry = ".anchor/keys/ed25519_private.pem"
     if add_gitignore:
-        gitignore_path = ".gitignore"
-        cache_entry = ".anchor/cache/\n.anchor/keys/ed25519_private.pem\n"
-        existing = ""
-        if os.path.exists(gitignore_path):
-            with open(gitignore_path, "r", encoding="utf-8") as f:
-                existing = f.read()
-        if ".anchor/cache/" not in existing:
-            with open(gitignore_path, "a", encoding="utf-8") as f:
-                f.write(f"\n# Anchor governance cache & private key\n{cache_entry}")
+        if _ensure_gitignore_entries([".anchor/cache/", private_key_entry]):
             click.secho("   [OK] Added `.anchor/cache/` & private key to .gitignore", fg="green")
     else:
-        click.secho("   [SKIP] .gitignore left untouched", fg="yellow")
+        # The private identity key must never be committed by accident, so it is
+        # protected even when the user declines the cache entry.
+        if _ensure_gitignore_entries([private_key_entry]):
+            click.secho("   [OK] Added the private key to .gitignore (cache entry skipped)", fg="green")
+        else:
+            click.secho("   [SKIP] .gitignore left untouched", fg="yellow")
 
     # 3. Consent-Driven Git Pre-Commit Hook Handling
     install_hook = hook
@@ -414,17 +412,8 @@ def init(domains, frameworks, regulators, all_items, no_prompt, gitignore, hook,
             shutil.copy(pre_commit_path, f"{pre_commit_path}.bak")
             click.secho(f"   [BACKUP] Existing pre-commit hook backed up to {pre_commit_path}.bak", fg="yellow")
 
-        hook_content = """#!/bin/sh
-echo "[Anchor] Checking staged files for compliance..."
-STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\\.(py|ts|tsx)$')
-if [ -z "$STAGED_FILES" ]; then
-  exit 0
-fi
-python -m anchor check . --severity error
-if [ $? -ne 0 ]; then
-  exit 1
-fi
-"""
+        import shlex
+        hook_content = _PRE_COMMIT_HOOK.replace("__PYTHON__", shlex.quote(sys.executable or "python3"))
         with open(pre_commit_path, "w", encoding="utf-8") as f:
             f.write(hook_content)
         try:
@@ -446,20 +435,65 @@ fi
             click.echo("     ✓ Identity discovery & verified project compliance badge")
             click.echo("     ✓ Support for key rotation & revocation")
             click.echo("   (Only your PUBLIC key is uploaded. Your PRIVATE key NEVER leaves your machine.)")
-            resp = click.prompt("   Register public identity with AnimusLab Registry?", default="N", show_choices=False).strip().lower()
+            resp = click.prompt("   Register public identity with AnimusLab Registry? (not yet available in this release)", default="N", show_choices=False).strip().lower()
             click.echo("   Register public identity with AnimusLab Registry? [y/N]: " + (resp if resp else "n"))
             register_pub = resp in ["y", "yes"]
 
         if register_pub:
-            click.secho("   [REGISTERED] Public key queued for AnimusLab Identity Registry", fg="green")
+            # No upload code exists in this release; say so instead of claiming the key was queued.
+            click.secho(
+                "   [NOT SENT] Registry upload is not available in this release; "
+                "your public key stays local.", fg="yellow")
         else:
             click.secho("   [LOCAL ONLY] Key not registered with the AnimusLab registry", fg="yellow")
     else:
-        click.secho(f"   [ENTERPRISE HUB] Provisioned under Hub Key {hub_key[:12]}...", fg="cyan")
+        click.secho(
+            "   [ENTERPRISE HUB] Hub key received but not validated or transmitted in this "
+            "release (no network call was made).", fg="yellow")
 
     click.secho("\n✅ Anchor initialization complete. Created `.anchor/` governance package.", fg="green", bold=True)
 
     click.echo("   Run `anchor check .` to start auditing!\n")
+
+
+def _ensure_gitignore_entries(entries: List[str]) -> bool:
+    """Append missing ``entries`` to ./.gitignore (only inside a git repo). True if anything was added."""
+    if not (os.path.exists(".git") or os.path.exists(".gitignore")):
+        return False
+    existing = ""
+    if os.path.exists(".gitignore"):
+        with open(".gitignore", "r", encoding="utf-8") as f:
+            existing = f.read()
+    present = {line.strip() for line in existing.splitlines()}
+    missing = [e for e in entries if e not in present]
+    if not missing:
+        return False
+    with open(".gitignore", "a", encoding="utf-8") as f:
+        if existing and not existing.endswith("\n"):
+            f.write("\n")
+        f.write("\n# Anchor governance cache & private key\n" + "\n".join(missing) + "\n")
+    return True
+
+
+_PRE_COMMIT_HOOK = """#!/bin/sh
+# Installed by `anchor init`: scans the files staged for this commit.
+echo "[Anchor] Checking staged files for compliance..."
+ANCHOR_PY=__PYTHON__
+[ -x "$ANCHOR_PY" ] || ANCHOR_PY="$(command -v python3 || command -v python)"
+STAGED=$(git diff --cached --name-only --diff-filter=ACM)
+[ -z "$STAGED" ] && exit 0
+STATUS=0
+OLDIFS=$IFS
+IFS='
+'
+for f in $STAGED; do
+  case "$f" in .anchor/*) continue ;; esac
+  [ -f "$f" ] || continue
+  OUT=$("$ANCHOR_PY" -m anchor check "$f" --severity error 2>&1) || { echo "$OUT"; STATUS=1; }
+done
+IFS=$OLDIFS
+exit $STATUS
+"""
 
 
 def _packaged_governance_dir():

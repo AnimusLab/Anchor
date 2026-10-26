@@ -221,7 +221,7 @@ def _fix_pickle(line: str):
         suggested = line.rstrip() + "  # RISK: Use json.loads() for untrusted data; pickle can execute code"
         return (
             suggested,
-            "pickle.loads() on untrusted data allows arbitrary code execution. "
+            "pickle.loads() on untrusted data allows arbitrary code execution. "  # anchor: ignore SEC-023 -- explanatory text
             "Use json.loads() for safe deserialization, or validate the source before unpickling.",
             False
         )

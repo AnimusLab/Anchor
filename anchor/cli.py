@@ -44,6 +44,34 @@ REMEDIATION_SNIPPETS = {
 }
 
 RULE_DESCRIPTIONS = {
+    "SEC-020": (
+        "An AWS access key ID is committed in source. Anyone with repository read access can use it. "
+        "Revoke and rotate the key, then load credentials from the environment or a secrets manager."
+    ),
+    "SEC-021": (
+        "A provider or VCS access token is committed in source. Revoke and rotate it, then load it from "
+        "the environment or a secrets manager."
+    ),
+    "SEC-022": (
+        "Private key material is committed in source. Treat the key as compromised: rotate it and keep "
+        "keys out of the repository."
+    ),
+    "SEC-023": (
+        "Deserialising untrusted pickle/marshal/yaml.load/torch.load data can execute arbitrary code. "
+        "Use json, yaml.safe_load, or torch.load(..., weights_only=True), or verify the data source."
+    ),
+    "SEC-024": (
+        "TLS certificate verification is disabled, so connections can be intercepted by a "
+        "man-in-the-middle. Remove the override and trust the proper CA bundle instead."
+    ),
+    "SEC-025": (
+        "document.write() injects markup into the page and is a DOM XSS sink for untrusted input. "
+        "Build nodes with textContent/createElement instead."
+    ),
+    "SEC-026": (
+        "A value shaped like a US Social Security Number appears in source. Do not commit real PII; "
+        "use clearly fake placeholders in fixtures."
+    ),
     "SEC-007": (
         # anchor: ignore -- test fixture; adversarial payload used to verify detection, not a real violation
         "Your code passes a command string to the operating system shell (for example os.system(), os.popen(), "
@@ -226,13 +254,25 @@ def load_anchorignore(root_path: str) -> List[str]:
         return [line.strip() for line in f if line.strip() and not line.startswith("#")]
 
 
+_PYTHON_SUFFIXES = (".py", ".pyi", ".ipynb")
+
+
+def _relabel_for_language(violation: Dict[str, Any]) -> None:
+    """The engine names SEC-010 "Insecure Python Execution" even for JS/TS/... files."""
+    if "SEC-010" in str(violation.get("aggregated_rule_ids", "")) and not str(
+        violation.get("file", "")
+    ).lower().endswith(_PYTHON_SUFFIXES):
+        violation["name"] = "Insecure Dynamic Code Execution (eval/exec/dynamic import)"
+
+
 def _collect_violations(target_dir: str, severity: str = "error", engine=None):
     """Scan ``target_dir`` and return ``(engine_result, violations)`` after every filter.
 
     Filters, in order: correctly scoped ``# anchor: ignore`` pragmas, ``.anchorignore``
     patterns, effective severity, and the ``--severity`` threshold.
     """
-    from anchor.scanner.pragmas import apply_pragmas
+    from anchor.scanner.pragmas import apply_pragmas, filter_violations
+    from anchor.scanner.supplemental import scan_supplemental
 
     engine = engine or AnchorEngine()
     ignored_patterns = load_anchorignore(target_dir)
@@ -242,6 +282,9 @@ def _collect_violations(target_dir: str, severity: str = "error", engine=None):
     }
 
     raw_violations = apply_pragmas(engine, target_dir, detailed_res.get("violations", []))
+    raw_violations = raw_violations + filter_violations(scan_supplemental(target_dir, raw_violations))
+    for v in raw_violations:
+        _relabel_for_language(v)
     filtered_violations = []
 
     for v in raw_violations:

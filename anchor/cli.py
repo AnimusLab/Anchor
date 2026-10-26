@@ -422,11 +422,20 @@ def check(ctx, paths, fmt, severity, model, metadata, context):
         click.secho(f"\n[MODEL AUDIT] Auditing Model Weights: {model}", fg="cyan", bold=True)
         from anchor.core.model_auditor import ModelAuditor
         auditor = ModelAuditor({}, verbose=True)
-        res = auditor.audit_weights(model, metadata)
-        click.secho(f"Status: {res.status.value.upper()}", fg="red" if res.status.value == "failed" else "green", bold=True)
+        try:
+            res = auditor.audit_weights(model, metadata)
+        except FileNotFoundError as exc:
+            click.secho(str(exc), fg="red")
+            sys.exit(2)
+        _status_color = {"failed": "red", "needs_review": "yellow"}.get(res.status.value, "green")
+        click.secho(f"Status: {res.status.value.upper()}", fg=_status_color, bold=True)
         click.echo(f"Passed: {res.checks_passed}/{res.checks_total}")
         click.echo(f"Recommendation: {res.recommendation}")
-        if res.status.value == "failed":
+        if res.unverified:
+            click.secho(
+                "No check could verify this model file (unsupported format or nothing to inspect); "
+                "it is NOT approved.", fg="yellow")
+        if res.status.value == "failed" or res.unverified:
             sys.exit(1)
         return
 

@@ -2,7 +2,7 @@
 
 All notable changes to Anchor are documented here.
 
-## [6.0.6] - Unreleased
+## [6.0.6] - 2026-10-26
 
 ### Security
 
@@ -44,6 +44,22 @@ All notable changes to Anchor are documented here.
 
 - `anchor --version`.
 - Building from source documented (needs Rust >= 1.78).
+- `AnchorEngine.code_rules()` exposes the scanner's rule table (id, statute, name,
+  pattern, runtime) for introspection and tests.
+- `Tests` GitHub Actions workflow: pytest on Ubuntu/Windows/macOS across Python
+  3.10, 3.12 and 3.14, plus a wheel install smoke test (fresh venv, `init`, exit
+  codes, `--format json`).
+- Python 3.14 trove classifier (the suite passes on 3.14).
+
+### Changed
+
+- Scanner: the three index-coupled tables in the Rust kernel (regex list, finding
+  metadata, Layer 2 payload checks) are now one `CODE_RULES` table, so they cannot
+  drift apart. Detection behaviour is unchanged (identical findings and payload
+  verdicts before and after on a corpus covering all 10 patterns).
+- The `anchor-guard` PR comment no longer says "Certified by ..."; it states that
+  the output is automated static analysis, not a certification.
+- The README's per-release "6.0.3 highlights" moved into this changelog.
 
 ### Tests
 
@@ -53,4 +69,20 @@ All notable changes to Anchor are documented here.
 - Configure pytest (`testpaths`, importlib import mode) so `pytest` runs from
   the repository root; remove two obsolete tests that imported the removed
   `anchor.repo` module.
-- Full unit suite: 139 tests.
+- Rule-table consistency tests: scanner rule IDs must exist in the signed rule files
+  (known gap: `RBI-007` is emitted by the scanner but not defined in the rule files;
+  fixing it needs a re-signed `GOVERNANCE.lock`), each rule has a declared severity,
+  and the Layer 2 payload guard enforces exactly the rules flagged `runtime`.
+- Replace Click's deprecated `isolated_filesystem()` with a shared `isolated_fs` fixture.
+- `test_version_sync` falls back to `tomli` on Python 3.10 (`tomllib` is 3.11+); `tomli` is
+  added to the `dev` extra for Python < 3.11.
+- Full unit suite: 143 tests.
+
+## [6.0.3]
+
+- Telemetry remains explicitly opt-in and performs no network dispatch by default.
+- Governance signatures are line-ending independent across Windows, macOS, and Linux.
+- The package metadata, wheel smoke test, secret scanning, and developer extras are
+  aligned with the `pyproject.toml` build.
+- The committed governance public key is rotated; the private signing key is
+  generated and retained outside the repository.

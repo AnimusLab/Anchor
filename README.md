@@ -54,15 +54,6 @@ pip install "anchor-audit[dev]"         # pytest, black, mypy
 
 The CLI, the `@guard` decorator and the static scanner need none of these extras.
 
-### 6.0.3 release highlights
-
-- Telemetry remains explicitly opt-in and performs no network dispatch by default.
-- Governance signatures are line-ending independent across Windows, macOS, and Linux.
-- The package metadata, wheel smoke test, secret scanning, and developer extras are
-  aligned with the `pyproject.toml` build.
-- The committed governance public key is rotated; the private signing key is
-  generated and retained outside the repository.
-
 Initialize your local asymmetric cryptographic repository identity:
 
 ```bash

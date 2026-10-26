@@ -19,6 +19,104 @@ use std::path::Path;
 use std::sync::Arc;
 use std::time::Instant;
 
+/// One code-scanning rule. This table is the single source of truth: the compiled
+/// RegexSet, the metadata attached to static-scan findings and the Layer 2 payload
+/// checks are all derived from it, so they cannot drift apart. The regexes are
+/// hand-tuned (e.g. the SEC-010 pattern skips `.eval(` and `literal_eval(`); the
+/// signed rule files in anchor/governance are checked against `rule_id` by tests.
+struct CodeRule {
+    rule_id: &'static str,
+    statute: &'static str,
+    name: &'static str,
+    /// Message emitted when this pattern matches a Layer 2 runtime payload.
+    /// `None` means the rule only applies to the static code scan.
+    runtime_message: Option<&'static str>,
+    pattern: &'static str,
+}
+
+const CODE_RULES: &[CodeRule] = &[
+    CodeRule {
+        rule_id: "AGT-001",
+        statute: "EU-ART52",
+        name: "Transparency Disclosure Gate",
+        runtime_message: Some("EU_ART52_TRANSPARENCY_VIOLATION: System configured to mimic human or hide AI disclosure."),
+        // anchor: ignore AGT-001 -- pattern definition, not a violation
+        pattern: r"(?i)(hide_ai_identity|mimic_human_agent|pretend_human|bypass_disclosure)",
+    },
+    CodeRule {
+        rule_id: "RBI-007",
+        statute: "EU-ART12",
+        name: "Audit Traceability Logging Gate",
+        runtime_message: Some("EU_ART12_LOGGING_DISABLED_VIOLATION: Traceability logging explicitly disabled on high-risk call."),
+        // anchor: ignore RBI-007 -- pattern definition, not a violation
+        pattern: r"(?i)(enable_audit_log\s*=\s*false|disable_logging|suppress_traceability)",
+    },
+    CodeRule {
+        rule_id: "AGT-001",
+        statute: "EU-ART14",
+        name: "Autonomous Action Human Oversight Gate",
+        runtime_message: Some("EU_ART14_MISSING_HUMAN_OVERSIGHT: Autonomous action executed without required human approval gate."),
+        // anchor: ignore AGT-001 -- pattern definition, not a violation
+        pattern: r"(?i)(autonomous_p2p_wire|unvetted_risk_execution|bypass_human_auth)",
+    },
+    CodeRule {
+        rule_id: "SEC-001",
+        statute: "OWASP-LLM01",
+        name: "Prompt Injection Defense Gate",
+        runtime_message: Some("SEC_001_PROMPT_INJECTION: Adversarial prompt override pattern detected."),
+        // anchor: ignore SEC-001 -- pattern definition, not a violation
+        pattern: r"(?i)(ignore\s+(all\s+)?(previous|prior)\s+instructions|system\s+prompt\s+override|jailbreak|disregard\s+(all\s+)?(previous|prior)\s+instructions)",
+    },
+    CodeRule {
+        rule_id: "SEC-002",
+        statute: "OWASP-LLM06",
+        name: "Hardcoded Secret Leak Gate",
+        runtime_message: Some("SEC_002_CREDENTIAL_LEAK: Hardcoded API secret or bearer token detected in context payload."),
+        // anchor: ignore SEC-002 -- pattern definition, not a violation
+        pattern: r#"(?i)(api[_-]?key\s*=\s*['\"][A-Za-z0-9_-]{8,}['\"]|bearer\s+[A-Za-z0-9_.-]{8,}|api_key\s*=\s*['\"][^'"]+['\"]|authorization['"]\s*==\s*['\"]Bearer)"#,
+    },
+    CodeRule {
+        rule_id: "SEC-007",
+        statute: "OWASP-LLM07",
+        name: "Shell Injection (Unsandboxed Subprocess in Agent)",
+        runtime_message: None,
+        // anchor: ignore SEC-007 -- pattern definition, not a violation
+        pattern: r"(?i)(subprocess\.(run|call|Popen|check_output)|os\.(system|popen|spawn))\s*\(",
+    },
+    CodeRule {
+        rule_id: "ALN-001",
+        statute: "OWASP-LLM09",
+        name: "Hallucination (LLM Output Without Validation)",
+        runtime_message: None,
+        // anchor: ignore ALN-001 -- pattern definition, not a violation
+        pattern: r"(?i)(\.(completions|messages|chat)\.(create|send)|agents\.messages\.create)\s*\(",
+    },
+    CodeRule {
+        rule_id: "SEC-002",
+        statute: "OWASP-LLM03",
+        name: "Data Poisoning (Unencrypted Vector Store Upsert)",
+        runtime_message: None,
+        // anchor: ignore SEC-002 -- pattern definition, not a violation
+        pattern: r"(?i)\.(upsert|add_texts|add_documents)\s*\(",
+    },
+    CodeRule {
+        rule_id: "SEC-010",
+        statute: "OWASP-LLM05",
+        name: "Insecure Python Execution (eval/exec/dynamic import)",
+        runtime_message: Some("SEC_010_INSECURE_EXECUTION: Dynamic code execution (eval/exec/__import__) detected in payload."),
+        // anchor: ignore SEC-010 -- pattern definition, not a violation
+        pattern: r"(^|[^.\w])(eval|exec)\s*\(|__import__\s*\(",
+    },
+    CodeRule {
+        rule_id: "SEC-007",
+        statute: "OWASP-LLM07",
+        name: "Shell Injection (Destructive or Piped Shell String)",
+        runtime_message: Some("SEC_007_SHELL_INJECTION: Destructive or piped shell command detected in payload."),
+        // anchor: ignore SEC-007 -- pattern definition, not a violation
+        pattern: r"(?i)(rm\s+-(rf|fr)\s+[/~]|curl\s+[^\s]+\s*\|\s*(bash|sh|zsh|fish))",
+    },
+];
+
 /// Core Anchor Governance Engine (Rust Core Kernel)
 #[pyclass]
 pub struct AnchorEngine {
@@ -41,28 +139,7 @@ struct InternalAuditResult<'a> {
 impl AnchorEngine {
     #[new]
     fn new() -> PyResult<Self> {
-        let patterns = vec![
-            // anchor: ignore AGT-001 -- pattern definition, not a violation
-            r"(?i)(hide_ai_identity|mimic_human_agent|pretend_human|bypass_disclosure)", // index 0: AGT-001 / EU-ART52
-            // anchor: ignore RBI-007 -- pattern definition, not a violation
-            r"(?i)(enable_audit_log\s*=\s*false|disable_logging|suppress_traceability)",  // index 1: RBI-007 / EU-ART12
-            // anchor: ignore AGT-001 -- pattern definition, not a violation
-            r"(?i)(autonomous_p2p_wire|unvetted_risk_execution|bypass_human_auth)",      // index 2: AGT-001 / EU-ART14
-            // anchor: ignore SEC-001 -- pattern definition, not a violation
-            r"(?i)(ignore\s+(all\s+)?(previous|prior)\s+instructions|system\s+prompt\s+override|jailbreak|disregard\s+(all\s+)?(previous|prior)\s+instructions)",       // index 3: SEC-001
-            // anchor: ignore SEC-002 -- pattern definition, not a violation
-            r#"(?i)(api[_-]?key\s*=\s*['\"][A-Za-z0-9_-]{8,}['\"]|bearer\s+[A-Za-z0-9_.-]{8,}|api_key\s*=\s*['\"][^'"]+['\"]|authorization['"]\s*==\s*['\"]Bearer)"#, // index 4: SEC-002
-            // anchor: ignore SEC-007 -- pattern definition, not a violation
-            r"(?i)(subprocess\.(run|call|Popen|check_output)|os\.(system|popen|spawn))\s*\(", // index 5: SEC-007 / Shell Injection / Unsandboxed Subprocess
-            // anchor: ignore ALN-001 -- pattern definition, not a violation
-            r"(?i)(\.(completions|messages|chat)\.(create|send)|agents\.messages\.create)\s*\(", // index 6: ALN-001 / Hallucination (LLM Output Validation)
-            // anchor: ignore SEC-002 -- pattern definition, not a violation
-            r"(?i)\.(upsert|add_texts|add_documents)\s*\(", // index 7: SEC-002 / Data Poisoning (Unencrypted Vector Store Write)
-            // anchor: ignore SEC-010 -- pattern definition, not a violation
-            r"(^|[^.\w])(eval|exec)\s*\(|__import__\s*\(", // index 8: SEC-010 / Insecure Python Execution (case-sensitive; skips .eval( and literal_eval()
-            // anchor: ignore SEC-007 -- pattern definition, not a violation
-            r"(?i)(rm\s+-(rf|fr)\s+[/~]|curl\s+[^\s]+\s*\|\s*(bash|sh|zsh|fish))", // index 9: SEC-007 / destructive or piped shell strings
-        ];
+        let patterns: Vec<&str> = CODE_RULES.iter().map(|r| r.pattern).collect();
 
         let regex_set = Arc::new(
             RegexSet::new(&patterns)
@@ -104,19 +181,6 @@ impl AnchorEngine {
         let violations_list = PyList::empty(py);
         let mut total_violations_count = 0;
 
-        let rule_id_map = vec![
-            ("AGT-001", "EU-ART52", "Transparency Disclosure Gate"),
-            ("RBI-007", "EU-ART12", "Audit Traceability Logging Gate"),
-            ("AGT-001", "EU-ART14", "Autonomous Action Human Oversight Gate"),
-            ("SEC-001", "OWASP-LLM01", "Prompt Injection Defense Gate"),
-            ("SEC-002", "OWASP-LLM06", "Hardcoded Secret Leak Gate"),
-            ("SEC-007", "OWASP-LLM07", "Shell Injection (Unsandboxed Subprocess in Agent)"),
-            ("ALN-001", "OWASP-LLM09", "Hallucination (LLM Output Without Validation)"),
-            ("SEC-002", "OWASP-LLM03", "Data Poisoning (Unencrypted Vector Store Upsert)"),
-            ("SEC-010", "OWASP-LLM05", "Insecure Python Execution (eval/exec/dynamic import)"),
-            ("SEC-007", "OWASP-LLM07", "Shell Injection (Destructive or Piped Shell String)"),
-        ];
-
 
         for res in scan_results {
             for m in res.matches {
@@ -130,8 +194,8 @@ impl AnchorEngine {
                 let mut matched_statutes = Vec::new();
 
                 for idx in m.matched_rule_indices {
-                    if idx < rule_id_map.len() {
-                        let (r_id, stat_ref, name) = rule_id_map[idx];
+                    if let Some(rule) = CODE_RULES.get(idx) {
+                        let (r_id, stat_ref, name) = (rule.rule_id, rule.statute, rule.name);
                         if !matched_rules.contains(&r_id) {
                             matched_rules.push(r_id);
                         }
@@ -368,6 +432,21 @@ impl AnchorEngine {
     pub fn version(&self) -> String {
         self.rule_set_version.clone()
     }
+
+    /// The code-scanning rule table: [{id, statute, name, pattern, runtime}, ...].
+    pub fn code_rules<'py>(&self, py: Python<'py>) -> PyResult<&'py PyList> {
+        let out = PyList::empty(py);
+        for rule in CODE_RULES {
+            let d = PyDict::new(py);
+            d.set_item("id", rule.rule_id)?;
+            d.set_item("statute", rule.statute)?;
+            d.set_item("name", rule.name)?;
+            d.set_item("pattern", rule.pattern)?;
+            d.set_item("runtime", rule.runtime_message.is_some())?;
+            out.append(d)?;
+        }
+        Ok(out)
+    }
 }
 
 impl AnchorEngine {
@@ -377,33 +456,13 @@ impl AnchorEngine {
         let mut matched_rule_ids = Vec::new();
 
         let matches = self.regex_set.matches(source);
-        if matches.matched(0) {
-            violations.push("EU_ART52_TRANSPARENCY_VIOLATION: System configured to mimic human or hide AI disclosure.");
-            matched_rule_ids.push("AGT-001");
-        }
-        if matches.matched(1) {
-            violations.push("EU_ART12_LOGGING_DISABLED_VIOLATION: Traceability logging explicitly disabled on high-risk call.");
-            matched_rule_ids.push("RBI-007");
-        }
-        if matches.matched(2) {
-            violations.push("EU_ART14_MISSING_HUMAN_OVERSIGHT: Autonomous action executed without required human approval gate.");
-            matched_rule_ids.push("AGT-001");
-        }
-        if matches.matched(3) {
-            violations.push("SEC_001_PROMPT_INJECTION: Adversarial prompt override pattern detected.");
-            matched_rule_ids.push("SEC-001");
-        }
-        if matches.matched(4) {
-            violations.push("SEC_002_CREDENTIAL_LEAK: Hardcoded API secret or bearer token detected in context payload.");
-            matched_rule_ids.push("SEC-002");
-        }
-        if matches.matched(8) {
-            violations.push("SEC_010_INSECURE_EXECUTION: Dynamic code execution (eval/exec/__import__) detected in payload.");
-            matched_rule_ids.push("SEC-010");
-        }
-        if matches.matched(9) {
-            violations.push("SEC_007_SHELL_INJECTION: Destructive or piped shell command detected in payload.");
-            matched_rule_ids.push("SEC-007");
+        for (idx, rule) in CODE_RULES.iter().enumerate() {
+            if let Some(message) = rule.runtime_message {
+                if matches.matched(idx) {
+                    violations.push(message);
+                    matched_rule_ids.push(rule.rule_id);
+                }
+            }
         }
 
         let is_compliant = violations.is_empty();

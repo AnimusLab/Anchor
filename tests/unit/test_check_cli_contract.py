@@ -18,28 +18,28 @@ def _verified(monkeypatch):
     monkeypatch.setattr(cli_mod, "_governance_status", lambda: (True, ""))
 
 
-def test_violations_exit_nonzero(monkeypatch):
+def test_violations_exit_nonzero(monkeypatch, isolated_fs):
     _verified(monkeypatch)
     runner = CliRunner()
-    with runner.isolated_filesystem():
+    with isolated_fs():
         Path("bad.py").write_text(BAD)
         r = runner.invoke(cli_mod.cli, ["check", "."])
         assert r.exit_code == 1, r.output
         assert "VIOLATIONS FOUND" in r.output
 
 
-def test_clean_tree_exits_zero(monkeypatch):
+def test_clean_tree_exits_zero(monkeypatch, isolated_fs):
     _verified(monkeypatch)
     runner = CliRunner()
-    with runner.isolated_filesystem():
+    with isolated_fs():
         Path("ok.py").write_text("x = 1\n")
         assert runner.invoke(cli_mod.cli, ["check", "."]).exit_code == 0
 
 
-def test_format_json_is_pure_json_and_exit_code_tracks_findings(monkeypatch):
+def test_format_json_is_pure_json_and_exit_code_tracks_findings(monkeypatch, isolated_fs):
     _verified(monkeypatch)
     runner = CliRunner()
-    with runner.isolated_filesystem():
+    with isolated_fs():
         Path("bad.py").write_text(BAD)
         r = runner.invoke(cli_mod.cli, ["check", "--format", "json", "."])
         data = json.loads(r.output)  # stdout must be only JSON
@@ -47,35 +47,35 @@ def test_format_json_is_pure_json_and_exit_code_tracks_findings(monkeypatch):
         assert data["is_compliant"] is False
         assert data["total_violations"] == len(data["violations"]) >= 1
 
-    with runner.isolated_filesystem():
+    with isolated_fs():
         Path("ok.py").write_text("x = 1\n")
         r = runner.invoke(cli_mod.cli, ["check", "--format", "json", "."])
         assert r.exit_code == 0 and json.loads(r.output)["is_compliant"] is True
 
 
-def test_format_markdown_emits_report(monkeypatch):
+def test_format_markdown_emits_report(monkeypatch, isolated_fs):
     _verified(monkeypatch)
     runner = CliRunner()
-    with runner.isolated_filesystem():
+    with isolated_fs():
         Path("ok.py").write_text("x = 1\n")
         r = runner.invoke(cli_mod.cli, ["check", "--format", "markdown", "."])
         assert r.exit_code == 0
         assert r.output.startswith("# Anchor Governance Audit Report")
 
 
-def test_format_json_still_honours_require_verified_governance(monkeypatch):
+def test_format_json_still_honours_require_verified_governance(monkeypatch, isolated_fs):
     monkeypatch.setattr(cli_mod, "_governance_status", lambda: (False, "modified: x"))
     monkeypatch.setenv("ANCHOR_REQUIRE_VERIFIED_GOVERNANCE", "1")
     runner = CliRunner()
-    with runner.isolated_filesystem():
+    with isolated_fs():
         Path("ok.py").write_text("x = 1\n")
         assert runner.invoke(cli_mod.cli, ["check", "--format", "json", "."]).exit_code == 2
 
 
-def test_init_never_prompts_without_a_tty():
+def test_init_never_prompts_without_a_tty(isolated_fs):
     """CliRunner stdin is not a TTY: init must finish instead of waiting for input."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
+    with isolated_fs():
         r = runner.invoke(cli_mod.cli, ["init"], input="")
         assert r.exit_code == 0, r.output
         assert "Aborted" not in r.output
@@ -83,10 +83,10 @@ def test_init_never_prompts_without_a_tty():
 
 
 # ---------------------------------------------------------------- option order, version
-def test_options_are_accepted_after_the_path(monkeypatch):
+def test_options_are_accepted_after_the_path(monkeypatch, isolated_fs):
     _verified(monkeypatch)
     runner = CliRunner()
-    with runner.isolated_filesystem():
+    with isolated_fs():
         Path("bad.py").write_text(BAD)
         r = runner.invoke(cli_mod.cli, ["check", ".", "--format", "json"])
         assert "Path not found" not in r.output
@@ -101,32 +101,32 @@ def test_version_flag_reports_package_version():
 
 
 # ---------------------------------------------------------------- --severity
-def _json_scan(args, monkeypatch, source=BAD):
+def _json_scan(args, monkeypatch, isolated_fs, source=BAD):
     _verified(monkeypatch)
     runner = CliRunner()
-    with runner.isolated_filesystem():
+    with isolated_fs():
         Path("bad.py").write_text(source)
         r = runner.invoke(cli_mod.cli, ["check", *args, "."])
         return r, json.loads(r.output)
 
 
-def test_default_severity_keeps_all_findings_and_reports_declared_severity(monkeypatch):
-    r, data = _json_scan(["--format", "json"], monkeypatch)
+def test_default_severity_keeps_all_findings_and_reports_declared_severity(monkeypatch, isolated_fs):
+    r, data = _json_scan(["--format", "json"], monkeypatch, isolated_fs)
     assert data["total_violations"] == 2  # eval + os.system
     assert {v["severity"] for v in data["violations"]} == {"blocker"}  # as declared by SEC-010 / SEC-007
 
 
-def test_severity_threshold_never_hides_findings_that_meet_it(monkeypatch):
-    r, data = _json_scan(["--format", "json", "--severity", "blocker"], monkeypatch)
+def test_severity_threshold_never_hides_findings_that_meet_it(monkeypatch, isolated_fs):
+    r, data = _json_scan(["--format", "json", "--severity", "blocker"], monkeypatch, isolated_fs)
     assert r.exit_code == 1 and data["total_violations"] == 2
 
 
-def test_severity_threshold_filters_lower_findings_and_exit_code(monkeypatch):
+def test_severity_threshold_filters_lower_findings_and_exit_code(monkeypatch, isolated_fs):
     # Pretend the rules only declare "warning": a default (error) gate must ignore them.
     monkeypatch.setattr(cli_mod, "_declared_rule_severities", lambda: {"SEC-010": "warning", "SEC-007": "warning"})
-    r, data = _json_scan(["--format", "json"], monkeypatch)
+    r, data = _json_scan(["--format", "json"], monkeypatch, isolated_fs)
     assert r.exit_code == 0 and data["total_violations"] == 0 and data["is_compliant"] is True
-    r, data = _json_scan(["--format", "json", "--severity", "warning"], monkeypatch)
+    r, data = _json_scan(["--format", "json", "--severity", "warning"], monkeypatch, isolated_fs)
     assert r.exit_code == 1 and data["total_violations"] == 2
 
 
@@ -138,10 +138,10 @@ def test_effective_severity_prefers_declared_and_falls_back_to_scanner():
 
 
 # ---------------------------------------------------------------- report text
-def test_trace_uri_is_a_valid_file_uri(monkeypatch):
+def test_trace_uri_is_a_valid_file_uri(monkeypatch, isolated_fs):
     _verified(monkeypatch)
     runner = CliRunner()
-    with runner.isolated_filesystem():
+    with isolated_fs():
         Path("bad.py").write_text(BAD)
         out = runner.invoke(cli_mod.cli, ["check", "."]).output
         uris = [l.split("Trace URI:")[1].strip() for l in out.splitlines() if "Trace URI:" in l]
@@ -149,10 +149,10 @@ def test_trace_uri_is_a_valid_file_uri(monkeypatch):
         assert all("#L" in u for u in uris)
 
 
-def test_sec007_and_sec010_have_specific_descriptions(monkeypatch):
+def test_sec007_and_sec010_have_specific_descriptions(monkeypatch, isolated_fs):
     _verified(monkeypatch)
     runner = CliRunner()
-    with runner.isolated_filesystem():
+    with isolated_fs():
         Path("bad.py").write_text(BAD)
         out = runner.invoke(cli_mod.cli, ["check", "."]).output
         assert "Manual code review required" not in out
@@ -160,12 +160,12 @@ def test_sec007_and_sec010_have_specific_descriptions(monkeypatch):
 
 
 # ---------------------------------------------------------------- telemetry
-def test_telemetry_is_dispatched_in_machine_readable_mode_without_polluting_stdout(monkeypatch):
+def test_telemetry_is_dispatched_in_machine_readable_mode_without_polluting_stdout(monkeypatch, isolated_fs):
     _verified(monkeypatch)
     calls = []
     monkeypatch.setattr(cli_mod, "_dispatch_telemetry", lambda *a, **k: calls.append(a) or {"status": "LOGGED", "transaction_id": "x"})
     runner = CliRunner()
-    with runner.isolated_filesystem():
+    with isolated_fs():
         Path("bad.py").write_text(BAD)
         r = runner.invoke(cli_mod.cli, ["check", "--format", "json", "."])
         json.loads(r.output)  # still pure JSON

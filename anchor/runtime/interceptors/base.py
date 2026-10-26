@@ -88,8 +88,11 @@ class ResponseScanResult:
     """
     Result of scanning an incoming LLM response for dangerous patterns.
 
-    The response scanner never blocks (the response already arrived);
-    it logs/warns so that the application layer can decide what to do.
+    ``AnchorGuard.scan_response`` and the scanner itself never raise; they
+    return this verdict so the application can decide. The SDK and HTTP
+    interceptors apply the mode: in BLOCK mode a blocker-severity finding
+    raises AnchorViolationError instead of handing the response to the
+    caller; WARN logs a warning; AUDIT is silent.
     """
     provider:   str
     is_flagged: bool

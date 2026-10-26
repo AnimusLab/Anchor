@@ -92,12 +92,23 @@ def _handle_prompt_result(result: PromptScanResult) -> None:
 def _handle_response_result(result: ResponseScanResult) -> None:
     if _stats:
         _stats.record_response(result)
-    if result.is_flagged:
-        top = result.findings[0]
-        logger.warning(
-            f"[Anchor] {result.provider} response flagged — "
-            f"{top.rule_id}: {top.message}"
+    if not result.is_flagged:
+        return
+    top = result.findings[0]
+    msg = f"[Anchor] {result.provider} response flagged — {top.rule_id}: {top.message}"
+    blocker = next((f for f in result.findings if f.severity == "blocker"), None)
+    if _mode == InterceptorMode.BLOCK and blocker:
+        logger.error(msg)
+        raise AnchorViolationError(
+            message  = blocker.message,
+            rule_id  = blocker.rule_id,
+            provider = result.provider,
+            preview  = blocker.snippet,
         )
+    if _mode == InterceptorMode.AUDIT:
+        logger.info(msg)  # audit mode never prints or interrupts
+    else:
+        logger.warning(msg)
 
 
 # ---------------------------------------------------------------------------

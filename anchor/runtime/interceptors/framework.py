@@ -105,9 +105,23 @@ def _handle_response(text: str, provider: str) -> None:
     result = scan_response(text, provider)
     if _stats:
         _stats.record_response(result)
-    if result.is_flagged:
-        top = result.findings[0]
-        logger.warning(f"[Anchor] {provider} response: {top.rule_id} — {top.message}")
+    if not result.is_flagged:
+        return
+    top = result.findings[0]
+    msg = f"[Anchor] {provider} response: {top.rule_id} — {top.message}"
+    blocker = next((f for f in result.findings if f.severity == "blocker"), None)
+    if _mode == InterceptorMode.BLOCK and blocker:
+        logger.error(msg)
+        raise AnchorViolationError(
+            message  = blocker.message,
+            rule_id  = blocker.rule_id,
+            provider = provider,
+            preview  = blocker.snippet,
+        )
+    if _mode == InterceptorMode.AUDIT:
+        logger.info(msg)  # audit mode never prints or interrupts
+    else:
+        logger.warning(msg)
 
 
 # ---------------------------------------------------------------------------
@@ -131,6 +145,8 @@ def _patch_openai() -> bool:
                 text = response.choices[0].message.content or ""
                 if text:
                     _handle_response(text, "openai")
+            except AnchorViolationError:
+                raise  # block-mode response verdicts must reach the caller
             except Exception:
                 pass
             return response
@@ -166,6 +182,8 @@ def _patch_anthropic() -> bool:
                 out = response.content[0].text if response.content else ""
                 if out:
                     _handle_response(out, "anthropic")
+            except AnchorViolationError:
+                raise  # block-mode response verdicts must reach the caller
             except Exception:
                 pass
             return response
@@ -196,6 +214,8 @@ def _patch_google_genai() -> bool:
                 out = response.text or ""
                 if out:
                     _handle_response(out, "google-gemini")
+            except AnchorViolationError:
+                raise  # block-mode response verdicts must reach the caller
             except Exception:
                 pass
             return response
@@ -230,6 +250,8 @@ def _patch_langchain() -> bool:
                 out = response.content if hasattr(response, "content") else str(response)
                 if out:
                     _handle_response(out, "langchain")
+            except AnchorViolationError:
+                raise  # block-mode response verdicts must reach the caller
             except Exception:
                 pass
             return response
@@ -257,6 +279,8 @@ def _patch_ollama() -> bool:
                 out = response.get("message", {}).get("content", "")
                 if out:
                     _handle_response(out, "ollama")
+            except AnchorViolationError:
+                raise  # block-mode response verdicts must reach the caller
             except Exception:
                 pass
             return response
@@ -286,6 +310,8 @@ def _patch_groq() -> bool:
                 out = response.choices[0].message.content or ""
                 if out:
                     _handle_response(out, "groq")
+            except AnchorViolationError:
+                raise  # block-mode response verdicts must reach the caller
             except Exception:
                 pass
             return response
@@ -314,6 +340,8 @@ def _patch_cohere() -> bool:
                 out = response.text or ""
                 if out:
                     _handle_response(out, "cohere")
+            except AnchorViolationError:
+                raise  # block-mode response verdicts must reach the caller
             except Exception:
                 pass
             return response

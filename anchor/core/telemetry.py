@@ -41,6 +41,14 @@ def telemetry_enabled() -> bool:
     return os.getenv("ANCHOR_TELEMETRY", "").strip().lower() in TELEMETRY_TRUTHY
 
 
+def _is_hex(data: bytes) -> bool:
+    try:
+        bytes.fromhex(data.decode("ascii"))
+        return True
+    except (ValueError, UnicodeDecodeError):
+        return False
+
+
 class SpokeTelemetryClient:
     def __init__(
         self,
@@ -77,16 +85,31 @@ class SpokeTelemetryClient:
                 try:
                     key_bytes = Path(p).read_bytes()
                     if HAS_CRYPTO:
+                        raw_style = False
+                        hex_text = key_bytes.strip()
                         if b"BEGIN PRIVATE KEY" in key_bytes or b"BEGIN OPENSSH PRIVATE KEY" in key_bytes:
                             self.private_key = serialization.load_pem_private_key(key_bytes, password=None)
                         elif len(key_bytes) == 32:
                             self.private_key = Ed25519PrivateKey.from_private_bytes(key_bytes)
-                        
+                            raw_style = True
+                        elif len(hex_text) == 64 and _is_hex(hex_text):
+                            # `anchor init` writes the Ed25519 seed as 64 hex characters
+                            # (despite the .pem file name).
+                            self.private_key = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(hex_text.decode()))
+                            raw_style = True
+
                         if self.private_key and not self.identity_fingerprint:
-                            pub_bytes = self.private_key.public_key().public_bytes(
-                                encoding=serialization.Encoding.PEM,
-                                format=serialization.PublicFormat.SubjectPublicKeyInfo
-                            )
+                            if raw_style:
+                                # Same fingerprint `anchor init` prints: sha256 of the raw public key.
+                                pub_bytes = self.private_key.public_key().public_bytes(
+                                    encoding=serialization.Encoding.Raw,
+                                    format=serialization.PublicFormat.Raw
+                                )
+                            else:
+                                pub_bytes = self.private_key.public_key().public_bytes(
+                                    encoding=serialization.Encoding.PEM,
+                                    format=serialization.PublicFormat.SubjectPublicKeyInfo
+                                )
                             self.identity_fingerprint = "sha256:" + hashlib.sha256(pub_bytes).hexdigest()
                     break
                 except Exception as e:

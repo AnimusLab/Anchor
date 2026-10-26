@@ -45,6 +45,8 @@ _stats: Optional[SessionStats]  = None
 
 _requests_original_send = None
 _httpx_original_send    = None
+_httpx_async_original_send = None
+_urllib_original_open   = None
 
 _patches_active = False
 
@@ -167,8 +169,7 @@ def _patched_httpx_send(self, request, **kwargs):
     if provider:
         _in_anchor_call.active = True
         try:
-            body = request.content or b""
-            prompt_text = extract_prompt_from_payload(body)
+            prompt_text = extract_prompt_from_payload(_httpx_body(request))
             if prompt_text:
                 result = _scan_prompt_text(prompt_text, provider)
                 _handle_prompt_result(result)
@@ -185,6 +186,70 @@ def _patched_httpx_send(self, request, **kwargs):
             _in_anchor_call.active = False
     else:
         return _httpx_original_send(self, request, **kwargs)
+
+
+def _httpx_body(request) -> bytes:
+    """Request body as bytes; streaming bodies that were not read yet scan as empty."""
+    try:
+        return request.content or b""
+    except Exception:
+        return b""
+
+
+# ---------------------------------------------------------------------------
+# httpx.AsyncClient patch
+# ---------------------------------------------------------------------------
+
+async def _patched_httpx_async_send(self, request, **kwargs):
+    """Replacement for httpx.AsyncClient.send."""
+    if getattr(_in_anchor_call, "active", False):
+        return await _httpx_async_original_send(self, request, **kwargs)
+
+    provider = identify_provider(str(request.url))
+    if not provider:
+        return await _httpx_async_original_send(self, request, **kwargs)
+
+    # No thread-local re-entrancy flag across awaits: concurrent tasks share a
+    # thread, so a flag held over `await` would let other tasks bypass the scan.
+    prompt_text = extract_prompt_from_payload(_httpx_body(request))
+    if prompt_text:
+        _handle_prompt_result(_scan_prompt_text(prompt_text, provider))
+
+    response = await _httpx_async_original_send(self, request, **kwargs)
+
+    try:
+        content = response.content  # populated unless the caller streams
+    except Exception:
+        content = b""
+    resp_text = extract_response_text(content or b"", provider)
+    if resp_text:
+        _handle_response_result(scan_response(resp_text, provider))
+    return response
+
+
+# ---------------------------------------------------------------------------
+# urllib patch (prompt side only)
+# ---------------------------------------------------------------------------
+
+def _patched_urllib_open(self, fullurl, data=None, *args, **kwargs):
+    """Replacement for urllib.request.OpenerDirector.open.
+
+    Only the outgoing prompt is scanned: reading the response here would
+    consume the stream, and swapping the response object would change what
+    callers receive.
+    """
+    if not getattr(_in_anchor_call, "active", False):
+        url = fullurl if isinstance(fullurl, str) else getattr(fullurl, "full_url", "")
+        provider = identify_provider(url or "")
+        if provider:
+            body = data if data is not None else getattr(fullurl, "data", None)
+            if isinstance(body, str):
+                body = body.encode("utf-8")
+            if isinstance(body, (bytes, bytearray)):
+                prompt_text = extract_prompt_from_payload(bytes(body))
+                if prompt_text:
+                    _handle_prompt_result(_scan_prompt_text(prompt_text, provider))
+    return _urllib_original_open(self, fullurl, data, *args, **kwargs)
 
 
 # ---------------------------------------------------------------------------
@@ -219,6 +284,7 @@ def activate_backstop(mode: InterceptorMode, stats: SessionStats) -> bool:
     Returns True if at least one HTTP library was successfully patched.
     """
     global _requests_original_send, _httpx_original_send
+    global _httpx_async_original_send, _urllib_original_open
     global _mode, _stats, _patches_active
 
     _mode  = mode
@@ -243,7 +309,17 @@ def activate_backstop(mode: InterceptorMode, stats: SessionStats) -> bool:
         _httpx_original_send = httpx.Client.send
         httpx.Client.send    = _patched_httpx_send
         logger.debug("[Anchor] HTTP backstop: httpx.Client.send patched")
+        _httpx_async_original_send = httpx.AsyncClient.send
+        httpx.AsyncClient.send     = _patched_httpx_async_send
+        logger.debug("[Anchor] HTTP backstop: httpx.AsyncClient.send patched")
         patched_any = True
+
+    # Patch urllib (stdlib; always available)
+    import urllib.request
+    _urllib_original_open = urllib.request.OpenerDirector.open
+    urllib.request.OpenerDirector.open = _patched_urllib_open
+    logger.debug("[Anchor] HTTP backstop: urllib.request.OpenerDirector.open patched")
+    patched_any = True
 
     _patches_active = patched_any
     return patched_any
@@ -263,5 +339,11 @@ def deactivate_backstop() -> None:
     httpx = _get_sanctioned_library("httpx")
     if httpx and _httpx_original_send:
         httpx.Client.send = _httpx_original_send
+    if httpx and _httpx_async_original_send:
+        httpx.AsyncClient.send = _httpx_async_original_send
+
+    if _urllib_original_open:
+        import urllib.request
+        urllib.request.OpenerDirector.open = _urllib_original_open
 
     _patches_active = False

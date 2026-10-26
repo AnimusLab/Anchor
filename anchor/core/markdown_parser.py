@@ -1,5 +1,8 @@
+import logging
 import re
 from typing import Dict, List, Set
+
+logger = logging.getLogger("anchor.markdown_parser")
 
 
 class MarkdownPolicyParser:
@@ -29,12 +32,11 @@ class MarkdownPolicyParser:
             for match in matches:
                 detected_risks.add(match.upper())
 
-            print(
-                f"[DEBUG] Parsed Threat Model '{file_path}': Found {len(detected_risks)} risks.")
+            logger.debug("Parsed threat model %r: found %d risk IDs.", file_path, len(detected_risks))
             return detected_risks
 
         except Exception as e:
-            print(f"[WARN] Failed to parse threat model: {e}")
+            logger.warning("Failed to parse threat model: %s", e)
             return set()
 
 

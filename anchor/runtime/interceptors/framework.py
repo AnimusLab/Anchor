@@ -57,38 +57,20 @@ def _scan_messages(messages: list, provider: str) -> PromptScanResult:
             role    = "?"
         if isinstance(content, str):
             parts.append(f"[{role}] {content}")
+        elif isinstance(content, list):
+            # Multi-part content blocks: [{"type": "text", "text": "..."}]
+            for block in content:
+                text = block.get("text") if isinstance(block, dict) else getattr(block, "text", None)
+                if isinstance(text, str):
+                    parts.append(f"[{role}] {text}")
     return _scan_text("\n".join(parts), provider)
 
 
 def _scan_text(text: str, provider: str) -> PromptScanResult:
     """Scan arbitrary text and return PromptScanResult."""
-    from anchor.runtime.interceptors.output_scanner import _COMPILED
+    from anchor.runtime.interceptors.prompt_scanner import scan_prompt
 
-    findings = []
-    for compiled, rule_id, severity, message in _COMPILED:
-        m = compiled.search(text)
-        if m:
-            findings.append(Finding(
-                rule_id  = rule_id,
-                severity = severity,
-                message  = message.replace("response", "prompt"),
-                snippet  = m.group(0)[:120],
-            ))
-
-    is_flagged = bool(findings)
-    is_blocked = (
-        is_flagged
-        and _mode == InterceptorMode.BLOCK
-        and any(f.severity in ("blocker", "error") for f in findings)
-    )
-
-    return PromptScanResult(
-        provider   = provider,
-        is_blocked = is_blocked,
-        is_flagged = is_flagged,
-        findings   = findings,
-        mode       = _mode,
-    )
+    return scan_prompt(text, provider, _mode)
 
 
 def _handle(result: PromptScanResult) -> None:

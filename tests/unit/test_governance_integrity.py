@@ -97,9 +97,9 @@ def test_drift_command_does_not_claim_success():
     assert r.exit_code == 2 and "not implemented" in r.output and "History verified" not in r.output
 
 
-def test_verify_sync_detects_and_fixes_mismatch():
+def test_verify_sync_detects_and_fixes_mismatch(isolated_fs):
     runner = CliRunner()
-    with runner.isolated_filesystem():
+    with isolated_fs():
         Path("sub").mkdir()
         Path("sub/mitigation.anchor").write_text("tampered\n")
         bad = runner.invoke(_cli(), ["verify-sync"])
@@ -109,9 +109,9 @@ def test_verify_sync_detects_and_fixes_mismatch():
         assert runner.invoke(_cli(), ["verify-sync"]).exit_code == 0
 
 
-def test_sync_restore_requires_anchor_dir_and_verified_source(monkeypatch):
+def test_sync_restore_requires_anchor_dir_and_verified_source(monkeypatch, isolated_fs):
     runner = CliRunner()
-    with runner.isolated_filesystem():
+    with isolated_fs():
         assert runner.invoke(_cli(), ["sync", "--restore"]).exit_code == 1  # no .anchor/
         Path(".anchor").mkdir()
         monkeypatch.setattr(gs, "verify_governance_tree", lambda *_a, **_k: (_ for _ in ()).throw(gs.GovernanceSignatureError("bad")))
@@ -123,29 +123,29 @@ def test_sync_restore_requires_anchor_dir_and_verified_source(monkeypatch):
 
 
 @pytest.mark.parametrize("verified,expect", [(True, "match the signed GOVERNANCE.lock"), (False, "UNVERIFIED RULE SET")])
-def test_check_footer_reflects_real_verification(monkeypatch, verified, expect):
+def test_check_footer_reflects_real_verification(monkeypatch, verified, expect, isolated_fs):
     import anchor.cli as cli_mod
     monkeypatch.setattr(cli_mod, "_governance_status", lambda: (verified, "" if verified else "modified: x.anchor"))
     runner = CliRunner()
-    with runner.isolated_filesystem():
+    with isolated_fs():
         Path("ok.py").write_text("x = 1\n")
         r = runner.invoke(cli_mod.cli, ["check", "."])
         assert expect in r.output and "not legal advice" in r.output
 
 
-def test_check_can_require_verified_governance(monkeypatch):
+def test_check_can_require_verified_governance(monkeypatch, isolated_fs):
     import anchor.cli as cli_mod
     monkeypatch.setattr(cli_mod, "_governance_status", lambda: (False, "modified: x.anchor"))
     monkeypatch.setenv("ANCHOR_REQUIRE_VERIFIED_GOVERNANCE", "1")
     runner = CliRunner()
-    with runner.isolated_filesystem():
+    with isolated_fs():
         Path("ok.py").write_text("x = 1\n")
         assert runner.invoke(cli_mod.cli, ["check", "."]).exit_code == 2
 
 
-def test_check_fails_on_missing_path_instead_of_reporting_clean():
+def test_check_fails_on_missing_path_instead_of_reporting_clean(isolated_fs):
     runner = CliRunner()
-    with runner.isolated_filesystem():
+    with isolated_fs():
         r = runner.invoke(_cli(), ["check", "does-not-exist"])
         assert r.exit_code == 2 and "Path not found" in r.output
         hint = runner.invoke(_cli(), ["check", "drift"])

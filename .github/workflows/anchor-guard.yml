@@ -70,5 +70,5 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `## 🛡️ Anchor Governance Scan\n\n${reportContent}\n\n*Automated static checks by `anchor check`. This is not a legal or regulatory certification.*`
+              body: `## 🛡️ Anchor Governance Scan\n\n${reportContent}\n\n*Automated static checks by anchor check. This is not a legal or regulatory certification.*`
             });

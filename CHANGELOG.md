@@ -74,6 +74,8 @@ All notable changes to Anchor are documented here.
   fixing it needs a re-signed `GOVERNANCE.lock`), each rule has a declared severity,
   and the Layer 2 payload guard enforces exactly the rules flagged `runtime`.
 - Replace Click's deprecated `isolated_filesystem()` with a shared `isolated_fs` fixture.
+- `test_version_sync` falls back to `tomli` on Python 3.10 (`tomllib` is 3.11+); `tomli` is
+  added to the `dev` extra for Python < 3.11.
 - Full unit suite: 143 tests.
 
 ## [6.0.3]

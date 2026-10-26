@@ -776,23 +776,40 @@ def sync(restore):
 @cli.command("heal")
 @click.argument("paths", nargs=-1, default=None)
 @click.option("--apply", "apply_fixes", is_flag=True, help="Apply fixes in-place.")
-def heal(paths, apply_fixes):
-    """Review and apply Anchor's suggested fixes."""
+@click.option("--suppress", "allow_suppress", is_flag=True,
+              help="With --apply, also apply suggestions that only add an `anchor: ignore` pragma.")
+def heal(paths, apply_fixes, allow_suppress):
+    """Review and apply Anchor's suggested fixes.
+
+    With PATHS, those paths are scanned now. Without PATHS, the findings from the
+    last `anchor check` run (.anchor/reports/governance_report.json) are used.
+    """
     from anchor.core.healer import suggest_fix, format_suggestion_for_report, apply_fix
     click.secho("\nAnchor Heal Engine", bold=True)
     click.echo("=" * 70)
-    json_path = os.path.join(".anchor", "reports", "governance_report.json")
-    if not os.path.exists(json_path):
-        click.secho("No violations found. Run `anchor check .` first.", fg="green")
-        return
-    with open(json_path, "r", encoding="utf-8") as f:
-        data = json.load(f)
-    violations = data.get("violations", [])
+    if paths:
+        violations = []
+        for _p in paths:
+            if not os.path.exists(_p):
+                click.secho(f"Path not found: {_p}.", fg="red")
+                sys.exit(2)
+            _, found = _collect_violations(os.path.abspath(_p), "error")
+            violations.extend(found)
+    else:
+        json_path = os.path.join(".anchor", "reports", "governance_report.json")
+        if not os.path.exists(json_path):
+            click.secho("No violations found. Run `anchor check .` first, or pass PATHS to scan.", fg="green")
+            return
+        with open(json_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        violations = data.get("violations", [])
+        click.echo("Using findings from the last `anchor check` run (pass PATHS to scan instead).")
     if not violations:
         click.secho("No active violations to heal.", fg="green")
         return
 
     fixed_count = 0
+    skipped_suppressions = 0
     for v in violations:
         click.secho(f"\n[VIOLATION] {v['file']}:{v['line']}", fg="red", bold=True)
         click.echo(f"  Rules: {v['aggregated_rule_ids']}")
@@ -805,7 +822,10 @@ def heal(paths, apply_fixes):
         })
         if suggestion:
             click.echo(format_suggestion_for_report(suggestion))
-            if apply_fixes and suggestion.auto_fixable:
+            if apply_fixes and suggestion.auto_fixable and suggestion.suppression and not allow_suppress:
+                skipped_suppressions += 1
+                click.secho("  - Not applied: this only suppresses the finding. Re-run with --suppress after review.", fg="yellow")
+            elif apply_fixes and suggestion.auto_fixable:
                 if apply_fix(suggestion):
                     fixed_count += 1
                     click.secho(f"  ✔ Applied auto-patch to {v['file']}:{v['line']}", fg="green")
@@ -814,6 +834,8 @@ def heal(paths, apply_fixes):
 
     if apply_fixes:
         click.secho(f"\nApplied {fixed_count} auto-fix patch(es) in-place.", fg="green", bold=True)
+        if skipped_suppressions:
+            click.secho(f"Skipped {skipped_suppressions} suppression-only suggestion(s); use --suppress to apply them.", fg="yellow")
 
 def main():
     cli()

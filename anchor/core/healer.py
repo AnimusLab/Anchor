@@ -39,6 +39,7 @@ class HealSuggestion:
     suggested:   str          # the proposed replacement (stripped), or "" if manual only
     explanation: str          # human-readable explanation of the change
     auto_fixable: bool = False  # True if suggested can be applied programmatically
+    suppression: bool = False   # True if the change only silences the finding (adds an ignore pragma)
 
 
 # ---------------------------------------------------------------------------
@@ -158,7 +159,8 @@ def _fix_subprocess_shell(line: str):
         return (
             suggested,
             "Designate reviewed host subprocess invocation with '# anchor: ignore SEC-007' or route through DiamondCage.run_safe().",
-            True
+            True,
+            True,  # suppression: silences the finding, does not fix it
         )
     return (
         "",
@@ -190,26 +192,39 @@ def _fix_open_file(line: str):
             suggested,
             "If this file access is intentional and safe, add '# anchor: ignore RI-08' "
             "to suppress this finding and create an audit trail.",
-            True
+            True,
+            True,  # suppression
         )
     return None
 
 
 def _fix_hardcoded_secret(line: str):
     """Hardcoded credential â†’ replace with env var lookup"""
-    m = re.search(r'(api[_\-]?key|password|secret|token)\s*=\s*["\'"]([^"\']{6,})["\']', line, re.IGNORECASE)
+    m = re.search(
+        r'([A-Za-z_][\w.]*)\s*=\s*["\']([^"\']{6,})["\']', line
+    ) if re.search(r'api[_\-]?key|password|secret|token', line, re.IGNORECASE) else None
     if m:
-        var_name = m.group(1).upper().replace("-", "_")
-        suggested = re.sub(
-            r'(api[_\-]?key|password|secret|token)\s*=\s*["\'"][^"\']+["\']',
-            f'{m.group(1)} = os.environ.get("{var_name}", "")',
-            line, count=1, flags=re.IGNORECASE
-        )
+        # Keep the original identifier (e.g. OPENAI_API_KEY) and replace only the literal.
+        var_name = re.sub(r'\W', '_', m.group(1).split(".")[-1]).upper()
+        suggested = line[:m.start()] + f'{m.group(1)} = os.environ.get("{var_name}", "")' + line[m.end():]
         return (
             suggested.rstrip(),
             f"Never hardcode credentials. Load from environment: "
-            f'os.environ.get("{var_name}", ""). '
-            f"Add {var_name} to your .env file and ensure it's in .gitignore.",
+            f'os.environ.get("{var_name}", "") (add `import os` if missing). '
+            f"Add {var_name} to your .env file and ensure it's in .gitignore, "
+            f"and rotate the exposed value.",
+            True
+        )
+    return None
+
+
+def _fix_tls_verify(line: str):
+    """SEC-024: TLS verification disabled -> restore the secure default."""
+    if re.search(r'\bverify\s*=\s*False\b', line):
+        return (
+            re.sub(r'\bverify\s*=\s*False\b', "verify=True", line, count=1).rstrip(),
+            "Certificate verification protects against man-in-the-middle attacks. Restore verify=True "
+            "(or point verify= at your CA bundle if you use a private CA).",
             True
         )
     return None
@@ -250,6 +265,8 @@ _FIXERS: list[tuple[str, callable]] = [
     ("ANC-031",  _fix_eval),
     ("RI-08",    _fix_open_file),
     ("ANC-PKL",  _fix_pickle),
+    ("SEC-023",  _fix_pickle),
+    ("SEC-024",  _fix_tls_verify),
 ]
 
 
@@ -291,7 +308,7 @@ def suggest_fix(violation: dict) -> Optional[HealSuggestion]:
         if rule_id.startswith(prefix):
             result = fixer(original_line)
             if result:
-                suggested, explanation, auto_fixable = result
+                suggested, explanation, auto_fixable, *extra = result
                 return HealSuggestion(
                     rule_id      = rule_id,
                     file         = file_path,
@@ -300,6 +317,7 @@ def suggest_fix(violation: dict) -> Optional[HealSuggestion]:
                     suggested    = suggested.strip(),
                     explanation  = explanation,
                     auto_fixable = auto_fixable,
+                    suppression  = bool(extra and extra[0]),
                 )
 
     # Generic fallback
@@ -330,8 +348,11 @@ def format_suggestion_for_report(suggestion: HealSuggestion) -> str:
         lines.append(f"    [âœ”] {suggestion.suggested}")
     if not suggestion.auto_fixable:
         lines.append("    Manual review required â€” apply with care.")
+    elif suggestion.suppression:
+        lines.append("    Suppression only (the finding is silenced, not fixed). After review: "
+                     "anchor heal --apply --suppress " + suggestion.file)
     else:
-        lines.append("    Auto-fixable via: anchor heal " + suggestion.file)
+        lines.append("    Auto-fixable via: anchor heal --apply " + suggestion.file)
     lines.append("    " + "-" * 59)
     return "\n".join(lines)
 

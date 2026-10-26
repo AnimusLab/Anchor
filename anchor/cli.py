@@ -225,6 +225,37 @@ def load_anchorignore(root_path: str) -> List[str]:
     with open(ignore_path, "r", encoding="utf-8") as f:
         return [line.strip() for line in f if line.strip() and not line.startswith("#")]
 
+
+def _collect_violations(target_dir: str, severity: str = "error", engine=None):
+    """Scan ``target_dir`` and return ``(engine_result, violations)`` after every filter.
+
+    Filters, in order: correctly scoped ``# anchor: ignore`` pragmas, ``.anchorignore``
+    patterns, effective severity, and the ``--severity`` threshold.
+    """
+    from anchor.scanner.pragmas import apply_pragmas
+
+    engine = engine or AnchorEngine()
+    ignored_patterns = load_anchorignore(target_dir)
+
+    detailed_res = engine.scan_directory_detailed(target_dir) if hasattr(engine, "scan_directory_detailed") else {
+        "total_files_scanned": 0, "total_lines_scanned": 0, "scan_latency_microsec": 0, "total_violations": 0, "violations": []
+    }
+
+    raw_violations = apply_pragmas(engine, target_dir, detailed_res.get("violations", []))
+    filtered_violations = []
+
+    for v in raw_violations:
+        f_path = v["file"]
+        if not any(pat in f_path for pat in ignored_patterns):
+            filtered_violations.append(v)
+
+    # Effective severity per finding, then apply the --severity threshold.
+    for v in filtered_violations:
+        v["severity"] = _effective_severity(v)
+    _threshold = _SEVERITY_RANK[severity]
+    filtered_violations = [v for v in filtered_violations if _SEVERITY_RANK[v["severity"]] >= _threshold]
+    return detailed_res, filtered_violations
+
 @click.group()
 @click.version_option(version=_pkg_version(), prog_name="anchor")
 def cli():
@@ -457,25 +488,7 @@ def check(ctx, paths, fmt, severity, model, metadata, context):
 
     engine = AnchorEngine()
     target_dir = os.path.abspath(paths[0] if paths else ".")
-    ignored_patterns = load_anchorignore(target_dir)
-
-    detailed_res = engine.scan_directory_detailed(target_dir) if hasattr(engine, "scan_directory_detailed") else {
-        "total_files_scanned": 0, "total_lines_scanned": 0, "scan_latency_microsec": 0, "total_violations": 0, "violations": []
-    }
-
-    raw_violations = detailed_res.get("violations", [])
-    filtered_violations = []
-
-    for v in raw_violations:
-        f_path = v["file"]
-        if not any(pat in f_path for pat in ignored_patterns):
-            filtered_violations.append(v)
-
-    # Effective severity per finding, then apply the --severity threshold.
-    for v in filtered_violations:
-        v["severity"] = _effective_severity(v)
-    _threshold = _SEVERITY_RANK[severity]
-    filtered_violations = [v for v in filtered_violations if _SEVERITY_RANK[v["severity"]] >= _threshold]
+    detailed_res, filtered_violations = _collect_violations(target_dir, severity, engine)
 
     total_violations = len(filtered_violations)
     is_compliant = (total_violations == 0)

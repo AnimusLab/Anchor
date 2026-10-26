@@ -29,7 +29,7 @@ runtime extension.
 
 - Governance lock check passed.
 - CLI governance check passed with zero violations.
-- Full unit suite: 139 passed.
+- Full unit suite: 143 passed.
 
 This is an engineering security release. Deployment owners remain responsible
 for authorization, network isolation, privacy, legal, and regulatory review.

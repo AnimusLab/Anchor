@@ -18,7 +18,9 @@ def _git(repo, *args, env_extra=None):
     env = dict(os.environ, GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@t", GIT_COMMITTER_NAME="t", GIT_COMMITTER_EMAIL="t@t")
     env["PYTHONPATH"] = PKG_ROOT + os.pathsep + env.get("PYTHONPATH", "")
     env.update(env_extra or {})
-    return subprocess.run(["git", *args], cwd=repo, capture_output=True, text=True, env=env)
+    # git/anchor emit UTF-8; decoding with the locale codec (cp1252 on Windows) loses the output.
+    return subprocess.run(["git", *args], cwd=repo, capture_output=True, text=True,
+                          encoding="utf-8", errors="replace", env=env)
 
 
 @pytest.fixture

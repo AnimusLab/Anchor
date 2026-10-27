@@ -96,6 +96,14 @@ def test_anchorignore_applies_to_supplemental_findings(tmp_path):
     assert data["total_violations"] == 0
 
 
+def test_anchorignore_matches_windows_style_paths():
+    from anchor.cli import _is_ignored
+
+    assert _is_ignored("D:\\repo\\vendor\\x.py", ["vendor/"])
+    assert _is_ignored("D:\\repo\\vendor\\x.py", ["repo\\vendor"])
+    assert not _is_ignored("D:\\repo\\src\\x.py", ["vendor/"])
+
+
 def test_js_eval_is_not_labelled_python(tmp_path):
     _, _, data = _check(tmp_path, "a.js", "function f(x){ eval(x); }\n")
     assert "Python" not in data["violations"][0]["name"]

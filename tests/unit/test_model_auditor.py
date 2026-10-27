@@ -60,7 +60,8 @@ def test_malicious_raw_pickle_is_rejected(tmp_path):
     res = _audit(p)
     assert res.status == AuditStatus.FAILED
     assert res.recommendation == "REJECT"
-    assert "posix.system" in res.violations[0]["message"] or "os.system" in res.violations[0]["message"]
+    # os.system pickles as posix.system on Unix and nt.system on Windows
+    assert any(n in res.violations[0]["message"] for n in ("posix.system", "nt.system", "os.system"))
 
 
 @pytest.mark.parametrize("protocol", [2, 4, 5])

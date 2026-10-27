@@ -254,6 +254,12 @@ def load_anchorignore(root_path: str) -> List[str]:
         return [line.strip() for line in f if line.strip() and not line.startswith("#")]
 
 
+def _is_ignored(file_path: str, patterns: List[str]) -> bool:
+    """.anchorignore patterns are written with forward slashes; match Windows paths the same way."""
+    normalised = file_path.replace("\\", "/")
+    return any(pat.replace("\\", "/") in normalised for pat in patterns)
+
+
 _PYTHON_SUFFIXES = (".py", ".pyi", ".ipynb")
 
 
@@ -288,8 +294,7 @@ def _collect_violations(target_dir: str, severity: str = "error", engine=None):
     filtered_violations = []
 
     for v in raw_violations:
-        f_path = v["file"]
-        if not any(pat in f_path for pat in ignored_patterns):
+        if not _is_ignored(v["file"], ignored_patterns):
             filtered_violations.append(v)
 
     # Effective severity per finding, then apply the --severity threshold.

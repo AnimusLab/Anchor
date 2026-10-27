@@ -30,6 +30,15 @@ _RESPONSE_PATTERNS: list[tuple[str, str, str, str]] = [
     (r'(?i)(aws_access_key_id|aws_secret_access_key)\s*=\s*["\']?[A-Z0-9/+]{16,}',
         "RSP-001", "blocker", "AWS credential pattern detected in LLM response"),
 
+    # Bare AWS access key IDs (no assignment needed). The AWS documentation
+    # placeholder (...EXAMPLE) is excluded so docs snippets do not trip it.
+    (r'\b(?:AKIA|ASIA)(?![0-9A-Z]*EXAMPLE)[0-9A-Z]{16}\b',
+        "RSP-006", "blocker", "AWS access key ID detected in LLM response"),
+
+    # Provider API tokens recognisable by prefix alone.
+    (r'\b(?:sk-(?:proj-|ant-)?[A-Za-z0-9_-]{32,}|xox[abprs]-[A-Za-z0-9-]{10,}|github_pat_[A-Za-z0-9_]{22,})',
+        "RSP-007", "blocker", "Provider API token detected in LLM response"),
+
     (r'(?i)(api[_\-]?key|apikey|secret[_\-]?key|auth[_\-]?token)\s*[=:]\s*["\']?[A-Za-z0-9\-_]{20,}',
         "RSP-002", "error", "API key or secret token pattern detected in LLM response"),
 
@@ -88,6 +97,10 @@ _RESPONSE_PATTERNS: list[tuple[str, str, str, str]] = [
 
     (r'(?i)(4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13})',
         "RSP-052", "blocker", "Credit card number pattern in LLM response"),
+
+    # Card numbers written with spaces or dashes (4-4-4-4 and Amex 4-6-5).
+    (r'\b(?:(?:4\d{3}|5[1-5]\d{2})(?:[ -]\d{4}){2}[ -]\d{3,4}|3[47]\d{2}[ -]\d{6}[ -]\d{5})\b',
+        "RSP-053", "blocker", "Credit card number with separators in LLM response"),
 ]
 
 

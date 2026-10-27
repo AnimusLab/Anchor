@@ -44,6 +44,34 @@ REMEDIATION_SNIPPETS = {
 }
 
 RULE_DESCRIPTIONS = {
+    "SEC-020": (
+        "An AWS access key ID is committed in source. Anyone with repository read access can use it. "
+        "Revoke and rotate the key, then load credentials from the environment or a secrets manager."
+    ),
+    "SEC-021": (
+        "A provider or VCS access token is committed in source. Revoke and rotate it, then load it from "
+        "the environment or a secrets manager."
+    ),
+    "SEC-022": (
+        "Private key material is committed in source. Treat the key as compromised: rotate it and keep "
+        "keys out of the repository."
+    ),
+    "SEC-023": (
+        "Deserialising untrusted pickle/marshal/yaml.load/torch.load data can execute arbitrary code. "
+        "Use json, yaml.safe_load, or torch.load(..., weights_only=True), or verify the data source."
+    ),
+    "SEC-024": (
+        "TLS certificate verification is disabled, so connections can be intercepted by a "
+        "man-in-the-middle. Remove the override and trust the proper CA bundle instead."
+    ),
+    "SEC-025": (
+        "document.write() injects markup into the page and is a DOM XSS sink for untrusted input. "
+        "Build nodes with textContent/createElement instead."
+    ),
+    "SEC-026": (
+        "A value shaped like a US Social Security Number appears in source. Do not commit real PII; "
+        "use clearly fake placeholders in fixtures."
+    ),
     "SEC-007": (
         # anchor: ignore -- test fixture; adversarial payload used to verify detection, not a real violation
         "Your code passes a command string to the operating system shell (for example os.system(), os.popen(), "
@@ -225,6 +253,57 @@ def load_anchorignore(root_path: str) -> List[str]:
     with open(ignore_path, "r", encoding="utf-8") as f:
         return [line.strip() for line in f if line.strip() and not line.startswith("#")]
 
+
+def _is_ignored(file_path: str, patterns: List[str]) -> bool:
+    """.anchorignore patterns are written with forward slashes; match Windows paths the same way."""
+    normalised = file_path.replace("\\", "/")
+    return any(pat.replace("\\", "/") in normalised for pat in patterns)
+
+
+_PYTHON_SUFFIXES = (".py", ".pyi", ".ipynb")
+
+
+def _relabel_for_language(violation: Dict[str, Any]) -> None:
+    """The engine names SEC-010 "Insecure Python Execution" even for JS/TS/... files."""
+    if "SEC-010" in str(violation.get("aggregated_rule_ids", "")) and not str(
+        violation.get("file", "")
+    ).lower().endswith(_PYTHON_SUFFIXES):
+        violation["name"] = "Insecure Dynamic Code Execution (eval/exec/dynamic import)"
+
+
+def _collect_violations(target_dir: str, severity: str = "error", engine=None):
+    """Scan ``target_dir`` and return ``(engine_result, violations)`` after every filter.
+
+    Filters, in order: correctly scoped ``# anchor: ignore`` pragmas, ``.anchorignore``
+    patterns, effective severity, and the ``--severity`` threshold.
+    """
+    from anchor.scanner.pragmas import apply_pragmas, filter_violations
+    from anchor.scanner.supplemental import scan_supplemental
+
+    engine = engine or AnchorEngine()
+    ignored_patterns = load_anchorignore(target_dir)
+
+    detailed_res = engine.scan_directory_detailed(target_dir) if hasattr(engine, "scan_directory_detailed") else {
+        "total_files_scanned": 0, "total_lines_scanned": 0, "scan_latency_microsec": 0, "total_violations": 0, "violations": []
+    }
+
+    raw_violations = apply_pragmas(engine, target_dir, detailed_res.get("violations", []))
+    raw_violations = raw_violations + filter_violations(scan_supplemental(target_dir, raw_violations))
+    for v in raw_violations:
+        _relabel_for_language(v)
+    filtered_violations = []
+
+    for v in raw_violations:
+        if not _is_ignored(v["file"], ignored_patterns):
+            filtered_violations.append(v)
+
+    # Effective severity per finding, then apply the --severity threshold.
+    for v in filtered_violations:
+        v["severity"] = _effective_severity(v)
+    _threshold = _SEVERITY_RANK[severity]
+    filtered_violations = [v for v in filtered_violations if _SEVERITY_RANK[v["severity"]] >= _threshold]
+    return detailed_res, filtered_violations
+
 @click.group()
 @click.version_option(version=_pkg_version(), prog_name="anchor")
 def cli():
@@ -306,19 +385,17 @@ def init(domains, frameworks, regulators, all_items, no_prompt, gitignore, hook,
         click.echo("   Add `.anchor/cache/` to `.gitignore`? [Y/n]: " + (resp if resp else "y"))
         add_gitignore = resp in ["", "y", "yes"]
 
+    private_key_entry = ".anchor/keys/ed25519_private.pem"
     if add_gitignore:
-        gitignore_path = ".gitignore"
-        cache_entry = ".anchor/cache/\n.anchor/keys/ed25519_private.pem\n"
-        existing = ""
-        if os.path.exists(gitignore_path):
-            with open(gitignore_path, "r", encoding="utf-8") as f:
-                existing = f.read()
-        if ".anchor/cache/" not in existing:
-            with open(gitignore_path, "a", encoding="utf-8") as f:
-                f.write(f"\n# Anchor governance cache & private key\n{cache_entry}")
+        if _ensure_gitignore_entries([".anchor/cache/", private_key_entry]):
             click.secho("   [OK] Added `.anchor/cache/` & private key to .gitignore", fg="green")
     else:
-        click.secho("   [SKIP] .gitignore left untouched", fg="yellow")
+        # The private identity key must never be committed by accident, so it is
+        # protected even when the user declines the cache entry.
+        if _ensure_gitignore_entries([private_key_entry]):
+            click.secho("   [OK] Added the private key to .gitignore (cache entry skipped)", fg="green")
+        else:
+            click.secho("   [SKIP] .gitignore left untouched", fg="yellow")
 
     # 3. Consent-Driven Git Pre-Commit Hook Handling
     install_hook = hook
@@ -340,17 +417,8 @@ def init(domains, frameworks, regulators, all_items, no_prompt, gitignore, hook,
             shutil.copy(pre_commit_path, f"{pre_commit_path}.bak")
             click.secho(f"   [BACKUP] Existing pre-commit hook backed up to {pre_commit_path}.bak", fg="yellow")
 
-        hook_content = """#!/bin/sh
-echo "[Anchor] Checking staged files for compliance..."
-STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\\.(py|ts|tsx)$')
-if [ -z "$STAGED_FILES" ]; then
-  exit 0
-fi
-python -m anchor check . --severity error
-if [ $? -ne 0 ]; then
-  exit 1
-fi
-"""
+        import shlex
+        hook_content = _PRE_COMMIT_HOOK.replace("__PYTHON__", shlex.quote(sys.executable or "python3"))
         with open(pre_commit_path, "w", encoding="utf-8") as f:
             f.write(hook_content)
         try:
@@ -372,25 +440,94 @@ fi
             click.echo("     ✓ Identity discovery & verified project compliance badge")
             click.echo("     ✓ Support for key rotation & revocation")
             click.echo("   (Only your PUBLIC key is uploaded. Your PRIVATE key NEVER leaves your machine.)")
-            resp = click.prompt("   Register public identity with AnimusLab Registry?", default="N", show_choices=False).strip().lower()
+            resp = click.prompt("   Register public identity with AnimusLab Registry? (not yet available in this release)", default="N", show_choices=False).strip().lower()
             click.echo("   Register public identity with AnimusLab Registry? [y/N]: " + (resp if resp else "n"))
             register_pub = resp in ["y", "yes"]
 
         if register_pub:
-            click.secho("   [REGISTERED] Public key queued for AnimusLab Identity Registry", fg="green")
+            # No upload code exists in this release; say so instead of claiming the key was queued.
+            click.secho(
+                "   [NOT SENT] Registry upload is not available in this release; "
+                "your public key stays local.", fg="yellow")
         else:
             click.secho("   [LOCAL ONLY] Key not registered with the AnimusLab registry", fg="yellow")
     else:
-        click.secho(f"   [ENTERPRISE HUB] Provisioned under Hub Key {hub_key[:12]}...", fg="cyan")
+        click.secho(
+            "   [ENTERPRISE HUB] Hub key received but not validated or transmitted in this "
+            "release (no network call was made).", fg="yellow")
 
     click.secho("\n✅ Anchor initialization complete. Created `.anchor/` governance package.", fg="green", bold=True)
 
     click.echo("   Run `anchor check .` to start auditing!\n")
 
 
+def _ensure_gitignore_entries(entries: List[str]) -> bool:
+    """Append missing ``entries`` to ./.gitignore (only inside a git repo). True if anything was added."""
+    if not (os.path.exists(".git") or os.path.exists(".gitignore")):
+        return False
+    existing = ""
+    if os.path.exists(".gitignore"):
+        with open(".gitignore", "r", encoding="utf-8") as f:
+            existing = f.read()
+    present = {line.strip() for line in existing.splitlines()}
+    missing = [e for e in entries if e not in present]
+    if not missing:
+        return False
+    with open(".gitignore", "a", encoding="utf-8") as f:
+        if existing and not existing.endswith("\n"):
+            f.write("\n")
+        f.write("\n# Anchor governance cache & private key\n" + "\n".join(missing) + "\n")
+    return True
+
+
+_PRE_COMMIT_HOOK = """#!/bin/sh
+# Installed by `anchor init`: scans the files staged for this commit.
+echo "[Anchor] Checking staged files for compliance..."
+ANCHOR_PY=__PYTHON__
+[ -x "$ANCHOR_PY" ] || ANCHOR_PY="$(command -v python3 || command -v python)"
+STAGED=$(git diff --cached --name-only --diff-filter=ACM)
+[ -z "$STAGED" ] && exit 0
+STATUS=0
+OLDIFS=$IFS
+IFS='
+'
+for f in $STAGED; do
+  case "$f" in .anchor/*) continue ;; esac
+  [ -f "$f" ] || continue
+  OUT=$("$ANCHOR_PY" -m anchor check "$f" --severity error 2>&1) || { echo "$OUT"; STATUS=1; }
+done
+IFS=$OLDIFS
+exit $STATUS
+"""
+
+
 def _packaged_governance_dir():
     from pathlib import Path
     return Path(__file__).resolve().parent / "governance"
+
+
+_GOVERNANCE_DRIFT_FILES = ("mitigation.anchor", "GOVERNANCE.lock", "GOVERNANCE.lock.sig")
+
+
+def _local_governance_drift() -> List[str]:
+    """Local ./.anchor copies of the rule catalog and lock that differ from the packaged ones.
+
+    `check` always scans with the packaged rules, so an edited local copy is not what
+    runs; but a project that commits `.anchor/` is reviewing something other than what
+    is enforced, and the integrity line below must not claim otherwise.
+    """
+    from anchor.core.governance_signature import hash_governance_bytes
+    local = Path(".anchor")
+    if not local.is_dir():
+        return []
+    src = _packaged_governance_dir()
+    drift = []
+    for name in _GOVERNANCE_DRIFT_FILES:
+        mine, packaged = local / name, src / name
+        if mine.is_file() and packaged.is_file() and \
+                hash_governance_bytes(mine.read_bytes()) != hash_governance_bytes(packaged.read_bytes()):
+            drift.append(f".anchor/{name}")
+    return drift
 
 
 def _governance_status():
@@ -422,22 +559,38 @@ def check(ctx, paths, fmt, severity, model, metadata, context):
         click.secho(f"\n[MODEL AUDIT] Auditing Model Weights: {model}", fg="cyan", bold=True)
         from anchor.core.model_auditor import ModelAuditor
         auditor = ModelAuditor({}, verbose=True)
-        res = auditor.audit_weights(model, metadata)
-        click.secho(f"Status: {res.status.value.upper()}", fg="red" if res.status.value == "failed" else "green", bold=True)
+        try:
+            res = auditor.audit_weights(model, metadata)
+        except FileNotFoundError as exc:
+            click.secho(str(exc), fg="red")
+            sys.exit(2)
+        _status_color = {"failed": "red", "needs_review": "yellow"}.get(res.status.value, "green")
+        click.secho(f"Status: {res.status.value.upper()}", fg=_status_color, bold=True)
         click.echo(f"Passed: {res.checks_passed}/{res.checks_total}")
         click.echo(f"Recommendation: {res.recommendation}")
-        if res.status.value == "failed":
+        if res.unverified:
+            click.secho(
+                "No check could verify this model file (unsupported format or nothing to inspect); "
+                "it is NOT approved.", fg="yellow")
+        if res.status.value == "failed" or res.unverified:
             sys.exit(1)
         return
 
     # Handle GenAI Threat Model Context Parsing
     if context:
-        click.secho(f"\n[THREAT MODEL BRIDGE] Parsing Threat Model: {context}", fg="cyan", bold=True)
+        # Diagnostics go to stderr so `--format json|markdown` output stays machine-readable.
+        if not os.path.isfile(context):
+            click.secho(f"Threat model not found: {context}", fg="red", err=True)
+            sys.exit(2)
+        click.secho(f"\n[THREAT MODEL BRIDGE] Parsing Threat Model: {context}", fg="cyan", bold=True, err=True)
         from anchor.core.markdown_parser import MarkdownPolicyParser
         md_parser = MarkdownPolicyParser()
         detected_risks = md_parser.parse_file(context)
-        if detected_risks:
-            click.secho(f"   Activated dynamic enforcement rules for {len(detected_risks)} detected risk IDs", fg="green")
+        # The parsed IDs are not used to select or add rules yet, so do not claim they were enforced.
+        click.secho(
+            f"   Parsed {len(detected_risks)} risk ID(s). Informational only: threat-model-driven "
+            "enforcement is not implemented in this release; the scan below is unchanged.",
+            fg="yellow", err=True)
 
 
     for _p in (paths or (".",)):
@@ -448,25 +601,7 @@ def check(ctx, paths, fmt, severity, model, metadata, context):
 
     engine = AnchorEngine()
     target_dir = os.path.abspath(paths[0] if paths else ".")
-    ignored_patterns = load_anchorignore(target_dir)
-
-    detailed_res = engine.scan_directory_detailed(target_dir) if hasattr(engine, "scan_directory_detailed") else {
-        "total_files_scanned": 0, "total_lines_scanned": 0, "scan_latency_microsec": 0, "total_violations": 0, "violations": []
-    }
-
-    raw_violations = detailed_res.get("violations", [])
-    filtered_violations = []
-
-    for v in raw_violations:
-        f_path = v["file"]
-        if not any(pat in f_path for pat in ignored_patterns):
-            filtered_violations.append(v)
-
-    # Effective severity per finding, then apply the --severity threshold.
-    for v in filtered_violations:
-        v["severity"] = _effective_severity(v)
-    _threshold = _SEVERITY_RANK[severity]
-    filtered_violations = [v for v in filtered_violations if _SEVERITY_RANK[v["severity"]] >= _threshold]
+    detailed_res, filtered_violations = _collect_violations(target_dir, severity, engine)
 
     total_violations = len(filtered_violations)
     is_compliant = (total_violations == 0)
@@ -491,6 +626,10 @@ def check(ctx, paths, fmt, severity, model, metadata, context):
         "total_violations": total_violations,
         "violations": filtered_violations
     }
+
+    governance_drift = _local_governance_drift()
+    if governance_drift:
+        audit_report["governance_drift"] = governance_drift
 
     json_path = os.path.join(reports_dir, "governance_report.json")
     md_path = os.path.join(reports_dir, "governance_audit.md")
@@ -573,6 +712,7 @@ def check(ctx, paths, fmt, severity, model, metadata, context):
             with open(md_path, "r", encoding="utf-8") as _md:
                 click.echo(_md.read())
         _verified, _ = _governance_status()
+        _verified = _verified and not governance_drift
         if not _verified and os.environ.get("ANCHOR_REQUIRE_VERIFIED_GOVERNANCE", "").strip().lower() in {"1", "true", "on", "yes"}:
             sys.exit(2)
         if not is_compliant:
@@ -631,6 +771,11 @@ def check(ctx, paths, fmt, severity, model, metadata, context):
     if governance_verified:
         click.echo("  This report was generated by Anchor's automated pattern and AST checks.")
         click.secho("  Built-in rule files match the signed GOVERNANCE.lock.\n", fg="cyan", bold=True)
+        if governance_drift:
+            click.secho("  [!] LOCAL RULE FILES MODIFIED: " + ", ".join(governance_drift), fg="yellow", bold=True)
+            click.echo("      The scanner uses the packaged rules, not these copies.")
+            click.echo("      Run `anchor sync --restore` to make .anchor/ match what is enforced.\n")
+            governance_verified = False
     else:
         click.secho("  [!] UNVERIFIED RULE SET: built-in rules could not be checked against the signed lock.", fg="yellow", bold=True)
         for note_line in governance_note.splitlines()[:5]:
@@ -711,23 +856,40 @@ def sync(restore):
 @cli.command("heal")
 @click.argument("paths", nargs=-1, default=None)
 @click.option("--apply", "apply_fixes", is_flag=True, help="Apply fixes in-place.")
-def heal(paths, apply_fixes):
-    """Review and apply Anchor's suggested fixes."""
+@click.option("--suppress", "allow_suppress", is_flag=True,
+              help="With --apply, also apply suggestions that only add an `anchor: ignore` pragma.")
+def heal(paths, apply_fixes, allow_suppress):
+    """Review and apply Anchor's suggested fixes.
+
+    With PATHS, those paths are scanned now. Without PATHS, the findings from the
+    last `anchor check` run (.anchor/reports/governance_report.json) are used.
+    """
     from anchor.core.healer import suggest_fix, format_suggestion_for_report, apply_fix
     click.secho("\nAnchor Heal Engine", bold=True)
     click.echo("=" * 70)
-    json_path = os.path.join(".anchor", "reports", "governance_report.json")
-    if not os.path.exists(json_path):
-        click.secho("No violations found. Run `anchor check .` first.", fg="green")
-        return
-    with open(json_path, "r", encoding="utf-8") as f:
-        data = json.load(f)
-    violations = data.get("violations", [])
+    if paths:
+        violations = []
+        for _p in paths:
+            if not os.path.exists(_p):
+                click.secho(f"Path not found: {_p}.", fg="red")
+                sys.exit(2)
+            _, found = _collect_violations(os.path.abspath(_p), "error")
+            violations.extend(found)
+    else:
+        json_path = os.path.join(".anchor", "reports", "governance_report.json")
+        if not os.path.exists(json_path):
+            click.secho("No violations found. Run `anchor check .` first, or pass PATHS to scan.", fg="green")
+            return
+        with open(json_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        violations = data.get("violations", [])
+        click.echo("Using findings from the last `anchor check` run (pass PATHS to scan instead).")
     if not violations:
         click.secho("No active violations to heal.", fg="green")
         return
 
     fixed_count = 0
+    skipped_suppressions = 0
     for v in violations:
         click.secho(f"\n[VIOLATION] {v['file']}:{v['line']}", fg="red", bold=True)
         click.echo(f"  Rules: {v['aggregated_rule_ids']}")
@@ -740,7 +902,10 @@ def heal(paths, apply_fixes):
         })
         if suggestion:
             click.echo(format_suggestion_for_report(suggestion))
-            if apply_fixes and suggestion.auto_fixable:
+            if apply_fixes and suggestion.auto_fixable and suggestion.suppression and not allow_suppress:
+                skipped_suppressions += 1
+                click.secho("  - Not applied: this only suppresses the finding. Re-run with --suppress after review.", fg="yellow")
+            elif apply_fixes and suggestion.auto_fixable:
                 if apply_fix(suggestion):
                     fixed_count += 1
                     click.secho(f"  ✔ Applied auto-patch to {v['file']}:{v['line']}", fg="green")
@@ -749,6 +914,8 @@ def heal(paths, apply_fixes):
 
     if apply_fixes:
         click.secho(f"\nApplied {fixed_count} auto-fix patch(es) in-place.", fg="green", bold=True)
+        if skipped_suppressions:
+            click.secho(f"Skipped {skipped_suppressions} suppression-only suggestion(s); use --suppress to apply them.", fg="yellow")
 
 def main():
     cli()

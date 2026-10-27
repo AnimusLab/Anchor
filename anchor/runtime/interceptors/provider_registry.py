@@ -138,6 +138,14 @@ def extract_prompt_from_payload(body_bytes: bytes) -> Optional[str]:
     # ── OpenAI / Groq / Together / Mistral chat format ────────────────
     if "messages" in payload and isinstance(payload["messages"], list):
         parts: List[str] = []
+        # Anthropic carries the system prompt at the top level, not in messages.
+        system = payload.get("system")
+        if isinstance(system, str) and system:
+            parts.append(f"[system] {system}")
+        elif isinstance(system, list):
+            for block in system:
+                if isinstance(block, dict) and isinstance(block.get("text"), str):
+                    parts.append(f"[system] {block['text']}")
         for msg in payload["messages"]:
             role    = msg.get("role", "")
             content = msg.get("content", "")

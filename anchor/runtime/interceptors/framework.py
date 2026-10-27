@@ -57,38 +57,20 @@ def _scan_messages(messages: list, provider: str) -> PromptScanResult:
             role    = "?"
         if isinstance(content, str):
             parts.append(f"[{role}] {content}")
+        elif isinstance(content, list):
+            # Multi-part content blocks: [{"type": "text", "text": "..."}]
+            for block in content:
+                text = block.get("text") if isinstance(block, dict) else getattr(block, "text", None)
+                if isinstance(text, str):
+                    parts.append(f"[{role}] {text}")
     return _scan_text("\n".join(parts), provider)
 
 
 def _scan_text(text: str, provider: str) -> PromptScanResult:
     """Scan arbitrary text and return PromptScanResult."""
-    from anchor.runtime.interceptors.output_scanner import _COMPILED
+    from anchor.runtime.interceptors.prompt_scanner import scan_prompt
 
-    findings = []
-    for compiled, rule_id, severity, message in _COMPILED:
-        m = compiled.search(text)
-        if m:
-            findings.append(Finding(
-                rule_id  = rule_id,
-                severity = severity,
-                message  = message.replace("response", "prompt"),
-                snippet  = m.group(0)[:120],
-            ))
-
-    is_flagged = bool(findings)
-    is_blocked = (
-        is_flagged
-        and _mode == InterceptorMode.BLOCK
-        and any(f.severity in ("blocker", "error") for f in findings)
-    )
-
-    return PromptScanResult(
-        provider   = provider,
-        is_blocked = is_blocked,
-        is_flagged = is_flagged,
-        findings   = findings,
-        mode       = _mode,
-    )
+    return scan_prompt(text, provider, _mode)
 
 
 def _handle(result: PromptScanResult) -> None:
@@ -123,9 +105,23 @@ def _handle_response(text: str, provider: str) -> None:
     result = scan_response(text, provider)
     if _stats:
         _stats.record_response(result)
-    if result.is_flagged:
-        top = result.findings[0]
-        logger.warning(f"[Anchor] {provider} response: {top.rule_id} — {top.message}")
+    if not result.is_flagged:
+        return
+    top = result.findings[0]
+    msg = f"[Anchor] {provider} response: {top.rule_id} — {top.message}"
+    blocker = next((f for f in result.findings if f.severity == "blocker"), None)
+    if _mode == InterceptorMode.BLOCK and blocker:
+        logger.error(msg)
+        raise AnchorViolationError(
+            message  = blocker.message,
+            rule_id  = blocker.rule_id,
+            provider = provider,
+            preview  = blocker.snippet,
+        )
+    if _mode == InterceptorMode.AUDIT:
+        logger.info(msg)  # audit mode never prints or interrupts
+    else:
+        logger.warning(msg)
 
 
 # ---------------------------------------------------------------------------
@@ -149,6 +145,8 @@ def _patch_openai() -> bool:
                 text = response.choices[0].message.content or ""
                 if text:
                     _handle_response(text, "openai")
+            except AnchorViolationError:
+                raise  # block-mode response verdicts must reach the caller
             except Exception:
                 pass
             return response
@@ -184,6 +182,8 @@ def _patch_anthropic() -> bool:
                 out = response.content[0].text if response.content else ""
                 if out:
                     _handle_response(out, "anthropic")
+            except AnchorViolationError:
+                raise  # block-mode response verdicts must reach the caller
             except Exception:
                 pass
             return response
@@ -214,6 +214,8 @@ def _patch_google_genai() -> bool:
                 out = response.text or ""
                 if out:
                     _handle_response(out, "google-gemini")
+            except AnchorViolationError:
+                raise  # block-mode response verdicts must reach the caller
             except Exception:
                 pass
             return response
@@ -248,6 +250,8 @@ def _patch_langchain() -> bool:
                 out = response.content if hasattr(response, "content") else str(response)
                 if out:
                     _handle_response(out, "langchain")
+            except AnchorViolationError:
+                raise  # block-mode response verdicts must reach the caller
             except Exception:
                 pass
             return response
@@ -275,6 +279,8 @@ def _patch_ollama() -> bool:
                 out = response.get("message", {}).get("content", "")
                 if out:
                     _handle_response(out, "ollama")
+            except AnchorViolationError:
+                raise  # block-mode response verdicts must reach the caller
             except Exception:
                 pass
             return response
@@ -304,6 +310,8 @@ def _patch_groq() -> bool:
                 out = response.choices[0].message.content or ""
                 if out:
                     _handle_response(out, "groq")
+            except AnchorViolationError:
+                raise  # block-mode response verdicts must reach the caller
             except Exception:
                 pass
             return response
@@ -332,6 +340,8 @@ def _patch_cohere() -> bool:
                 out = response.text or ""
                 if out:
                     _handle_response(out, "cohere")
+            except AnchorViolationError:
+                raise  # block-mode response verdicts must reach the caller
             except Exception:
                 pass
             return response

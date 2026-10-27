@@ -4,6 +4,8 @@ All notable changes to Anchor are documented here.
 
 ## [Unreleased]
 
+## [6.1.0] - 2026-10-27
+
 ### Fixed
 
 - Runtime interceptors: detect bare AWS keys, `sk-`/`ghp_` tokens and spaced card

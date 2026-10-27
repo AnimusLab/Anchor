@@ -5,7 +5,7 @@
 [![PyPI Version](https://img.shields.io/pypi/v/anchor-audit.svg)](https://pypi.org/project/anchor-audit/)
 [![License](https://img.shields.io/github/license/AnimusLab/Anchor.svg)](https://github.com/AnimusLab/Anchor)
 
-**Current release: 6.0.6** · Python 3.10–3.13
+**Current release: 6.1.0** · Python 3.10–3.14
 
 Anchor is a high-performance, dual-language (Rust/Python) infrastructure library designed to enforce strict regulatory invariants, architectural boundaries, and safety safeguards around autonomous AI agents and LLM application pipelines in real-time. 
 

@@ -2,6 +2,41 @@
 
 All notable changes to Anchor are documented here.
 
+## [Unreleased]
+
+### Fixed
+
+- Runtime interceptors: detect bare AWS keys, `sk-`/`ghp_` tokens and spaced card
+  numbers; SDK and HTTP interceptors now run the prompt-injection rules (they only
+  checked secrets); in block mode a dangerous response raises instead of reaching
+  the caller; `httpx.AsyncClient` and `urllib` are intercepted.
+- `@guard`: bare `@guard` / `@enforce` protect the function; new rules block
+  destructive SQL, exfiltration, credentials and card numbers.
+- Telemetry loads the Ed25519 keys that `anchor init` writes, so packets are signed.
+- `check --model` no longer approves with "0/0 checks": it scans pickles, validates
+  safetensors/GGUF headers, and exits 1 for formats it cannot verify.
+- `# anchor: ignore` is rule-specific and line-scoped. Legacy IDs (`ANC-018`,
+  `RI-12`, `ANC-030`, `ANC-031`) remain aliases; `ANCHOR_LEGACY_PRAGMAS=1` restores
+  the old behaviour during migration.
+- `heal PATHS` scans the given paths instead of the last saved report; fixes that
+  only add a suppression pragma require `--suppress`; the secret fix keeps the
+  variable name.
+- `init` always gitignores the private key, installs a corrected pre-commit hook,
+  and no longer claims registry/hub upload that does not happen.
+- `check -c` no longer claims enforcement (informational only) and keeps JSON
+  stdout clean; drifted local `.anchor` files are reported.
+
+### Added
+
+- Static rules SEC-020 to SEC-026: AWS keys, provider tokens, PEM private keys,
+  unsafe pickle/yaml/torch loading, disabled TLS certificate verification, unsafe
+  DOM writes, SSN.
+
+### Changed
+
+- Block mode now raises on blocker-severity responses (previously it only logged).
+- `requests` added to the `dev` extra (imported by the interceptor tests).
+
 ## [6.0.6] - 2026-10-26
 
 ### Security

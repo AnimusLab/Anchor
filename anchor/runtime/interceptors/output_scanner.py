@@ -7,7 +7,7 @@ Scans the text of any LLM response — regardless of which model or
 provider generated it — for patterns that indicate dangerous content:
 
   - Hardcoded secrets / credentials
-  - Shell injection (rm -rf, chmod, curl | bash, etc.)
+  - Shell injection (recursive deletes, chmod, downloads piped into a shell, etc.)
   - SQL injection patterns
   - Insecure code constructs common to codegen models
   - PII exposure (email, phone, SSN regex patterns)
@@ -56,10 +56,10 @@ _RESPONSE_PATTERNS: list[tuple[str, str, str, str]] = [
         "RSP-010", "blocker", "Destructive file deletion command in LLM response"),
 
     (r'(?i)curl\s+[^\s]+\s*\|\s*(bash|sh|zsh|fish)',
-        "RSP-011", "blocker", "Pipe-to-shell command (curl | bash) in LLM response"),
+        "RSP-011", "blocker", "Pipe-to-shell command (curl piped to bash) in LLM response"),
 
     (r'(?i)(wget|fetch)\s+[^\s]+\s*\|\s*(bash|sh)',
-        "RSP-011", "blocker", "Pipe-to-shell command (wget | bash) in LLM response"),
+        "RSP-011", "blocker", "Pipe-to-shell command (wget piped to bash) in LLM response"),
 
     (r'(?i)chmod\s+(777|a\+x|0777)',
         "RSP-012", "error", "Insecure file permission change in LLM response"),

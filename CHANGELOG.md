@@ -4,6 +4,28 @@ All notable changes to Anchor are documented here.
 
 ## [Unreleased]
 
+### Added
+
+- `@guard`: payloads are also scanned after normalization (look-alike letters, zero-width
+  characters, spaced-out letters, base64), so trivial obfuscation no longer hides a match.
+- `@guard`: Social Security numbers (AGT-014); card numbers now accept spaces and dashes and
+  require a valid Luhn check, which removes false positives on look-alike numbers (AGT-013).
+- More prompt-injection phrasings (SEC-001) and shell-level patterns at runtime: `wget`/`curl`
+  piped into a shell with flags, `nc -e`, `/dev/tcp`, `mkfs`, `dd` to a device, fork bombs (SEC-007).
+- Static scan: Java and Kotlin files are scanned; explicit shell invocation in Java, Go, Rust and Node
+  (SEC-007); `apiKey: "..."` and JSON/JS-object key forms (SEC-002); reads of `/etc/passwd`,
+  `~/.ssh/id_*` and `.aws/credentials` (SEC-004).
+
+### Changed
+
+- Telemetry sent from `@guard` is delivered by a background thread with a bounded queue, so a slow
+  or unreachable hub no longer delays a blocked call (about 79 ms before).
+- The gateway's `/docs`, `/redoc` and `/openapi.json` are off unless `ANCHOR_GATEWAY_ENABLE_DOCS=1`.
+- `guard(domain=...)` must be a non-empty string; the value labels events and does not select rules.
+- Normalization limits now fail closed instead of silently truncating payloads or skipping later base64 candidates.
+- Static SEC-007 detection now requires explicit shell use; ordinary process APIs are not treated as shell injection.
+- Static ALN-001 detection based solely on an LLM completion call is disabled pending data-flow-aware validation analysis.
+
 ## [6.1.0] - 2026-10-27
 
 ### Fixed

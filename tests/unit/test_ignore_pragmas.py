@@ -113,3 +113,19 @@ def test_legacy_env_var_restores_engine_behaviour(tmp_path, monkeypatch):
 def test_filter_violations_ignores_unreadable_files():
     v = {"file": "/nonexistent/x.py", "line": 1, "aggregated_rule_ids": "SEC-010"}
     assert filter_violations([v]) == [v]
+
+
+def test_rust_sec007_detector_fixtures_are_suppressed_but_real_invocation_is_reported(tmp_path):
+    source = (
+        'const DETECTOR_EXAMPLE: &str = "os.system(cmd)"; '
+        '// anchor: ignore SEC-007 -- detector fixture, not execution\n'
+        'assert!("os.system(cmd)"); '
+        '// anchor: ignore SEC-007 -- detector fixture, not execution\n'
+        'fn run(input: &str) { let _ = std::process::Command::new("sh").arg("-c").arg(input).status(); }\n'
+    )
+    rust_file = _write(tmp_path, "sec007_context.rs", source)
+
+    code, findings = _check(rust_file)
+
+    assert findings == [("SEC-007", 3)]
+    assert code == 1

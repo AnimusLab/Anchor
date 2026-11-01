@@ -20,8 +20,9 @@ use std::sync::Arc;
 use std::time::Instant;
 
 /// One code-scanning rule. This table is the single source of truth: the compiled
-/// RegexSet, the metadata attached to static-scan findings and the Layer 2 payload
-/// checks are all derived from it, so they cannot drift apart. The regexes are
+/// Static and runtime RegexSets, their metadata and the Layer 2 payload checks are
+/// derived from this table. A rule may use a narrower runtime matcher than its
+/// static source-code matcher. The regexes are
 /// hand-tuned (e.g. the SEC-010 pattern skips `.eval(` and `literal_eval(`); the
 /// signed rule files in anchor/governance are checked against `rule_id` by tests.
 struct CodeRule {
@@ -32,6 +33,9 @@ struct CodeRule {
     /// `None` means the rule only applies to the static code scan.
     runtime_message: Option<&'static str>,
     pattern: &'static str,
+    /// Optional runtime-specific matcher. When absent, runtime checks reuse `pattern`.
+    /// This lets static source scanning remain broader than payload enforcement.
+    runtime_pattern: Option<&'static str>,
 }
 
 const CODE_RULES: &[CodeRule] = &[
@@ -40,6 +44,7 @@ const CODE_RULES: &[CodeRule] = &[
         statute: "EU-ART52",
         name: "Transparency Disclosure Gate",
         runtime_message: Some("EU_ART52_TRANSPARENCY_VIOLATION: System configured to mimic human or hide AI disclosure."),
+        runtime_pattern: None,
         // anchor: ignore AGT-001 -- pattern definition, not a violation
         pattern: r"(?i)(hide_ai_identity|mimic_human_agent|pretend_human|bypass_disclosure)",
     },
@@ -48,6 +53,7 @@ const CODE_RULES: &[CodeRule] = &[
         statute: "EU-ART12",
         name: "Audit Traceability Logging Gate",
         runtime_message: Some("EU_ART12_LOGGING_DISABLED_VIOLATION: Traceability logging explicitly disabled on high-risk call."),
+        runtime_pattern: None,
         // anchor: ignore RBI-007 -- pattern definition, not a violation
         pattern: r"(?i)(enable_audit_log\s*=\s*false|disable_logging|suppress_traceability)",
     },
@@ -56,6 +62,7 @@ const CODE_RULES: &[CodeRule] = &[
         statute: "EU-ART14",
         name: "Autonomous Action Human Oversight Gate",
         runtime_message: Some("EU_ART14_MISSING_HUMAN_OVERSIGHT: Autonomous action executed without required human approval gate."),
+        runtime_pattern: None,
         // anchor: ignore AGT-001 -- pattern definition, not a violation
         pattern: r"(?i)(autonomous_p2p_wire|unvetted_risk_execution|bypass_human_auth)",
     },
@@ -64,38 +71,37 @@ const CODE_RULES: &[CodeRule] = &[
         statute: "OWASP-LLM01",
         name: "Prompt Injection Defense Gate",
         runtime_message: Some("SEC_001_PROMPT_INJECTION: Adversarial prompt override pattern detected."),
+        runtime_pattern: None,
         // anchor: ignore SEC-001 -- pattern definition, not a violation
-        pattern: r"(?i)(ignore\s+(all\s+)?(previous|prior)\s+instructions|system\s+prompt\s+override|jailbreak|disregard\s+(all\s+)?(previous|prior)\s+instructions)",
+        pattern: r"(?i)((ignore|disregard)\s+(all\s+)?(the\s+)?(previous|prior|above|earlier|preceding)\s+(instructions|prompts?|rules)|forget\s+(everything|all)\s+(above|before|previously|prior)|system\s+prompt\s+override|jailbreak|developer\s+mode\s+(enabled|activated|on)|you\s+are\s+now\s+(dan|in\s+developer\s+mode|jailbroken|unrestricted)|do\s+anything\s+now|(reveal|print|show|repeat)\s+(your|the)\s+(system\s+prompt|hidden\s+instructions))",
     },
     CodeRule {
         rule_id: "SEC-002",
         statute: "OWASP-LLM06",
         name: "Hardcoded Secret Leak Gate",
         runtime_message: Some("SEC_002_CREDENTIAL_LEAK: Hardcoded API secret or bearer token detected in context payload."),
+        runtime_pattern: None,
         // anchor: ignore SEC-002 -- pattern definition, not a violation
-        pattern: r#"(?i)(api[_-]?key\s*=\s*['\"][A-Za-z0-9_-]{8,}['\"]|bearer\s+[A-Za-z0-9_.-]{8,}|api_key\s*=\s*['\"][^'"]+['\"]|authorization['"]\s*==\s*['\"]Bearer)"#,
+        pattern: r#"(?i)(api[_-]?key['\"]?\s*[:=]\s*['\"][A-Za-z0-9_-]{8,}['\"]|bearer\s+[A-Za-z0-9_.-]{8,}|api_key\s*=\s*['\"][^'"]+['\"]|authorization['"]\s*==\s*['\"]Bearer)"#,
     },
     CodeRule {
         rule_id: "SEC-007",
         statute: "OWASP-LLM07",
-        name: "Shell Injection (Unsandboxed Subprocess in Agent)",
-        runtime_message: None,
-        // anchor: ignore SEC-007 -- pattern definition, not a violation
-        pattern: r"(?i)(subprocess\.(run|call|Popen|check_output)|os\.(system|popen|spawn))\s*\(",
+        name: "Potential Shell Invocation (Static and Runtime Heuristic)",
+        runtime_message: Some("SEC_007_SHELL_INVOCATION: Explicit shell invocation or dangerous shell command detected."),
+        runtime_pattern: Some(r#"(?i)(subprocess\.(run|call|Popen|check_output)\s*\([^\)\n]*\bshell\s*=\s*true|Runtime\.getRuntime\(\)\.exec\s*\(\s*["']?(?:sh|bash|zsh|cmd|powershell)\s+-c\b|new\s+ProcessBuilder\s*\([^\)\n]*["'](?:sh|bash|zsh|cmd|powershell)["']\s*,\s*["']-c["']|exec\.Command(?:Context)?\s*\(\s*(?:ctx\s*,\s*)?["'](?:sh|bash|zsh|cmd|powershell)["']\s*,\s*["']-c["']|Command::new\s*\(\s*["'](?:sh|bash|zsh|cmd|powershell)["']\s*\)[^\n]*\.arg\s*\(\s*["']-c["']|child_process["']?\)?\.(exec|execSync)\s*\(|\bexecSync\s*\(|(?:spawn|spawnSync)\s*\([^\)\n]*\bshell\s*:\s*true|rm\s+-(rf|fr)\s+[/~]|(curl|wget)\s+[^\n|;&]*\|\s*(sudo\s+)?(ba|z|da|fi)?sh\b|\bnc\s+(-\w+\s+)*-e\b|/dev/tcp/|\bmkfs(\.\w+)?\s|\bdd\s+if=\S+\s+of=/dev/|:\(\)\s*\{\s*:\|:&\s*\};:)"#), // anchor: ignore SEC-007 -- detector definition, not executable shell code
+        // Static scanning flags generic os.system/os.popen use; runtime requires explicit shell use.
+        pattern: r#"(?i)(os\.(system|popen)\s*\(|subprocess\.(run|call|Popen|check_output)\s*\([^\)\n]*\bshell\s*=\s*true|Runtime\.getRuntime\(\)\.exec\s*\(\s*["']?(?:sh|bash|zsh|cmd|powershell)\s+-c\b|new\s+ProcessBuilder\s*\([^\)\n]*["'](?:sh|bash|zsh|cmd|powershell)["']\s*,\s*["']-c["']|exec\.Command(?:Context)?\s*\(\s*(?:ctx\s*,\s*)?["'](?:sh|bash|zsh|cmd|powershell)["']\s*,\s*["']-c["']|Command::new\s*\(\s*["'](?:sh|bash|zsh|cmd|powershell)["']\s*\)[^\n]*\.arg\s*\(\s*["']-c["']|child_process["']?\)?\.(exec|execSync)\s*\(|\bexecSync\s*\(|(?:spawn|spawnSync)\s*\([^\)\n]*\bshell\s*:\s*true|rm\s+-(rf|fr)\s+[/~]|(curl|wget)\s+[^\n|;&]*\|\s*(sudo\s+)?(ba|z|da|fi)?sh\b|\bnc\s+(-\w+\s+)*-e\b|/dev/tcp/|\bmkfs(\.\w+)?\s|\bdd\s+if=\S+\s+of=/dev/|:\(\)\s*\{\s*:\|:&\s*\};:)"#, // anchor: ignore SEC-007 -- detector definition, not executable shell code
     },
-    CodeRule {
-        rule_id: "ALN-001",
-        statute: "OWASP-LLM09",
-        name: "Hallucination (LLM Output Without Validation)",
-        runtime_message: None,
-        // anchor: ignore ALN-001 -- pattern definition, not a violation
-        pattern: r"(?i)(\.(completions|messages|chat)\.(create|send)|agents\.messages\.create)\s*\(",
-    },
+    // ALN-001 is deliberately not a static regex rule: an LLM completion API call
+    // alone is not evidence of hallucination or missing output validation. Re-enable
+    // static detection only when a data-flow-aware implementation can substantiate it.
     CodeRule {
         rule_id: "SEC-002",
         statute: "OWASP-LLM03",
         name: "Data Poisoning (Unencrypted Vector Store Upsert)",
         runtime_message: None,
+        runtime_pattern: None,
         // anchor: ignore SEC-002 -- pattern definition, not a violation
         pattern: r"(?i)\.(upsert|add_texts|add_documents)\s*\(",
     },
@@ -104,16 +110,18 @@ const CODE_RULES: &[CodeRule] = &[
         statute: "OWASP-LLM05",
         name: "Insecure Python Execution (eval/exec/dynamic import)",
         runtime_message: Some("SEC_010_INSECURE_EXECUTION: Dynamic code execution (eval/exec/__import__) detected in payload."),
+        runtime_pattern: None,
         // anchor: ignore SEC-010 -- pattern definition, not a violation
         pattern: r"(^|[^.\w])(eval|exec)\s*\(|__import__\s*\(",
     },
     CodeRule {
-        rule_id: "SEC-007",
-        statute: "OWASP-LLM07",
-        name: "Shell Injection (Destructive or Piped Shell String)",
-        runtime_message: Some("SEC_007_SHELL_INJECTION: Destructive or piped shell command detected in payload."),
-        // anchor: ignore SEC-007 -- pattern definition, not a violation
-        pattern: r"(?i)(rm\s+-(rf|fr)\s+[/~]|curl\s+[^\s]+\s*\|\s*(bash|sh|zsh|fish))",
+        rule_id: "SEC-004",
+        statute: "OWASP-LLM02",
+        name: "Credential Harvesting (Sensitive File Read)",
+        runtime_message: None,
+        runtime_pattern: None,
+        // anchor: ignore SEC-004 -- pattern definition, not a violation
+        pattern: r#"open\s*\(\s*['"](/etc/(passwd|shadow)|[^'"]*\.ssh/id_\w+|[^'"]*\.aws/credentials)['"]"#,
     },
 ];
 
@@ -122,6 +130,8 @@ const CODE_RULES: &[CodeRule] = &[
 pub struct AnchorEngine {
     pub rule_set_version: String,
     regex_set: Arc<RegexSet>,
+    runtime_regex_set: Arc<RegexSet>,
+    runtime_rule_indices: Vec<usize>,
     legal_mapper: LegalMapper,
     async_core: Arc<AsyncEngineCore>,
     ledger_queue: PersistentLedgerQueue,
@@ -146,7 +156,29 @@ impl AnchorEngine {
                 .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Invalid RegexSet compilation: {}", e)))?
         );
 
-        let async_core = Arc::new(AsyncEngineCore::new(Arc::clone(&regex_set)));
+        // Runtime checks use only rules with runtime messages. A rule may provide a
+        // narrower runtime pattern than its static source-code pattern.
+        let runtime_rule_indices: Vec<usize> = CODE_RULES
+            .iter()
+            .enumerate()
+            .filter_map(|(index, rule)| rule.runtime_message.map(|_| index))
+            .collect();
+        let runtime_patterns: Vec<&str> = runtime_rule_indices
+            .iter()
+            .map(|&index| CODE_RULES[index].runtime_pattern.unwrap_or(CODE_RULES[index].pattern))
+            .collect();
+        let runtime_regex_set = Arc::new(
+            RegexSet::new(&runtime_patterns)
+                .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Invalid runtime RegexSet compilation: {}", e)))?
+        );
+        let runtime_messages: Vec<&'static str> = runtime_rule_indices
+            .iter()
+            .filter_map(|&index| CODE_RULES[index].runtime_message)
+            .collect();
+        let async_core = Arc::new(AsyncEngineCore::new(
+            Arc::clone(&runtime_regex_set),
+            runtime_messages,
+        ));
         let ledger_queue = PersistentLedgerQueue::new(Path::new(".anchor"));
 
         let mitigation_path = Path::new("anchor/governance/mitigation.anchor");
@@ -156,6 +188,8 @@ impl AnchorEngine {
             rule_set_version: env!("CARGO_PKG_VERSION").to_string(),
 
             regex_set,
+            runtime_regex_set,
+            runtime_rule_indices,
             legal_mapper: LegalMapper::new(),
             async_core,
             ledger_queue,
@@ -455,10 +489,11 @@ impl AnchorEngine {
         let mut violations = Vec::new();
         let mut matched_rule_ids = Vec::new();
 
-        let matches = self.regex_set.matches(source);
-        for (idx, rule) in CODE_RULES.iter().enumerate() {
-            if let Some(message) = rule.runtime_message {
-                if matches.matched(idx) {
+        let matches = self.runtime_regex_set.matches(source);
+        for (runtime_index, &rule_index) in self.runtime_rule_indices.iter().enumerate() {
+            if matches.matched(runtime_index) {
+                let rule = &CODE_RULES[rule_index];
+                if let Some(message) = rule.runtime_message {
                     violations.push(message);
                     matched_rule_ids.push(rule.rule_id);
                 }
@@ -482,4 +517,29 @@ impl AnchorEngine {
 fn anchor_core_rs(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<AnchorEngine>()?;
     Ok(())
+}
+
+
+#[cfg(test)]
+mod runtime_rule_tests {
+    use super::{CodeRule, CODE_RULES};
+    use regex::Regex;
+
+    #[test]
+    fn sec007_static_and_runtime_patterns_have_distinct_scopes() {
+        let rule: &CodeRule = CODE_RULES
+            .iter()
+            .find(|rule| rule.rule_id == "SEC-007")
+            .expect("SEC-007 must exist");
+        let static_pattern = Regex::new(rule.pattern).expect("static SEC-007 regex must compile");
+        let runtime_pattern = Regex::new(
+            rule.runtime_pattern.unwrap_or(rule.pattern),
+        )
+        .expect("runtime SEC-007 regex must compile");
+
+        assert!(static_pattern.is_match("os.system(cmd)")); // anchor: ignore SEC-007 -- regression fixture string, not execution
+        assert!(!runtime_pattern.is_match("os.system(cmd)")); // anchor: ignore SEC-007 -- regression fixture string, not execution
+        assert!(runtime_pattern.is_match("rm -rf /")); // anchor: ignore SEC-007 -- regression fixture string, not execution
+        assert!(runtime_pattern.is_match("subprocess.run(cmd, shell=True)")); // anchor: ignore SEC-007 -- regression fixture string, not execution
+    }
 }

@@ -120,6 +120,10 @@ Anchor Core acts as the local spoke auditing engine that feeds seamlessly into t
 
 ---
 
+## Engineering case studies
+
+- [SEC-007 self-scan false positive: distinguishing detector fixtures from shell execution](docs/case-studies/sec007-self-scan-false-positive.md) — a reproducible account of an Anchor self-scan finding, its root cause, the narrowly scoped remediation, and the regression test.
+
 ## ⚠️ Limitations
 
 - `@guard` (Layer 2) covers only the functions you decorate. Keyword/pattern checks can be rephrased around; treat Anchor as one deterministic layer in defense-in-depth.

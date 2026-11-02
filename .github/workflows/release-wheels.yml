@@ -9,12 +9,12 @@ name: Build & Publish Wheels
 # Python: 3.10, 3.11, 3.12, 3.13
 
 on:
+  # A published GitHub Release is the sole automatic PyPI publication trigger.
+  # Push the matching version tag first, then publish the GitHub Release.
   release:
     types: [published]
-  push:
-    tags:
-      - 'v*'
-  workflow_dispatch: # allow manual trigger for testing
+  # Manual dispatch builds and smoke-tests but never publishes to PyPI.
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -125,10 +125,55 @@ jobs:
     name: Publish to PyPI
     runs-on: ubuntu-latest
     needs: [linux, macos, windows, sdist, smoke]
+    # Only an intentionally published GitHub Release may publish to PyPI.
+    # workflow_dispatch runs the build and smoke-test jobs, but skips this job.
+    if: github.event_name == 'release' && github.event.action == 'published'
     environment: pypi
     permissions:
-      id-token: write # for trusted publishing (no API key needed)
+      contents: read
     steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Verify release tag matches all package versions
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          python - <<'PY'
+          import os
+          import re
+          import tomllib
+          from pathlib import Path
+
+          pyproject = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
+          cargo = tomllib.loads(Path("Cargo.toml").read_text(encoding="utf-8"))
+          lock = tomllib.loads(Path("Cargo.lock").read_text(encoding="utf-8"))
+          py_version = pyproject["project"]["version"]
+          cargo_version = cargo["package"]["version"]
+          core_lock = [p["version"] for p in lock["package"] if p["name"] == "anchor_core_rs"]
+          init_text = Path("anchor/__init__.py").read_text(encoding="utf-8")
+          readme_text = Path("README.md").read_text(encoding="utf-8")
+          init_match = re.search(r'^__version__\s*=\s*["\']([^"\']+)', init_text, re.MULTILINE)
+          readme_match = re.search(r'^\*\*Current release:\s*([^\s*]+)\*\*', readme_text, re.MULTILINE)
+          expected_tag = f"v{py_version}"
+
+          checks = {
+              "Cargo.toml": cargo_version == py_version,
+              "Cargo.lock": core_lock == [py_version],
+              "anchor/__init__.py": bool(init_match and init_match.group(1) == py_version),
+              "README.md": bool(readme_match and readme_match.group(1) == py_version),
+              "release tag": os.environ.get("RELEASE_TAG") == expected_tag,
+          }
+          for name, ok in checks.items():
+              print(f"{'OK' if ok else 'FAIL'}: {name}")
+          if not all(checks.values()):
+              raise SystemExit("Release tag and package metadata are not synchronized; refusing PyPI publication.")
+          print(f"All package metadata matches {expected_tag}.")
+          PY
+
       - name: Download all wheel artifacts
         uses: actions/download-artifact@v8
         with:
@@ -139,5 +184,5 @@ jobs:
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          password: ${{ secrets.PYPI_API_TOKEN }}
+          password: ${{ secrets.PYPI_API_TOKEN }} # API-token authentication; configure this secret in the pypi environment.
           skip-existing: true

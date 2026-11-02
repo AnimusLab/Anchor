@@ -26,6 +26,29 @@ All notable changes to Anchor are documented here.
 - Static SEC-007 detection now requires explicit shell use; ordinary process APIs are not treated as shell injection.
 - Static ALN-001 detection based solely on an LLM completion call is disabled pending data-flow-aware validation analysis.
 
+## [6.1.1] - 2026-11-02
+
+### Fixed
+
+- Prevent SEC-007 self-scan false positives from detector definitions, regression-test
+  examples, and response-scanner descriptions while preserving the underlying detection
+  patterns.
+- Align asynchronous runtime construction with its runtime-message mapping and replace
+  hard-coded match indexes with rule-table-driven mapping.
+
+### Tests
+
+- Add regression coverage for SEC-007 static/runtime scope separation and self-scan
+  suppression boundaries.
+- Verify the release candidate locally: 348 Python tests passed (2 skipped), one Rust
+  regression test passed, the Maturin release build succeeded, and the Anchor self-scan
+  reported zero findings across 121 files and 13,570 lines.
+
+### Documentation
+
+- Add the SEC-007 self-scan false-positive case study.
+
+
 ## [6.1.0] - 2026-10-27
 
 ### Fixed

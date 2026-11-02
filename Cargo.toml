@@ -1,6 +1,6 @@
 [package]
 name = "anchor_core_rs"
-version = "6.1.0"
+version = "6.1.1"
 
 edition = "2021"
 authors = ["Tanishq Vaswani <tan@animuslab.dev>"]
